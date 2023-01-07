@@ -1,0 +1,26 @@
+[book]
+title = "Cluster API Provider Hivelocity"
+description = "Documentation for CAPHV"
+authors = ["The Cluster API Provider Hivelocity Maintainers"]
+language = "en"
+multilingual = false
+
+[output.html]
+curly-quotes = true
+git-repository-url = "https://github.com/hivelocity/cluster-api-provider-hivelocity/tree/main/docs/book"
+additional-css = ["theme/css/custom.css"]
+edit-url-template = "https://github.com/hivelocity/cluster-api-provider-hivelocity/edit/main/docs/book/{path}"
+
+
+[preprocessor.tabulate]
+command = "mdbook-tabulate"
+
+[preprocessor.embed]
+command = "mdbook-embed"
+
+[preprocessor.releaselink]
+command = "mdbook-releaselink"
+
+[preprocessor.emojify]
+command = "./emojitsu-wrapper.sh"
+after = [ "embed" ]

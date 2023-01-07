@@ -1,0 +1,17 @@
+name: starlark
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches:
+      - main
+    paths:
+      - "**Tiltfile"
+jobs:
+  starlark:
+    name: run starlark lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout repo
+        uses: actions/checkout@v3
+      - name: run starlark lint
+        run: make verify-tiltfile

@@ -1,0 +1,27 @@
+# permissions for end users to view hivelocityclusters.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/name: clusterrole
+    app.kubernetes.io/instance: hivelocitycluster-viewer-role
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/created-by: cluster-api-provider-hivelocity
+    app.kubernetes.io/part-of: cluster-api-provider-hivelocity
+    app.kubernetes.io/managed-by: kustomize
+  name: hivelocitycluster-viewer-role
+rules:
+- apiGroups:
+  - infrastructure.cluster.x-k8s.io
+  resources:
+  - hivelocityclusters
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - infrastructure.cluster.x-k8s.io
+  resources:
+  - hivelocityclusters/status
+  verbs:
+  - get

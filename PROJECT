@@ -1,0 +1,85 @@
+domain: cluster.x-k8s.io
+layout:
+- go.kubebuilder.io/v4-alpha
+projectName: cluster-api-provider-hivelocity
+repo: github.com/hivelocity/cluster-api-provider-hivelocity
+resources:
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: cluster.x-k8s.io
+  group: infrastructure
+  kind: HivelocityCluster
+  path: github.com/hivelocity/cluster-api-provider-hivelocity/api/v1alpha1
+  version: v1alpha1
+  webhooks:
+    defaulting: true
+    validation: true
+    webhookVersion: v1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: cluster.x-k8s.io
+  group: infrastructure
+  kind: HivelocityClusterTemplate
+  path: github.com/hivelocity/cluster-api-provider-hivelocity/api/v1alpha1
+  version: v1alpha1
+  webhooks:
+    defaulting: true
+    validation: true
+    webhookVersion: v1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: cluster.x-k8s.io
+  group: infrastructure
+  kind: HivelocityMachine
+  path: github.com/hivelocity/cluster-api-provider-hivelocity/api/v1alpha1
+  version: v1alpha1
+  webhooks:
+    defaulting: true
+    validation: true
+    webhookVersion: v1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: cluster.x-k8s.io
+  group: infrastructure
+  kind: HivelocityMachineTemplate
+  path: github.com/hivelocity/cluster-api-provider-hivelocity/api/v1alpha1
+  version: v1alpha1
+  webhooks:
+    defaulting: true
+    validation: true
+    webhookVersion: v1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: cluster.x-k8s.io
+  group: infrastructure
+  kind: HivelocityRemediation
+  path: github.com/hivelocity/cluster-api-provider-hivelocity/api/v1alpha1
+  version: v1alpha1
+  webhooks:
+    defaulting: true
+    validation: true
+    webhookVersion: v1
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: cluster.x-k8s.io
+  group: infrastructure
+  kind: HivelocityRemediationTemplate
+  path: github.com/hivelocity/cluster-api-provider-hivelocity/api/v1alpha1
+  version: v1alpha1
+  webhooks:
+    defaulting: true
+    validation: true
+    webhookVersion: v1
+version: "3"
