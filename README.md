@@ -18,7 +18,7 @@ With the Hivelocity Provider, you can trust that your infrastructure is in good 
 ---
 ## :book: Documentation
 
-Docs can be found in the `/docs` directory. [Here](docs/README.md) you can find an overview of our documentation.
+Please see our [book](https://hivelocity.github.io/cluster-api-provider-hivelocity) for in-depth documentation.
 
 ## :sparkles: Features
 
@@ -33,7 +33,8 @@ Docs can be found in the `/docs` directory. [Here](docs/README.md) you can find 
 
 
 ## :rocket: Get Started
-If you're looking to jump straight into it, go ahead:
+
+If you're looking to jump straight into it, check out the [Quick Start Guide](https://hivelocity.github.io/cluster-api-provider-hivelocity/user/getting-started.html)
 
 ## :fire: Compatibility with Cluster API and Kubernetes Versions
 
@@ -66,7 +67,7 @@ do!
 
 ## :dizzy: Code of Conduct
 
-Participation in the Kubernetes community is governed by the [Kubernetes Code of Conduct](code-of-conduct.md).
+Participation in the Kubernetes community is governed by the [Kubernetes Code of Conduct](https://github.com/hivelocity/cluster-api-provider-hivelocity/blob/main/code-of-conduct.md).
 
 ## :construction: Github Issues
 
