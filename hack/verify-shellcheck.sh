@@ -97,5 +97,5 @@ IGNORE_FILES=$(find . -name "*.sh" | grep "third_party\|tilt_modules|node_module
 echo "Ignoring shellcheck on ${IGNORE_FILES}"
 FILES=$(find . -name "*.sh" -not -path "./tilt_modules/*" -not -path "*third_party*" -not -path "*node_modules*")
 while read -r file; do
-    "$SHELLCHECK" -x  "--exclude=${SHELLCHECK_DISABLED}" "--color=auto" "$file" >> "${OUT}" 2>&1 
-done <<< "$FILES" 
+    "$SHELLCHECK" -x  "--exclude=${SHELLCHECK_DISABLED}" "--color=auto" "$file" >> "${OUT}" 2>&1
+done <<< "$FILES"

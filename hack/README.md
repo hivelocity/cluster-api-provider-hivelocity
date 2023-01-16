@@ -1,9 +1,9 @@
 ## Verify & Ensure boilerplate
 
-- `verify-boilerplate.sh`:  
+- `verify-boilerplate.sh`:
    Verifies that the boilerplate for various formats (go files, Makefile, etc.)
    is included in each file.
-- `ensure-boilerplate.sh`:  
+- `ensure-boilerplate.sh`:
    Ensure that various formats (see above) have the boilerplate included.
 
 The scripts assume the root of the repo to be one level up of the directory
@@ -27,9 +27,9 @@ The config can look something like this:
 }
 ```
 Currently supported settings are
-- `dirs_to_skip`  
+- `dirs_to_skip`
   A list of directories which is excluded when checking or adding the headers
-- `not_generated_files_to_skip`  
+- `not_generated_files_to_skip`
   A list of all the files contain 'DO NOT EDIT', but are not generated
 
 All other settings will be ignored.

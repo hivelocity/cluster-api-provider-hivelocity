@@ -4,8 +4,8 @@
 
 CAPHV follows the [semantic versionining][semver] specification:
 
-MAJOR version release for incompatible API changes, 
-MINOR version release for backwards compatible feature additions, 
+MAJOR version release for incompatible API changes,
+MINOR version release for backwards compatible feature additions,
 and PATCH version release for only bug fixes.
 
 **Example versions:**

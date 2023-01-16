@@ -40,7 +40,7 @@ Requires ${MINIMUM_HELM_VERSION} or greater.
 Please install ${MINIMUM_HELM_VERSION} or later.
 
 EOF
-    
+
     confirm "$@" && echo 'Installing Helm' && install_helm
   else
     cat <<EOF
@@ -57,7 +57,7 @@ confirm() {
     echo "${1:-Do you want to install? [y/N]}"
     read -r -p "" response
     case "$response" in
-        [yY][eE][sS]|[yY]) 
+        [yY][eE][sS]|[yY])
             true
             ;;
         *)

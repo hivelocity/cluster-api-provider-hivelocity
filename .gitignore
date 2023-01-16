@@ -28,6 +28,7 @@ docs/book/book
 *.swp
 *.swo
 .DS_Store
+.pre-commit-config.yaml
 
 # Tilt files.
 .tiltbuild

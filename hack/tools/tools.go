@@ -1,3 +1,6 @@
+//go:build tools
+// +build tools
+
 /*
 Copyright 2022 The Kubernetes Authors.
 
@@ -14,8 +17,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-//go:build tools
-// +build tools
 // Package tools imports things required by build scripts, to force `go mod` to see them as dependencies
 package tools
 

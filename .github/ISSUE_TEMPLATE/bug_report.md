@@ -19,6 +19,6 @@ about: Tell us about a problem you are experiencing.
 
 **Environment:**
 
-- cluster-api-provider-hivelocity version: 
+- cluster-api-provider-hivelocity version:
 - Kubernetes version: (use `kubectl version`)
-- OS (e.g. from `/etc/os-release`): 
+- OS (e.g. from `/etc/os-release`):

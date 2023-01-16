@@ -25,7 +25,7 @@ cd "${REPO_ROOT}" || exit 1
 
 # Creates a kind cluster with the ctlptl tool https://github.com/tilt-dev/ctlptl
 ctlptl_kind-cluster-with-registry () {
-  
+
   local CLUSTER_NAME=$1
   local CLUSTER_VERSION=$2
 
@@ -56,7 +56,7 @@ export PATH="${REPO_ROOT}/hack/tools/bin:${PATH}"
 echo ""
 echo "Cluster initialising... Please hold on"
 echo ""
-ctlptl_kind-cluster-with-registry caph ${K8S_VERSION}
+ctlptl_kind-cluster-with-registry caphv ${K8S_VERSION}
 
 echo ""
 echo ""

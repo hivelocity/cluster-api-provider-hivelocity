@@ -195,7 +195,7 @@ def normalize_files(files, dirs_to_skip):
     return newfiles
 
 
-def get_files(extensions, dirs_to_skip):
+def get_files(extensions, dirs_to_skip, file_extensions_to_skip=[]):
     files = []
     if len(args.filenames) > 0:
         files = args.filenames
@@ -210,6 +210,13 @@ def get_files(extensions, dirs_to_skip):
                     dirs.remove(d)
 
             for name in walkfiles:
+                skip = False
+                for ex in file_extensions_to_skip:
+                    if name.endswith(ex):
+                        skip = True
+                        break
+                if skip:
+                    continue
                 pathname = os.path.join(root, name)
                 files.append(pathname)
 
@@ -303,7 +310,8 @@ def main():
 
     regexs = get_regexs()
     refs = get_refs()
-    filenames = get_files(refs.keys(), config.get('dirs_to_skip'))
+    filenames = get_files(refs.keys(), config.get('dirs_to_skip'),
+                                       config.get('file_extensions_to_skip', []))
     not_generated_files_to_skip = config.get('not_generated_files_to_skip', [])
 
     for filename in filenames:

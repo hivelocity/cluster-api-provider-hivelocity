@@ -14,50 +14,285 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-
 package controllers
 
 import (
 	"context"
+	"fmt"
+	"time"
 
-	"k8s.io/apimachinery/pkg/runtime"
+	infrav1 "github.com/hivelocity/cluster-api-provider-hivelocity/api/v1alpha1"
+	"github.com/hivelocity/cluster-api-provider-hivelocity/pkg/scope"
+	secretutil "github.com/hivelocity/cluster-api-provider-hivelocity/pkg/secrets"
+	hvclient "github.com/hivelocity/cluster-api-provider-hivelocity/pkg/services/hivelocity/client"
+	"github.com/hivelocity/cluster-api-provider-hivelocity/pkg/services/hivelocity/server"
+	"github.com/pkg/errors"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/klog/v2"
+	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+	"sigs.k8s.io/cluster-api/util"
+	"sigs.k8s.io/cluster-api/util/annotations"
+	"sigs.k8s.io/cluster-api/util/predicates"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
-
-	infrastructurev1alpha1 "github.com/hivelocity/cluster-api-provider-hivelocity/api/v1alpha1"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 )
 
-// HivelocityMachineReconciler reconciles a HivelocityMachine object
+// HivelocityMachineReconciler reconciles a HivelocityMachine object.
 type HivelocityMachineReconciler struct {
 	client.Client
-	Scheme *runtime.Scheme
+	APIReader        client.Reader
+	HVClientFactory  hvclient.Factory
+	WatchFilterValue string
 }
 
+//+kubebuilder:rbac:groups="",resources=events,verbs=get;list;watch;create;update;patch
+//+kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;watch;update
+//+kubebuilder:rbac:groups=cluster.x-k8s.io,resources=machines;machines/status,verbs=get;list;watch
 //+kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=hivelocitymachines,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=hivelocitymachines/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=hivelocitymachines/finalizers,verbs=update
 
-// Reconcile is part of the main kubernetes reconciliation loop which aims to
-// move the current state of the cluster closer to the desired state.
-// TODO(user): Modify the Reconcile function to compare the state specified by
-// the HivelocityMachine object against the actual cluster state, and then
-// perform operations to make the cluster state reflect the state specified by
-// the user.
-//
-// For more details, check Reconcile and its Result here:
-// - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.13.1/pkg/reconcile
-func (r *HivelocityMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	_ = log.FromContext(ctx)
+// Reconcile manages the lifecycle of an Hivelocity machine object.
+func (r *HivelocityMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ ctrl.Result, reterr error) {
+	log := ctrl.LoggerFrom(ctx)
 
-	// TODO(user): your logic here
+	// Fetch the HivelocityMachine instance.
+	hivelocityMachine := &infrav1.HivelocityMachine{}
+	err := r.Get(ctx, req.NamespacedName, hivelocityMachine)
+	if err != nil {
+		if apierrors.IsNotFound(err) {
+			return ctrl.Result{}, nil
+		}
+		return ctrl.Result{}, err
+	}
 
-	return ctrl.Result{}, nil
+	log = log.WithValues("HivelocityMachine", klog.KObj(hivelocityMachine))
+
+	// Fetch the Machine.
+	machine, err := util.GetOwnerMachine(ctx, r.Client, hivelocityMachine.ObjectMeta)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	if machine == nil {
+		log.Info("Machine Controller has not yet set OwnerRef")
+		return ctrl.Result{}, nil
+	}
+
+	log = log.WithValues("Machine", klog.KObj(machine))
+
+	// Fetch the Cluster.
+	cluster, err := util.GetClusterFromMetadata(ctx, r.Client, machine.ObjectMeta)
+	if err != nil {
+		log.Info("Machine is missing cluster label or cluster does not exist: %s", err) // question: added %s+err
+		return ctrl.Result{}, nil
+	}
+
+	if annotations.IsPaused(cluster, hivelocityMachine) {
+		log.Info("HivelocityMachine or linked Cluster is marked as paused. Won't reconcile")
+		return ctrl.Result{}, nil
+	}
+
+	log = log.WithValues("Cluster", klog.KObj(cluster))
+
+	hvCluster := &infrav1.HivelocityCluster{}
+
+	hvClusterName := client.ObjectKey{
+		Namespace: hivelocityMachine.Namespace,
+		Name:      cluster.Spec.InfrastructureRef.Name,
+	}
+	if err := r.Client.Get(ctx, hvClusterName, hvCluster); err != nil {
+		log.Info("HivelocityCluster is not available yet: %s", err)
+		return reconcile.Result{}, nil
+	}
+
+	log = log.WithValues("HivelocityCluster", klog.KObj(hvCluster))
+	ctx = ctrl.LoggerInto(ctx, log)
+
+	// Create the scope.
+	secretManager := secretutil.NewSecretManager(log, r.Client, r.APIReader)
+	hvAPIKey, hvSecret, err := getAndValidateHivelocityToken(ctx, req.Namespace, hvCluster, secretManager)
+	if err != nil {
+		return hvAPIKeyErrorResult(ctx, err, hivelocityMachine, infrav1.InstanceReadyCondition, r.Client)
+	}
+
+	hvClient := r.HVClientFactory.NewClient(hvAPIKey)
+
+	machineScope, err := scope.NewMachineScope(ctx, scope.MachineScopeParams{
+		ClusterScopeParams: scope.ClusterScopeParams{
+			Client:            r.Client,
+			Logger:            &log,
+			Cluster:           cluster,
+			HivelocityCluster: hvCluster,
+			HVClient:          hvClient,
+			HivelocitySecret:  hvSecret,
+			APIReader:         r.APIReader,
+		},
+		Machine:           machine,
+		HivelocityMachine: hivelocityMachine,
+	})
+	if err != nil {
+		return reconcile.Result{}, errors.Errorf("failed to create scope: %+v", err)
+	}
+
+	// Always close the scope when exiting this function so we can persist any HivelocityMachine changes.
+	defer func() {
+		if err := machineScope.Close(ctx); err != nil && reterr == nil {
+			reterr = err
+		}
+	}()
+
+	// check whether rate limit has been reached and if so, then wait.
+	if wait := reconcileRateLimit(hivelocityMachine); wait {
+		return ctrl.Result{RequeueAfter: 30 * time.Second}, nil
+	}
+
+	if !hivelocityMachine.ObjectMeta.DeletionTimestamp.IsZero() {
+		return r.reconcileDelete(ctx, machineScope)
+	}
+
+	return r.reconcileNormal(ctx, machineScope)
+}
+
+func breakReconcile(ctrl *reconcile.Result, err error) (reconcile.Result, bool, error) { // why name "ctrl"? This is already the package "sigs.k8s.io/controller-runtime"
+	c := reconcile.Result{}
+	if ctrl != nil {
+		c = *ctrl
+	}
+	return c, ctrl != nil || err != nil, err
+}
+
+func (r *HivelocityMachineReconciler) reconcileDelete(ctx context.Context, machineScope *scope.MachineScope) (reconcile.Result, error) {
+	machineScope.Info("Reconciling HivelocityMachine delete")
+	hivelocityMachine := machineScope.HivelocityMachine
+
+	// delete servers
+	if result, brk, err := breakReconcile(server.NewService(machineScope).Delete(ctx)); brk { // question: err message gets lost. .. breakReconcile ... too much magic
+		return result, fmt.Errorf("failed to delete servers for HivelocityMachine %s/%s: %w", hivelocityMachine.Namespace, hivelocityMachine.Name, err)
+	}
+
+	// Machine is deleted so remove the finalizer.
+	controllerutil.RemoveFinalizer(machineScope.HivelocityMachine, infrav1.MachineFinalizer)
+
+	return reconcile.Result{}, nil
+}
+
+func (r *HivelocityMachineReconciler) reconcileNormal(ctx context.Context, machineScope *scope.MachineScope) (reconcile.Result, error) {
+	machineScope.Info("Reconciling HivelocityMachine")
+	hivelocityMachine := machineScope.HivelocityMachine
+
+	// If the HivelocityMachine doesn't have our finalizer, add it.
+	controllerutil.AddFinalizer(machineScope.HivelocityMachine, infrav1.MachineFinalizer)
+
+	// question: I think this is only needed if a new Finalizer was added. But it gets done always. Too much load?
+	// Register the finalizer immediately to avoid orphaning Hivelocity resources on delete
+	if err := machineScope.PatchObject(ctx); err != nil {
+		return ctrl.Result{}, err
+	}
+
+	// reconcile server
+	if result, brk, err := breakReconcile(server.NewService(machineScope).Reconcile(ctx)); brk {
+		return result, fmt.Errorf("failed to reconcile server for HivelocityMachine %s/%s: %w", hivelocityMachine.Namespace, hivelocityMachine.Name, err)
+	}
+
+	return reconcile.Result{}, nil
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *HivelocityMachineReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewControllerManagedBy(mgr).
-		For(&infrastructurev1alpha1.HivelocityMachine{}).
-		Complete(r)
+func (r *HivelocityMachineReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager, options controller.Options) error {
+	log := ctrl.LoggerFrom(ctx)
+	c, err := ctrl.NewControllerManagedBy(mgr).
+		WithOptions(options).
+		For(&infrav1.HivelocityMachine{}).
+		WithEventFilter(predicates.ResourceNotPausedAndHasFilterLabel(ctrl.LoggerFrom(ctx), r.WatchFilterValue)).
+		Watches(
+			&source.Kind{Type: &clusterv1.Machine{}},
+			handler.EnqueueRequestsFromMapFunc(util.MachineToInfrastructureMapFunc(infrav1.GroupVersion.WithKind("HivelocityMachine"))),
+		).
+		Watches(
+			&source.Kind{Type: &infrav1.HivelocityCluster{}},
+			handler.EnqueueRequestsFromMapFunc(r.HivelocityClusterToHivelocityMachines(ctx)),
+		).
+		Build(r)
+	if err != nil {
+		return fmt.Errorf("error creating controller: %w", err)
+	}
+
+	clusterToObjectFunc, err := util.ClusterToObjectsMapper(r.Client, &infrav1.HivelocityMachineList{}, mgr.GetScheme())
+	if err != nil {
+		return fmt.Errorf("failed to create mapper for Cluster to HivelocityMachines: %w", err)
+	}
+
+	// Add a watch on clusterv1.Cluster object for unpause & ready notifications.
+	if err := c.Watch(
+		&source.Kind{Type: &clusterv1.Cluster{}},
+		handler.EnqueueRequestsFromMapFunc(clusterToObjectFunc),
+		predicates.ClusterUnpausedAndInfrastructureReady(log),
+	); err != nil {
+		return fmt.Errorf("failed adding a watch for ready clusters: %w", err)
+	}
+
+	return nil
+}
+
+// HivelocityClusterToHivelocityMachines is a handler.ToRequestsFunc to be used to enqeue requests for reconciliation
+// of HivelocityMachines.
+func (r *HivelocityMachineReconciler) HivelocityClusterToHivelocityMachines(ctx context.Context) handler.MapFunc {
+	return func(o client.Object) []ctrl.Request {
+		result := []ctrl.Request{}
+
+		log := log.FromContext(ctx)
+
+		c, ok := o.(*infrav1.HivelocityCluster)
+		if !ok {
+			log.Error(errors.Errorf("expected a HivelocityCluster but got a %T", o), "failed to get HivelocityMachine for HivelocityCluster")
+			return nil
+		}
+
+		log = log.WithValues("objectMapper", "hvClusterToHivelocityMachine", "namespace", c.Namespace, "hvCluster", c.Name)
+
+		// Don't handle deleted HivelocityCluster
+		if !c.ObjectMeta.DeletionTimestamp.IsZero() {
+			log.V(1).Info("HivelocityCluster has a deletion timestamp, skipping mapping.")
+			return nil
+		}
+
+		cluster, err := util.GetOwnerCluster(ctx, r.Client, c.ObjectMeta)
+		switch {
+		case apierrors.IsNotFound(err) || cluster == nil:
+			log.V(1).Info("Cluster for HivelocityCluster not found, skipping mapping.")
+			return result
+		case err != nil:
+			log.Error(err, "failed to get owning cluster, skipping mapping.")
+			return result
+		}
+
+		labels := map[string]string{clusterv1.ClusterLabelName: cluster.Name}
+		machineList := &clusterv1.MachineList{}
+		if err := r.List(ctx, machineList, client.InNamespace(c.Namespace), client.MatchingLabels(labels)); err != nil {
+			log.Error(err, "failed to list Machines, skipping mapping.")
+			return nil
+		}
+		for _, m := range machineList.Items {
+			log.WithValues("machine", m.Name)
+			if m.Spec.InfrastructureRef.GroupVersionKind().Kind != "HivelocityMachine" {
+				log.V(1).Info("Machine has an InfrastructureRef for a different type, will not add to reconciliation request.")
+				continue
+			}
+			if m.Spec.InfrastructureRef.Name == "" {
+				continue
+			}
+			name := client.ObjectKey{Namespace: m.Namespace, Name: m.Spec.InfrastructureRef.Name}
+			log.WithValues("hivelocityMachine", name.Name)
+			log.V(1).Info("Adding HivelocityMachine to reconciliation request.")
+			result = append(result, ctrl.Request{NamespacedName: name})
+		}
+
+		return result
+	}
 }
