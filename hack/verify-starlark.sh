@@ -81,5 +81,5 @@ IGNORE_FILES=$(find . -name "*.bazel" -o -name "*Tiltfile" | grep "third_party\|
 echo "Ignoring shellcheck on ${IGNORE_FILES}"
 FILES=$(find . -name "*.bazel" -o -name "*Tiltfile" -not -path "./tilt_modules/*" -not -path "*third_party*")
 while read -r file; do
-    "${BUILDIFIER}" -mode=${MODE} "$file" >> "${OUT}" 2>&1 
-done <<< "$FILES" 
+    "${BUILDIFIER}" -mode=${MODE} "$file" >> "${OUT}" 2>&1
+done <<< "$FILES"

@@ -1,10 +1,11 @@
 {
-  "dirs_to_skip" : [
+  "dirs_to_skip": [
     "tilt_modules",
     "hack/boilerplate/testdata/",
     "api/v1alpha1/zz_generated.deepcopy.go"
   ],
-  "not_generated_files_to_skip" : [
+  "not_generated_files_to_skip": [
     "hack/boilerplate/boilerplate.py"
-  ]
+  ],
+  "file_extensions_to_skip": []
 }

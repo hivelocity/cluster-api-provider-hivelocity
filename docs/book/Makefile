@@ -19,7 +19,7 @@ TOOLS_BIN_DIR := $(TOOLS_DIR)/bin
 BIN_DIR := bin
 MDBOOK_INSTALL := $(realpath ../../hack/ci-install-mdbook.sh)
 # API_DIRS to skip.
-API_DIRS := 
+API_DIRS :=
 API_SRCS := $(foreach dir, $(API_DIRS), $(call rwildcard,../../$(dir),*.go))
 GENERATED_SRCS := $(foreach dir, $(API_DIRS),../../$(dir)/zz_generated.deepcopy.go ../../$(dir)/zz_generated.conversion.go ../../$(dir)/zz_generated.defaults.go)
 API_FILTERED_SRCS := $(filter-out $(GENERATED_SRCS), $(API_SRCS))
@@ -51,7 +51,7 @@ $(EMOJITSU):
 	chmod +x $(TOOLS_BIN_DIR)/emojitsu
 
 GENCRDAPIREFERENCEDOCS := $(TOOLS_BIN_DIR)/gen-crd-docs
-$(GENCRDAPIREFERENCEDOCS): $(TOOLS_DIR)/go.mod 
+$(GENCRDAPIREFERENCEDOCS): $(TOOLS_DIR)/go.mod
 	cd $(TOOLS_DIR); go build -tags=tools -o $(BIN_DIR)/gen-crd-docs github.com/ahmetb/gen-crd-api-reference-docs
 
 src/crd:

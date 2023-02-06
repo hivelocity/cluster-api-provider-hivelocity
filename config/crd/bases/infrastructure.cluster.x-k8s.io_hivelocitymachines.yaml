@@ -9,13 +9,46 @@ metadata:
 spec:
   group: infrastructure.cluster.x-k8s.io
   names:
+    categories:
+    - cluster-api
     kind: HivelocityMachine
     listKind: HivelocityMachineList
     plural: hivelocitymachines
+    shortNames:
+    - capihcm
     singular: hivelocitymachine
   scope: Namespaced
   versions:
-  - name: v1alpha1
+  - additionalPrinterColumns:
+    - description: Cluster to which this HivelocityMachine belongs
+      jsonPath: .metadata.labels.cluster\.x-k8s\.io/cluster-name
+      name: Cluster
+      type: string
+    - description: Image name
+      jsonPath: .spec.imageName
+      name: Image
+      type: string
+    - description: Server type
+      jsonPath: .spec.type
+      name: Type
+      type: string
+    - description: Hivelocity instance state
+      jsonPath: .status.instanceState
+      name: State
+      type: string
+    - description: Machine ready status
+      jsonPath: .status.ready
+      name: Ready
+      type: string
+    - description: Hivelocity instance ID
+      jsonPath: .spec.providerID
+      name: InstanceID
+      type: string
+    - description: Machine object which owns with this HivelocityMachine
+      jsonPath: .metadata.ownerReferences[?(@.kind=="Machine")].name
+      name: Machine
+      type: string
+    name: v1alpha1
     schema:
       openAPIV3Schema:
         description: HivelocityMachine is the Schema for the hivelocitymachines API
@@ -35,13 +68,112 @@ spec:
           spec:
             description: HivelocityMachineSpec defines the desired state of HivelocityMachine
             properties:
-              foo:
-                description: Foo is an example field of HivelocityMachine. Edit hivelocitymachine_types.go
-                  to remove/update
+              imageName:
+                description: ImageName is the reference to the Machine Image from
+                  which to create the machine instance.
+                minLength: 1
                 type: string
+              providerID:
+                description: ProviderID is the unique identifier as specified by the
+                  cloud provider.
+                type: string
+              type:
+                description: Type is the Hivelocity Machine Type for this machine.
+                enum:
+                - todo question
+                type: string
+            required:
+            - imageName
+            - type
             type: object
           status:
             description: HivelocityMachineStatus defines the observed state of HivelocityMachine
+            properties:
+              addresses:
+                description: Addresses contains the server's associated addresses.
+                items:
+                  description: NodeAddress contains information for the node's address.
+                  properties:
+                    address:
+                      description: The node address.
+                      type: string
+                    type:
+                      description: Node address type, one of Hostname, ExternalIP
+                        or InternalIP.
+                      type: string
+                  required:
+                  - address
+                  - type
+                  type: object
+                type: array
+              conditions:
+                description: Conditions defines current service state of the HivelocityMachine.
+                items:
+                  description: Condition defines an observation of a Cluster API resource
+                    operational state.
+                  properties:
+                    lastTransitionTime:
+                      description: Last time the condition transitioned from one status
+                        to another. This should be when the underlying condition changed.
+                        If that is not known, then using the time when the API field
+                        changed is acceptable.
+                      format: date-time
+                      type: string
+                    message:
+                      description: A human readable message indicating details about
+                        the transition. This field may be empty.
+                      type: string
+                    reason:
+                      description: The reason for the condition's last transition
+                        in CamelCase. The specific API may choose whether or not this
+                        field is considered a guaranteed API. This field may not be
+                        empty.
+                      type: string
+                    severity:
+                      description: Severity provides an explicit classification of
+                        Reason code, so the users or machines can immediately understand
+                        the current situation and act accordingly. The Severity field
+                        MUST be set only when Status=False.
+                      type: string
+                    status:
+                      description: Status of the condition, one of True, False, Unknown.
+                      type: string
+                    type:
+                      description: Type of condition in CamelCase or in foo.example.com/CamelCase.
+                        Many .condition.type values are consistent across resources
+                        like Available, but because arbitrary conditions can be useful
+                        (see .node.status.conditions), the ability to deconflict is
+                        important.
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - status
+                  - type
+                  type: object
+                type: array
+              failureMessage:
+                description: FailureMessage will be set in the event that there is
+                  a terminal problem reconciling the Machine and will contain a more
+                  verbose string suitable for logging and human consumption.
+                type: string
+              failureReason:
+                description: FailureReason will be set in the event that there is
+                  a terminal problem reconciling the Machine and will contain a succinct
+                  value suitable for machine interpretation.
+                type: string
+              instanceState:
+                description: InstanceState is the state of the server for this machine.
+                type: string
+              ready:
+                description: Ready is true when the provider resource is ready.
+                type: boolean
+              region:
+                description: Region contains the name of the Hivelocity location the
+                  server is running.
+                enum:
+                - TODO1
+                - TODO2
+                type: string
             type: object
         type: object
     served: true

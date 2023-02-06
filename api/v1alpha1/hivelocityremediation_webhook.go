@@ -14,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-
 package v1alpha1
 
 import (
@@ -32,8 +31,6 @@ func (r *HivelocityRemediation) SetupWebhookWithManager(mgr ctrl.Manager) error 
 		For(r).
 		Complete()
 }
-
-// TODO(user): EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 
 //+kubebuilder:webhook:path=/mutate-infrastructure-cluster-x-k8s-io-v1alpha1-hivelocityremediation,mutating=true,failurePolicy=fail,sideEffects=None,groups=infrastructure.cluster.x-k8s.io,resources=hivelocityremediations,verbs=create;update,versions=v1alpha1,name=mhivelocityremediation.kb.io,admissionReviewVersions=v1
 

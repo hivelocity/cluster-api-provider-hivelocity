@@ -1,0 +1,39 @@
+/*
+Copyright 2022 The Kubernetes Authors.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
+package secretutil
+
+import (
+	"fmt"
+)
+
+// ResolveSecretRefError is returned when the  secret
+// for a host is defined but cannot be found.
+type ResolveSecretRefError struct {
+	Message string
+}
+
+func (e ResolveSecretRefError) Error() string {
+	return fmt.Sprintf("Secret doesn't exist %s",
+		e.Message)
+}
+
+// HivelocityApiKeyValidationError is returned when the secret is invalid.
+type HivelocityApiKeyValidationError struct{}
+
+func (e HivelocityApiKeyValidationError) Error() string {
+	return "Hivelocity Api-Key is invalid"
+}

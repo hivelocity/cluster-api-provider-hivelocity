@@ -13,7 +13,7 @@ Read the following guide if you're interested in contributing to cluster-api-pro
 
 ## Finding Things That Need Help
 
-If you're new to the project and want to help, but don't know where to start, we have a semi-curated list of issues that should not need deep knowledge of the system. [Have a look and see if anything sounds interesting](https://github.com/hivelocity/cluster-api-provider-hivelocity/issues?q=is%3Aopen+is%3Aissue+label%3A%22good+first+issue%22). 
+If you're new to the project and want to help, but don't know where to start, we have a semi-curated list of issues that should not need deep knowledge of the system. [Have a look and see if anything sounds interesting](https://github.com/hivelocity/cluster-api-provider-hivelocity/issues?q=is%3Aopen+is%3Aissue+label%3A%22good+first+issue%22).
 Before starting to work on the issue, make sure that it doesn't have a [lifecycle/active](https://github.com/hivelocity/cluster-api-provider-hivelocity/labels/lifecycle%2Factive) label. If the issue has been assigned, reach out to the assignee.
 Alternatively, read some of the docs on other controllers and try to write your own, file and fix any/all issues that come up, including gaps in documentation!
 
@@ -67,4 +67,4 @@ this should generally not be the case.
 
 All changes must be code reviewed. Coding conventions and standards are explained in the official [developer docs](https://github.com/kubernetes/community/tree/master/contributors/devel). Expect reviewers to request that you avoid common [go style mistakes](https://github.com/golang/go/wiki/CodeReviewComments) in your PRs.
 
-In case you want to run our E2E tests locally, please refer to [Testing](docs/developers/development.md#submitting-prs-and-testing) guide. 
+In case you want to run our E2E tests locally, please refer to [Testing](docs/developers/development.md#submitting-prs-and-testing) guide.
