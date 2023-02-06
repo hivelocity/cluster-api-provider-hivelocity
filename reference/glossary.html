@@ -310,6 +310,8 @@ IPAM provider’s interaction with Cluster API is based on the <code>IPAddressCl
 <p>See also: <a href="#server">Server</a></p>
 <h3 id="manage-a-cluster"><a class="header" href="#manage-a-cluster">Manage a cluster</a></h3>
 <p>Perform create, scale, upgrade, or destroy operations on the cluster.</p>
+<h3 id="managed-topology"><a class="header" href="#managed-topology">Managed Topology</a></h3>
+<p>See <a href="#Topology">Topology</a></p>
 <h3 id="management-cluster"><a class="header" href="#management-cluster">Management cluster</a></h3>
 <p>The cluster where one or more Infrastructure Providers run, and where resources (e.g. Machines) are stored. Typically referred to when you are provisioning multiple workload clusters.</p>
 <h3 id="multi-tenancy"><a class="header" href="#multi-tenancy">Multi-tenancy</a></h3>
@@ -374,7 +376,8 @@ is running as a static pod.</p>
 <h1 id="t"><a class="header" href="#t">T</a></h1>
 <hr />
 <h3 id="topology"><a class="header" href="#topology">Topology</a></h3>
-<p>A field in the Cluster object spec that allows defining and managing the shape of the Cluster’s control plane and worker machines from a single point of control. The Cluster’s topology is based on a <a href="#clusterclass">ClusterClass</a>.</p>
+<p>A field in the Cluster object spec that allows defining and managing the shape of the Cluster’s control plane and worker machines from a single point of control. The Cluster’s topology is based on a <a href="#clusterclass">ClusterClass</a>.
+Sometimes it is also referred as a managed topology.</p>
 <p>See <a href="#clusterclass">ClusterClass</a></p>
 <h3 id="topology-mutation-hook"><a class="header" href="#topology-mutation-hook">Topology Mutation Hook</a></h3>
 <p>A <a href="#runtime-hook">Runtime Hook</a> that allows external components to generate <a href="#patch">patches</a> for customizing Kubernetes objects that are part of a <a href="#topology">Cluster topology</a>.</p>

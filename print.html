@@ -156,7 +156,7 @@
 <p>The Hivelocity Provider is a Kubernetes-native tool that allows you to easily create and manage declarative infrastructure for your Kubernetes clusters on Hivelocity’s infrastructure. It offers options for high availability on instant bare metal or custom dedicated setups and simplifies the process of creating, updating, and operating production-ready clusters.</p>
 <p>You can find more information about Hivelocity and their infrastructure at https://www.hivelocity.net/.</p>
 <blockquote>
-<p>If you have questions or are interested in running production-ready Kubernetes clusters on Hivelocity, then please contact us via e-mail: <a href="mailto:info@syself.com?subject=cluster-api-provider-hivelocity">info@syself.com</a>.</p>
+<p>If you have questions or are interested in running production-ready Kubernetes clusters on Hivelocity, then please contact us <a href="https://www.hivelocity.net/about/contact-us/">Contact Hivelocity</a></p>
 </blockquote>
 <h2 id="-what-is-the-cluster-api-provider-hivelocity"><a class="header" href="#-what-is-the-cluster-api-provider-hivelocity">📰 What is the Cluster API Provider Hivelocity?</a></h2>
 <p>The Cluster API is an operator that manages infrastructure in a similar way to how Kubernetes manages containers. It uses a declarative API and includes controllers that ensure the desired state of the infrastructure is maintained. This approach, called Infrastructure as Software, allows for more automatic reactions to changes and problems compared to Infrastructure as Code solutions.</p>
@@ -1063,6 +1063,8 @@ IPAM provider’s interaction with Cluster API is based on the <code>IPAddressCl
 <p>See also: <a href="reference/glossary.html#server">Server</a></p>
 <h3 id="manage-a-cluster"><a class="header" href="#manage-a-cluster">Manage a cluster</a></h3>
 <p>Perform create, scale, upgrade, or destroy operations on the cluster.</p>
+<h3 id="managed-topology"><a class="header" href="#managed-topology">Managed Topology</a></h3>
+<p>See <a href="reference/glossary.html#Topology">Topology</a></p>
 <h3 id="management-cluster"><a class="header" href="#management-cluster">Management cluster</a></h3>
 <p>The cluster where one or more Infrastructure Providers run, and where resources (e.g. Machines) are stored. Typically referred to when you are provisioning multiple workload clusters.</p>
 <h3 id="multi-tenancy"><a class="header" href="#multi-tenancy">Multi-tenancy</a></h3>
@@ -1127,7 +1129,8 @@ is running as a static pod.</p>
 <h1 id="t"><a class="header" href="#t">T</a></h1>
 <hr />
 <h3 id="topology"><a class="header" href="#topology">Topology</a></h3>
-<p>A field in the Cluster object spec that allows defining and managing the shape of the Cluster’s control plane and worker machines from a single point of control. The Cluster’s topology is based on a <a href="reference/glossary.html#clusterclass">ClusterClass</a>.</p>
+<p>A field in the Cluster object spec that allows defining and managing the shape of the Cluster’s control plane and worker machines from a single point of control. The Cluster’s topology is based on a <a href="reference/glossary.html#clusterclass">ClusterClass</a>.
+Sometimes it is also referred as a managed topology.</p>
 <p>See <a href="reference/glossary.html#clusterclass">ClusterClass</a></p>
 <h3 id="topology-mutation-hook"><a class="header" href="#topology-mutation-hook">Topology Mutation Hook</a></h3>
 <p>A <a href="reference/glossary.html#runtime-hook">Runtime Hook</a> that allows external components to generate <a href="reference/glossary.html#patch">patches</a> for customizing Kubernetes objects that are part of a <a href="reference/glossary.html#topology">Cluster topology</a>.</p>
@@ -1165,7 +1168,7 @@ is running as a static pod.</p>
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 <p>Read the following guide if you’re interested in contributing to cluster-api-provider-hivelocity.</p>
 <h2 id="finding-things-that-need-help"><a class="header" href="#finding-things-that-need-help">Finding Things That Need Help</a></h2>
-<p>If you’re new to the project and want to help, but don’t know where to start, we have a semi-curated list of issues that should not need deep knowledge of the system. <a href="https://github.com/hivelocity/cluster-api-provider-hivelocity/issues?q=is%3Aopen+is%3Aissue+label%3A%22good+first+issue%22">Have a look and see if anything sounds interesting</a>. 
+<p>If you’re new to the project and want to help, but don’t know where to start, we have a semi-curated list of issues that should not need deep knowledge of the system. <a href="https://github.com/hivelocity/cluster-api-provider-hivelocity/issues?q=is%3Aopen+is%3Aissue+label%3A%22good+first+issue%22">Have a look and see if anything sounds interesting</a>.
 Before starting to work on the issue, make sure that it doesn’t have a <a href="https://github.com/hivelocity/cluster-api-provider-hivelocity/labels/lifecycle%2Factive">lifecycle/active</a> label. If the issue has been assigned, reach out to the assignee.
 Alternatively, read some of the docs on other controllers and try to write your own, file and fix any/all issues that come up, including gaps in documentation!</p>
 <p>If you’re a more experienced contributor, looking at unassigned issues in the next release milestone is a good way to find work that has been prioritized. For example, if the latest minor release is <code>v1.0</code>, the next release milestone is <code>v1.1</code>.</p>
@@ -1225,12 +1228,12 @@ this should generally not be the case.</p>
 </li>
 </ol>
 <p>All changes must be code reviewed. Coding conventions and standards are explained in the official <a href="https://github.com/kubernetes/community/tree/master/contributors/devel">developer docs</a>. Expect reviewers to request that you avoid common <a href="https://github.com/golang/go/wiki/CodeReviewComments">go style mistakes</a> in your PRs.</p>
-<p>In case you want to run our E2E tests locally, please refer to <a href="reference/docs/developers/development.html#submitting-prs-and-testing">Testing</a> guide. </p>
+<p>In case you want to run our E2E tests locally, please refer to <a href="reference/docs/developers/development.html#submitting-prs-and-testing">Testing</a> guide.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="version-support-1"><a class="header" href="#version-support-1">Version Support</a></h1>
 <h2 id="release-versioning"><a class="header" href="#release-versioning">Release Versioning</a></h2>
 <p>CAPHV follows the <a href="https://semver.org/#semantic-versioning-200">semantic versionining</a> specification:</p>
-<p>MAJOR version release for incompatible API changes, 
-MINOR version release for backwards compatible feature additions, 
+<p>MAJOR version release for incompatible API changes,
+MINOR version release for backwards compatible feature additions,
 and PATCH version release for only bug fixes.</p>
 <p><strong>Example versions:</strong></p>
 <ul>
