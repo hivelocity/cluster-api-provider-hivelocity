@@ -36,7 +36,7 @@ func (r *HivelocityCluster) SetupWebhookWithManager(mgr ctrl.Manager) error {
 
 var _ webhook.Defaulter = &HivelocityCluster{}
 
-// Default implements webhook.Defaulter so a webhook will be registered for the type
+// Default implements webhook.Defaulter so a webhook will be registered for the type.
 func (r *HivelocityCluster) Default() {
 	hivelocityclusterlog.Info("default", "name", r.Name)
 
@@ -48,7 +48,7 @@ func (r *HivelocityCluster) Default() {
 
 var _ webhook.Validator = &HivelocityCluster{}
 
-// ValidateCreate implements webhook.Validator so a webhook will be registered for the type
+// ValidateCreate implements webhook.Validator so a webhook will be registered for the type.
 func (r *HivelocityCluster) ValidateCreate() error {
 	hivelocityclusterlog.Info("validate create", "name", r.Name)
 
@@ -56,7 +56,7 @@ func (r *HivelocityCluster) ValidateCreate() error {
 	return nil
 }
 
-// ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
+// ValidateUpdate implements webhook.Validator so a webhook will be registered for the type.
 func (r *HivelocityCluster) ValidateUpdate(old runtime.Object) error {
 	hivelocityclusterlog.Info("validate update", "name", r.Name)
 
@@ -64,7 +64,7 @@ func (r *HivelocityCluster) ValidateUpdate(old runtime.Object) error {
 	return nil
 }
 
-// ValidateDelete implements webhook.Validator so a webhook will be registered for the type
+// ValidateDelete implements webhook.Validator so a webhook will be registered for the type.
 func (r *HivelocityCluster) ValidateDelete() error {
 	hivelocityclusterlog.Info("validate delete", "name", r.Name)
 

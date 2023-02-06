@@ -29,6 +29,7 @@ docs/book/book
 *.swo
 .DS_Store
 .pre-commit-config.yaml
+.envrc
 
 # Tilt files.
 .tiltbuild

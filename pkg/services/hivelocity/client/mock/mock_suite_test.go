@@ -14,26 +14,16 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package secretutil
+package mock_test
 
 import (
-	"fmt"
+	"testing"
+
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
 )
 
-// ResolveSecretRefError is returned when the  secret
-// for a host is defined but cannot be found.
-type ResolveSecretRefError struct {
-	Message string
-}
-
-func (e ResolveSecretRefError) Error() string {
-	return fmt.Sprintf("Secret doesn't exist %s",
-		e.Message)
-}
-
-// HivelocityAPIKeyValidationError is returned when the secret is invalid.
-type HivelocityAPIKeyValidationError struct{}
-
-func (e HivelocityAPIKeyValidationError) Error() string {
-	return "Hivelocity API-Key is invalid"
+func TestMock(t *testing.T) {
+	RegisterFailHandler(Fail)
+	RunSpecs(t, "Mock Suite")
 }

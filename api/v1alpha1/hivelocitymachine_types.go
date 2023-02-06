@@ -31,7 +31,7 @@ const (
 	MachineFinalizer = "hivelocitymachine.infrastructure.cluster.x-k8s.io"
 )
 
-// HivelocityMachineSpec defines the desired state of HivelocityMachine
+// HivelocityMachineSpec defines the desired state of HivelocityMachine.
 type HivelocityMachineSpec struct {
 	// Important: Run "make" to regenerate code after modifying this file
 
@@ -40,7 +40,7 @@ type HivelocityMachineSpec struct {
 	ProviderID *string `json:"providerID,omitempty"`
 
 	// Type is the Hivelocity Machine Type for this machine.
-	// +kubebuilder:validation:Enum=todo question
+	// +kubebuilder:validation:Enum=hvCustom;todo-question
 	Type HivelocityMachineType `json:"type"`
 
 	// ImageName is the reference to the Machine Image from which to create the machine instance.
@@ -48,7 +48,7 @@ type HivelocityMachineSpec struct {
 	ImageName string `json:"imageName"`
 }
 
-// HivelocityMachineStatus defines the observed state of HivelocityMachine
+// HivelocityMachineStatus defines the observed state of HivelocityMachine.
 type HivelocityMachineStatus struct {
 	// Important: Run "make" to regenerate code after modifying this file
 
@@ -95,7 +95,7 @@ type HivelocityMachineStatus struct {
 // +kubebuilder:printcolumn:name="Machine",type="string",JSONPath=".metadata.ownerReferences[?(@.kind==\"Machine\")].name",description="Machine object which owns with this HivelocityMachine"
 // +k8s:defaulter-gen=true
 
-// HivelocityMachine is the Schema for the hivelocitymachines API
+// HivelocityMachine is the Schema for the hivelocitymachines API.
 type HivelocityMachine struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -121,7 +121,7 @@ func (r *HivelocityMachine) SetConditions(conditions clusterv1.Conditions) {
 
 //+kubebuilder:object:root=true
 
-// HivelocityMachineList contains a list of HivelocityMachine
+// HivelocityMachineList contains a list of HivelocityMachine.
 type HivelocityMachineList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`

@@ -36,7 +36,7 @@ func (r *HivelocityMachineTemplate) SetupWebhookWithManager(mgr ctrl.Manager) er
 
 var _ webhook.Defaulter = &HivelocityMachineTemplate{}
 
-// Default implements webhook.Defaulter so a webhook will be registered for the type
+// Default implements webhook.Defaulter so a webhook will be registered for the type.
 func (r *HivelocityMachineTemplate) Default() {
 	hivelocitymachinetemplatelog.Info("default", "name", r.Name)
 
@@ -48,7 +48,7 @@ func (r *HivelocityMachineTemplate) Default() {
 
 var _ webhook.Validator = &HivelocityMachineTemplate{}
 
-// ValidateCreate implements webhook.Validator so a webhook will be registered for the type
+// ValidateCreate implements webhook.Validator so a webhook will be registered for the type.
 func (r *HivelocityMachineTemplate) ValidateCreate() error {
 	hivelocitymachinetemplatelog.Info("validate create", "name", r.Name)
 
@@ -56,7 +56,7 @@ func (r *HivelocityMachineTemplate) ValidateCreate() error {
 	return nil
 }
 
-// ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
+// ValidateUpdate implements webhook.Validator so a webhook will be registered for the type.
 func (r *HivelocityMachineTemplate) ValidateUpdate(old runtime.Object) error {
 	hivelocitymachinetemplatelog.Info("validate update", "name", r.Name)
 
@@ -64,7 +64,7 @@ func (r *HivelocityMachineTemplate) ValidateUpdate(old runtime.Object) error {
 	return nil
 }
 
-// ValidateDelete implements webhook.Validator so a webhook will be registered for the type
+// ValidateDelete implements webhook.Validator so a webhook will be registered for the type.
 func (r *HivelocityMachineTemplate) ValidateDelete() error {
 	hivelocitymachinetemplatelog.Info("validate delete", "name", r.Name)
 

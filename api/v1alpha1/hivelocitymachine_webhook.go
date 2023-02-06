@@ -36,7 +36,7 @@ func (r *HivelocityMachine) SetupWebhookWithManager(mgr ctrl.Manager) error {
 
 var _ webhook.Defaulter = &HivelocityMachine{}
 
-// Default implements webhook.Defaulter so a webhook will be registered for the type
+// Default implements webhook.Defaulter so a webhook will be registered for the type.
 func (r *HivelocityMachine) Default() {
 	hivelocitymachinelog.Info("default", "name", r.Name)
 
@@ -48,7 +48,7 @@ func (r *HivelocityMachine) Default() {
 
 var _ webhook.Validator = &HivelocityMachine{}
 
-// ValidateCreate implements webhook.Validator so a webhook will be registered for the type
+// ValidateCreate implements webhook.Validator so a webhook will be registered for the type.
 func (r *HivelocityMachine) ValidateCreate() error {
 	hivelocitymachinelog.Info("validate create", "name", r.Name)
 
@@ -56,7 +56,7 @@ func (r *HivelocityMachine) ValidateCreate() error {
 	return nil
 }
 
-// ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
+// ValidateUpdate implements webhook.Validator so a webhook will be registered for the type.
 func (r *HivelocityMachine) ValidateUpdate(old runtime.Object) error {
 	hivelocitymachinelog.Info("validate update", "name", r.Name)
 
@@ -64,7 +64,7 @@ func (r *HivelocityMachine) ValidateUpdate(old runtime.Object) error {
 	return nil
 }
 
-// ValidateDelete implements webhook.Validator so a webhook will be registered for the type
+// ValidateDelete implements webhook.Validator so a webhook will be registered for the type.
 func (r *HivelocityMachine) ValidateDelete() error {
 	hivelocitymachinelog.Info("validate delete", "name", r.Name)
 

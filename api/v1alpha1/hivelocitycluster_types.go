@@ -28,7 +28,7 @@ const (
 	ClusterFinalizer = "hivelocitycluster.infrastructure.cluster.x-k8s.io"
 )
 
-// HivelocityClusterSpec defines the desired state of HivelocityCluster
+// HivelocityClusterSpec defines the desired state of HivelocityCluster.
 type HivelocityClusterSpec struct {
 	// Important: Run "make generate" to regenerate code after modifying this file
 
@@ -43,7 +43,7 @@ type HivelocityClusterSpec struct {
 	SSHKey *SSHKey `json:"sshKey"`
 }
 
-// HivelocityClusterStatus defines the observed state of HivelocityCluster
+// HivelocityClusterStatus defines the observed state of HivelocityCluster.
 type HivelocityClusterStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
@@ -54,7 +54,7 @@ type HivelocityClusterStatus struct {
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 
-// HivelocityCluster is the Schema for the hivelocityclusters API
+// HivelocityCluster is the Schema for the hivelocityclusters API.
 type HivelocityCluster struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -65,7 +65,7 @@ type HivelocityCluster struct {
 
 //+kubebuilder:object:root=true
 
-// HivelocityClusterList contains a list of HivelocityCluster
+// HivelocityClusterList contains a list of HivelocityCluster.
 type HivelocityClusterList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`

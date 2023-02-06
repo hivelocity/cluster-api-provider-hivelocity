@@ -20,16 +20,19 @@ import (
 	"context"
 
 	infrastructurev1alpha1 "github.com/hivelocity/cluster-api-provider-hivelocity/api/v1alpha1"
-	"k8s.io/apimachinery/pkg/runtime"
+	hvclient "github.com/hivelocity/cluster-api-provider-hivelocity/pkg/services/hivelocity/client"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 )
 
-// HivelocityMachineTemplateReconciler reconciles a HivelocityMachineTemplate object
+// HivelocityMachineTemplateReconciler reconciles a HivelocityMachineTemplate object.
 type HivelocityMachineTemplateReconciler struct {
 	client.Client
-	Scheme *runtime.Scheme
+	APIReader        client.Reader
+	HVClientFactory  hvclient.Factory
+	WatchFilterValue string
 }
 
 //+kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=hivelocitymachinetemplates,verbs=get;list;watch;create;update;patch;delete
@@ -54,7 +57,7 @@ func (r *HivelocityMachineTemplateReconciler) Reconcile(ctx context.Context, req
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *HivelocityMachineTemplateReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *HivelocityMachineTemplateReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager, options controller.Options) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&infrastructurev1alpha1.HivelocityMachineTemplate{}).
 		Complete(r)

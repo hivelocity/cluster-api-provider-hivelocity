@@ -18,7 +18,7 @@ spec:
   - name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: HivelocityCluster is the Schema for the hivelocityclusters API
+        description: HivelocityCluster is the Schema for the hivelocityclusters API.
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
@@ -33,7 +33,7 @@ spec:
           metadata:
             type: object
           spec:
-            description: HivelocityClusterSpec defines the desired state of HivelocityCluster
+            description: HivelocityClusterSpec defines the desired state of HivelocityCluster.
             properties:
               controlPlaneEndpoint:
                 description: ControlPlaneEndpoint represents the endpoint used to
@@ -80,7 +80,7 @@ spec:
             - sshKey
             type: object
           status:
-            description: HivelocityClusterStatus defines the observed state of HivelocityCluster
+            description: HivelocityClusterStatus defines the observed state of HivelocityCluster.
             properties:
               conditions:
                 description: Conditions provide observations of the operational state

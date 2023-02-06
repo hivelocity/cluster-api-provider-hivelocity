@@ -14,14 +14,19 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// Package main provides the executable to run the cluster-api-provider-hivelocity.
 package main
 
 import (
+	"context"
 	"flag"
+	"fmt"
 	"os"
 
 	infrastructurev1alpha1 "github.com/hivelocity/cluster-api-provider-hivelocity/api/v1alpha1"
 	"github.com/hivelocity/cluster-api-provider-hivelocity/controllers"
+	"github.com/hivelocity/cluster-api-provider-hivelocity/pkg/hvutils"
+	hvclient "github.com/hivelocity/cluster-api-provider-hivelocity/pkg/services/hivelocity/client"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -46,7 +51,57 @@ func init() {
 	//+kubebuilder:scaffold:scheme
 }
 
+func cliTestListServers(ctx context.Context, client hvclient.Client) {
+	allServers, err := client.ListServers(ctx)
+	if err != nil {
+		panic(err.Error())
+	}
+	server, err := hvutils.FindServerByTags("cn=foo", "mn=bar", allServers)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Printf("server: %+v\n", server)
+}
+
+func cliTestListImages(ctx context.Context, client hvclient.Client) {
+	images, err := client.ListImages(ctx, 504)
+	if err != nil {
+		panic(err)
+	}
+	for _, image := range images {
+		fmt.Println(image)
+	}
+}
+
+func cliTestListSSHKeys(ctx context.Context, client hvclient.Client) {
+	keys, err := client.ListSSHKeys(ctx)
+	if err != nil {
+		panic(err)
+	}
+	for _, sshKey := range keys {
+		fmt.Println(sshKey)
+	}
+}
+
+func manualTests() {
+	factory := hvclient.HivelocityFactory{}
+	client := factory.NewClient(os.Getenv("HIVELOCITY_API_KEY"))
+	ctx := context.Background()
+	switch arg := os.Args[1]; arg {
+	case "ListServers":
+		cliTestListServers(ctx, client)
+	case "ListSSHKeys":
+		cliTestListSSHKeys(ctx, client)
+	case "ListImages":
+		cliTestListImages(ctx, client)
+	default:
+		panic(fmt.Sprintf("unknown argument %q", arg))
+	}
+	os.Exit(0)
+}
+
 func main() {
+	manualTests()
 	var metricsAddr string
 	var enableLeaderElection bool
 	var probeAddr string
@@ -105,15 +160,14 @@ func main() {
 	}
 	if err = (&controllers.HivelocityMachineReconciler{
 		Client: mgr.GetClient(),
-		//todo Scheme: mgr.GetScheme(),
+		// todo Scheme: mgr.GetScheme(),
 	}).SetupWithManager(ctx, mgr, controller.Options{}); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "HivelocityMachine")
 		os.Exit(1)
 	}
 	if err = (&controllers.HivelocityMachineTemplateReconciler{
 		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
+	}).SetupWithManager(ctx, mgr, controller.Options{}); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "HivelocityMachineTemplate")
 		os.Exit(1)
 	}
