@@ -107,7 +107,7 @@ func (r *HivelocityMachineReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		Name:      cluster.Spec.InfrastructureRef.Name,
 	}
 	if err := r.Client.Get(ctx, hvClusterName, hvCluster); err != nil {
-		log.Info("HivelocityCluster is not available yet: %s", err)
+		log.Info("HivelocityCluster is not available yet: %s", err.Error())
 		return reconcile.Result{}, nil
 	}
 
@@ -116,7 +116,7 @@ func (r *HivelocityMachineReconciler) Reconcile(ctx context.Context, req ctrl.Re
 
 	// Create the scope.
 	secretManager := secretutil.NewSecretManager(log, r.Client, r.APIReader)
-	hvAPIKey, hvSecret, err := getAndValidateHivelocityToken(ctx, req.Namespace, hvCluster, secretManager)
+	hvAPIKey, hvSecret, err := getAndValidateHivelocityAPIKey(ctx, req.Namespace, hvCluster, secretManager)
 	if err != nil {
 		return hvAPIKeyErrorResult(ctx, err, hivelocityMachine, infrav1.InstanceReadyCondition, r.Client)
 	}

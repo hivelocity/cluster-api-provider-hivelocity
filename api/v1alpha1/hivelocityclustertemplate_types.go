@@ -20,7 +20,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// HivelocityClusterTemplateSpec defines the desired state of HivelocityClusterTemplate
+// HivelocityClusterTemplateSpec defines the desired state of HivelocityClusterTemplate.
 type HivelocityClusterTemplateSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
@@ -29,7 +29,7 @@ type HivelocityClusterTemplateSpec struct {
 	Foo string `json:"foo,omitempty"`
 }
 
-// HivelocityClusterTemplateStatus defines the observed state of HivelocityClusterTemplate
+// HivelocityClusterTemplateStatus defines the observed state of HivelocityClusterTemplate.
 type HivelocityClusterTemplateStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
@@ -38,7 +38,7 @@ type HivelocityClusterTemplateStatus struct {
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 
-// HivelocityClusterTemplate is the Schema for the hivelocityclustertemplates API
+// HivelocityClusterTemplate is the Schema for the hivelocityclustertemplates API.
 type HivelocityClusterTemplate struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -49,7 +49,7 @@ type HivelocityClusterTemplate struct {
 
 //+kubebuilder:object:root=true
 
-// HivelocityClusterTemplateList contains a list of HivelocityClusterTemplate
+// HivelocityClusterTemplateList contains a list of HivelocityClusterTemplate.
 type HivelocityClusterTemplateList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`

@@ -125,13 +125,6 @@ func (s *ClusterScope) PatchObject(ctx context.Context) error {
 }
 
 /*
-// GetSpecRegion returns a region.
-func (s *ClusterScope) GetSpecRegion() []infrav1.Region {
-	return s.HivelocityCluster.Spec.ControlPlaneRegions
-}
-*/
-
-/*
 // SetStatusFailureDomain sets the region for the status.
 func (s *ClusterScope) SetStatusFailureDomain(regions []infrav1.Region) {
 	s.HivelocityCluster.Status.FailureDomains = make(clusterv1.FailureDomains)
@@ -140,17 +133,10 @@ func (s *ClusterScope) SetStatusFailureDomain(regions []infrav1.Region) {
 			ControlPlane: true,
 		}
 	}
-}
+}.
 */
 
-/*
-// ControlPlaneAPIEndpointPort returns the Port of the Kube-api server.
-func (s *ClusterScope) ControlPlaneAPIEndpointPort() int32 {
-	return int32(s.HivelocityCluster.Spec.ControlPlaneLoadBalancer.Port)
-}
-*/
-
-// ClientConfig return a kubernetes client config for the cluster context.
+// ClientConfig return a kusecretbernetes client config for the cluster context.
 func (s *ClusterScope) ClientConfig(ctx context.Context) (clientcmd.ClientConfig, error) {
 	var cluster = client.ObjectKey{
 		Name:      fmt.Sprintf("%s-%s", s.Cluster.Name, secret.Kubeconfig),

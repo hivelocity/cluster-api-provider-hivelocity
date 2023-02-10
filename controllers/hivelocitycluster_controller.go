@@ -14,6 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// Package controllers provides the controllers for CAPHV.
 package controllers
 
 import (
@@ -56,7 +57,7 @@ const (
 	rateLimitWaitTime     = 5 * time.Minute
 )
 
-// HivelocityClusterReconciler reconciles a HivelocityCluster object
+// HivelocityClusterReconciler reconciles a HivelocityCluster object.
 type HivelocityClusterReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
@@ -120,7 +121,7 @@ func (r *HivelocityClusterReconciler) Reconcile(ctx context.Context, req ctrl.Re
 
 	// Create the scope.
 	secretManager := secretutil.NewSecretManager(log, r.Client, r.APIReader)
-	apiKey, hvSecret, err := getAndValidateHivelocityToken(ctx, req.Namespace, hvCluster, secretManager)
+	apiKey, hvSecret, err := getAndValidateHivelocityAPIKey(ctx, req.Namespace, hvCluster, secretManager)
 	if err != nil {
 		return hvAPIKeyErrorResult(ctx, err, hvCluster, infrav1.HivelocityClusterReady, r.Client)
 	}
@@ -156,8 +157,7 @@ func (r *HivelocityClusterReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		return r.reconcileDelete(ctx, clusterScope)
 	}
 
-	// ............... the end
-	return ctrl.Result{}, nil
+	return r.reconcileNormal(ctx, clusterScope)
 }
 
 func (r *HivelocityClusterReconciler) reconcileNormal(ctx context.Context, clusterScope *scope.ClusterScope) (ctrl.Result, error) {
@@ -175,47 +175,6 @@ func (r *HivelocityClusterReconciler) reconcileNormal(ctx context.Context, clust
 	/* question clusterScope.SetStatusFailureDomain
 	// set failure domains in status using information in spec
 	clusterScope.SetStatusFailureDomain(clusterScope.GetSpecRegion())
-	*/
-
-	/* question network.NewService
-	// reconcile the network
-	*/
-
-	/*
-		// reconcile the load balancers
-		if err := loadbalancer.NewService(clusterScope).Reconcile(ctx); err != nil {
-			conditions.MarkFalse(hvCluster, infrav1.LoadBalancerAttached, infrav1.LoadBalancerUnreachableReason, clusterv1.ConditionSeverityError, err.Error())
-			return reconcile.Result{}, fmt.Errorf("failed to reconcile load balancers for HivelocityCluster %s/%s: %w", hvCluster.Namespace, hvCluster.Name, err)
-		}
-		conditions.MarkTrue(hvCluster, infrav1.LoadBalancerAttached)
-	*/
-
-
-	/*
-		if hvCluster.Spec.ControlPlaneLoadBalancer.Enabled {
-			if hvCluster.Status.ControlPlaneLoadBalancer.IPv4 != "<nil>" {
-				var defaultHost = hvCluster.Status.ControlPlaneLoadBalancer.IPv4
-				var defaultPort = int32(hvCluster.Spec.ControlPlaneLoadBalancer.Port)
-
-				if hvCluster.Spec.ControlPlaneEndpoint == nil {
-					hvCluster.Spec.ControlPlaneEndpoint = &clusterv1.APIEndpoint{
-						Host: defaultHost,
-						Port: defaultPort,
-					}
-				} else {
-					if hvCluster.Spec.ControlPlaneEndpoint.Host == "" {
-						hvCluster.Spec.ControlPlaneEndpoint.Host = defaultHost
-					}
-					if hvCluster.Spec.ControlPlaneEndpoint.Port == 0 {
-						hvCluster.Spec.ControlPlaneEndpoint.Port = defaultPort
-					}
-				}
-
-				hvCluster.Status.Ready = true
-			}
-		} else if hvCluster.Spec.ControlPlaneEndpoint != nil {
-			hvCluster.Status.Ready = true
-		}
 	*/
 
 	if err := r.reconcileTargetClusterManager(ctx, clusterScope); err != nil {
@@ -264,21 +223,6 @@ func (r *HivelocityClusterReconciler) reconcileDelete(ctx context.Context, clust
 	}
 
 	/* todo, later.
-
-	// delete load balancers
-	if err := loadbalancer.NewService(clusterScope).Delete(ctx); err != nil {
-		return reconcile.Result{}, fmt.Errorf("failed to delete load balancers for HivelocityCluster %s/%s: %w", hvCluster.Namespace, hvCluster.Name, err)
-	}
-	*/
-
-	/* todo, later.
-	// delete the network
-	if err := network.NewService(clusterScope).Delete(ctx); err != nil {
-		return reconcile.Result{}, fmt.Errorf("failed to delete network for HivelocityCluster %s/%s: %w", hvCluster.Namespace, hvCluster.Name, err)
-	}
-	*/
-
-	/* todo, later.
 	// Stop CSR manager
 	r.targetClusterManagersLock.Lock()
 	defer r.targetClusterManagersLock.Unlock()
@@ -322,7 +266,7 @@ func reconcileRateLimit(setter conditions.Setter) bool {
 	return false
 }
 
-func getAndValidateHivelocityToken(ctx context.Context, namespace string, hvCluster *infrav1.HivelocityCluster, secretManager *secretutil.SecretManager) (string, *corev1.Secret, error) {
+func getAndValidateHivelocityAPIKey(ctx context.Context, namespace string, hvCluster *infrav1.HivelocityCluster, secretManager *secretutil.SecretManager) (string, *corev1.Secret, error) {
 	// retrieve Hivelocity secret
 	secretNamspacedName := types.NamespacedName{Namespace: namespace, Name: hvCluster.Spec.HivelocitySecret.Name}
 
@@ -343,9 +287,9 @@ func getAndValidateHivelocityToken(ctx context.Context, namespace string, hvClus
 
 	apiKey := string(hvSecret.Data[hvCluster.Spec.HivelocitySecret.Key])
 
-	// Validate token
+	// Validate apiKey
 	if apiKey == "" {
-		return "", nil, &secretutil.HivelocityApiKeyValidationError{}
+		return "", nil, &secretutil.HivelocityAPIKeyValidationError{}
 	}
 
 	return apiKey, hvSecret, nil
@@ -372,7 +316,7 @@ func hvAPIKeyErrorResult(
 		res = ctrl.Result{Requeue: true, RequeueAfter: secretErrorRetryDelay}
 
 	// No need to reconcile again, as it will be triggered as soon as the secret is updated.
-	case *secretutil.HivelocityApiKeyValidationError:
+	case *secretutil.HivelocityAPIKeyValidationError:
 		conditions.MarkFalse(setter,
 			conditionType,
 			infrav1.HivelocityCredentialsInvalidReason,
@@ -381,7 +325,7 @@ func hvAPIKeyErrorResult(
 		)
 
 	default:
-		return ctrl.Result{}, fmt.Errorf("An unhandled failure occurred with the Hivelocity secret: %w", err)
+		return ctrl.Result{}, fmt.Errorf("an unhandled failure occurred with the Hivelocity secret: %w", err)
 	}
 
 	if err := client.Status().Update(ctx, setter); err != nil {
@@ -429,35 +373,28 @@ func reconcileTargetSecret(ctx context.Context, clusterScope *scope.ClusterScope
 			return fmt.Errorf("failed to get secret: %w", err)
 		}
 
-		tokenSecretName := types.NamespacedName{
+		apiKeySecretName := types.NamespacedName{
 			Namespace: clusterScope.HivelocityCluster.Namespace,
 			Name:      clusterScope.HivelocityCluster.Spec.HivelocitySecret.Name,
 		}
 		secretManager := secretutil.NewSecretManager(*clusterScope.Logger, clusterScope.Client, clusterScope.APIReader)
-		tokenSecret, err := secretManager.AcquireSecret(ctx, tokenSecretName, clusterScope.HivelocityCluster, false, clusterScope.HivelocityCluster.DeletionTimestamp.IsZero())
+		apiKeySecret, err := secretManager.AcquireSecret(ctx, apiKeySecretName, clusterScope.HivelocityCluster, false, clusterScope.HivelocityCluster.DeletionTimestamp.IsZero())
 		if err != nil {
 			return fmt.Errorf("failed to acquire secret: %w", err)
 		}
 
-		hvAPIKey, keyExists := tokenSecret.Data[clusterScope.HivelocityCluster.Spec.HivelocitySecret.Key]
+		hvAPIKey, keyExists := apiKeySecret.Data[clusterScope.HivelocityCluster.Spec.HivelocitySecret.Key]
 		if !keyExists {
 			return errors.Errorf(
 				"error key %s does not exist in secret/%s",
 				clusterScope.HivelocityCluster.Spec.HivelocitySecret.Key,
-				tokenSecretName,
+				apiKeySecretName,
 			)
 		}
 
 		var immutable bool
 		data := make(map[string][]byte)
 		data[clusterScope.HivelocityCluster.Spec.HivelocitySecret.Key] = hvAPIKey
-
-		/* question: Why does the secret get updated? Can the secret get used for several clusters?
-		// Save network ID in secret
-		if clusterScope.HivelocityCluster.Spec.HivelocityNetwork.Enabled {
-			data["network"] = []byte(strconv.Itoa(clusterScope.HivelocityCluster.Status.Network.ID))
-		}
-		*/
 
 		// Save api server information
 		data["apiserver-host"] = []byte(clusterScope.HivelocityCluster.Spec.ControlPlaneEndpoint.Host)
@@ -592,18 +529,17 @@ func (r *HivelocityClusterReconciler) newTargetClusterManager(ctx context.Contex
 	}
 
 	return clusterMgr, nil
-}
+}.
 */
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *HivelocityClusterReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager, options controller.Options) error {
 	log := log.FromContext(ctx)
 
-	/* later
-	if r.targetClusterManagersStopCh == nil {
-		r.targetClusterManagersStopCh = make(map[types.NamespacedName]chan struct{})
-	}
-	*/
+	// later
+	// if r.targetClusterManagersStopCh == nil {
+	//		r.targetClusterManagersStopCh = make(map[types.NamespacedName]chan struct{})
+	//	}
 
 	controller, err := ctrl.NewControllerManagedBy(mgr).
 		WithOptions(options).

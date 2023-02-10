@@ -19,11 +19,11 @@ package server
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
 	infrav1 "github.com/hivelocity/cluster-api-provider-hivelocity/api/v1alpha1"
+	hvutils "github.com/hivelocity/cluster-api-provider-hivelocity/pkg/hvutils"
 	"github.com/hivelocity/cluster-api-provider-hivelocity/pkg/scope"
 	hvclient "github.com/hivelocity/cluster-api-provider-hivelocity/pkg/services/hivelocity/client"
 	hv "github.com/hivelocity/hivelocity-client-go/client"
@@ -38,7 +38,6 @@ import (
 
 const maxShutDownTime = 2 * time.Minute
 const serverOffTimeout = 10 * time.Minute
-const ErrorCodeRateLimitExceeded = 429
 
 // Service defines struct with machine scope to reconcile Hivelocity machines.
 type Service struct {
@@ -92,7 +91,7 @@ func (s *Service) Reconcile(ctx context.Context) (_ *ctrl.Result, err error) {
 
 	// If no server is found we have to create one
 	if server == nil {
-		server, err = s.createServer(ctx, failureDomain)
+		server, err = s.createServer(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create server: %w", err)
 		}
@@ -137,13 +136,6 @@ func (s *Service) Reconcile(ctx context.Context) (_ *ctrl.Result, err error) {
 		return nil, nil
 	}
 
-	/*
-		// all control planes have to be attached to the load balancer if it exists
-		if err := s.reconcileLoadBalancerAttachment(ctx, server); err != nil {
-			return nil, fmt.Errorf("failed to reconcile load balancer attachement: %w", err)
-		}
-	*/
-
 	s.scope.HivelocityMachine.Spec.ProviderID = &providerID
 	s.scope.HivelocityMachine.Status.Ready = true
 	conditions.MarkTrue(s.scope.HivelocityMachine, infrav1.InstanceReadyCondition)
@@ -161,7 +153,7 @@ func (s *Service) handleServerStatusOff(ctx context.Context, server *hv.BareMeta
 		condition.Reason == infrav1.ServerOffReason {
 		if time.Now().Before(condition.LastTransitionTime.Time.Add(serverOffTimeout)) {
 			// Not yet timed out, try again to power on
-			if err := s.scope.HVClient.PowerOnServer(ctx, server); err != nil {
+			if err := s.scope.HVClient.PowerOnServer(ctx, server.DeviceId); err != nil {
 				return nil, fmt.Errorf("failed to power on server: %w", err)
 			}
 		} else {
@@ -171,8 +163,8 @@ func (s *Service) handleServerStatusOff(ctx context.Context, server *hv.BareMeta
 		}
 	} else { // todo: too complicated. Is there a way to avoid the "else"?
 		// No condition set yet. Try to power server on.
-		if err := s.scope.HVClient.PowerOnServer(ctx, server); err != nil {
-			if errors.Is(err, hvclient.ErrRateLimitExceeded) {
+		if err := s.scope.HVClient.PowerOnServer(ctx, server.DeviceId); err != nil {
+			if hvclient.IsRateLimitExceededError(err) {
 				conditions.MarkTrue(s.scope.HivelocityMachine, infrav1.RateLimitExceeded)
 				record.Event(s.scope.HivelocityMachine,
 					"RateLimitExceeded",
@@ -194,11 +186,7 @@ func (s *Service) handleServerStatusOff(ctx context.Context, server *hv.BareMeta
 	return &reconcile.Result{RequeueAfter: 30 * time.Second}, nil
 }
 
-func (s *Service) reconcileNetworkAttachment(ctx context.Context, server *hv.BareMetalDevice) error {
-	return nil
-}
-
-func (s *Service) createServer(ctx context.Context, failureDomain string) (*hv.BareMetalDevice, error) {
+func (s *Service) createServer(ctx context.Context) (*hv.BareMetalDevice, error) {
 	// get userData
 	userData, err := s.scope.GetRawBootstrapData(ctx)
 	if err != nil {
@@ -215,15 +203,29 @@ func (s *Service) createServer(ctx context.Context, failureDomain string) (*hv.B
 		return nil, fmt.Errorf("failed to get server image: %w", err)
 	}
 
+	servers, err := s.scope.HVClient.ListServers(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("[Service.createServer] ListServers() failed. cluster %q: %w",
+			s.scope.Name(), err)
+	}
+	unusedServer, err := hvutils.FindUnusedServer(servers, s.scope.Name(), "question instance-type")
+	if err != nil {
+		return nil, fmt.Errorf("[Service.createServer] FindUnusedServer() failed. cluster %q: %w",
+			s.scope.Name(), err)
+	}
+	if unusedServer == nil {
+		return nil, fmt.Errorf("[Service.createServer] FindUnusedServer() found no unused server. cluster %q: %w",
+			s.scope.Name(), err)
+	}
 	opts := hv.BareMetalDeviceUpdate{
 		Hostname: s.scope.Name(),
-		//todo Tags: createLabels(s.scope.HivelocityCluster.Name, s.scope.Name(), s.scope.IsControlPlane()),
-		Script: string(userData), // cloud-init script
-		OsName: image,
+		Tags:     createTags(s.scope.ClusterScope.Name(), s.scope.Name(), s.scope.IsControlPlane()),
+		Script:   string(userData), // cloud-init script
+		OsName:   image,
 	}
 
 	if s.scope.HivelocityCluster.Spec.SSHKey != nil {
-		sshKeyID, err := getSSHKeyIDFromSSHKeyName(s.scope.HivelocityCluster.Spec.SSHKey)
+		sshKeyID, err := s.getSSHKeyIDFromSSHKeyName(ctx, s.scope.HivelocityCluster.Spec.SSHKey)
 		if err != nil {
 			return nil, fmt.Errorf("error with ssh keys: %w", err)
 		}
@@ -232,9 +234,9 @@ func (s *Service) createServer(ctx context.Context, failureDomain string) (*hv.B
 	}
 
 	// Create the server
-	server, err := s.scope.HVClient.CreateServer(ctx, &opts)
+	server, err := s.scope.HVClient.CreateServer(ctx, unusedServer.DeviceId, opts)
 	if err != nil {
-		if errors.Is(err, hvclient.ErrRateLimitExceeded) {
+		if hvclient.IsRateLimitExceededError(err) {
 			conditions.MarkTrue(s.scope.HivelocityMachine, infrav1.RateLimitExceeded)
 			record.Event(s.scope.HivelocityMachine,
 				"RateLimitExceeded",
@@ -250,28 +252,102 @@ func (s *Service) createServer(ctx context.Context, failureDomain string) (*hv.B
 		return nil, fmt.Errorf("error while creating Hivelocity server %s: %s", s.scope.HivelocityMachine.Name, err)
 	}
 
-	return server, nil
+	return &server, nil
 }
+
+const defaultImageName = "Ubuntu 20.x"
 
 func (s *Service) getServerImage(ctx context.Context) (string, error) {
-	return "todo", fmt.Errorf("todo: getServerImage()")
+	return defaultImageName, nil
 }
 
-func getSSHKeyIDFromSSHKeyName(sshKeyID *infrav1.SSHKey) (int32, error) {
-	if sshKeyID == nil {
+func (s *Service) getSSHKeyIDFromSSHKeyName(ctx context.Context, sshKey *infrav1.SSHKey) (int32, error) {
+	if sshKey == nil {
 		return 0, fmt.Errorf("SSHKey is nil")
 	}
-	// todo: we only support one ssh-key for all nodes of the cluster.
-	return 0, fmt.Errorf("todo: getSSHKeyIDFromSSHKeyName()")
+	keys, err := s.scope.HVClient.ListSSHKeys(ctx)
+	if err != nil {
+		return 0, fmt.Errorf("[getSSHKeyIDFromSSHKeyName] ListSSHKeys() failed. Name %q: %w", sshKey.Name, err)
+	}
+	for _, key := range keys {
+		if key.Name == sshKey.Name {
+			return key.SshKeyId, nil
+		}
+	}
+	return 0, fmt.Errorf("[getSSHKeyIDFromSSHKeyName] no corresponding ssh-key found in HV API. Name %q",
+		sshKey.Name)
 }
 
 // Delete implements delete method of server.
 func (s *Service) Delete(ctx context.Context) (_ *ctrl.Result, err error) {
-	return nil, fmt.Errorf("todo: Delete()")
+	// find current server
+	server, err := s.findServer(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to find Server: %w", err)
+	}
+
+	// If no server has been found then nothing can be deleted
+	if server == nil {
+		s.scope.V(2).Info("Unable to locate Hivelocity server by ID or tags")
+		record.Warnf(s.scope.HivelocityMachine, "NoInstanceFound", "Unable to find matching Hivelocity server for %s", s.scope.Name())
+		return nil, nil
+	}
+
+	// First shut the server down, then delete it
+	switch status := server.PowerStatus; status {
+	case hvclient.PowerStatusOn:
+		return s.handleDeleteServerStatusRunning(ctx, server)
+	case hvclient.PowerStatusOff:
+		return s.handleDeleteServerStatusOff(ctx, server)
+	default:
+		return &ctrl.Result{RequeueAfter: 5 * time.Second}, nil
+	}
 }
 
 func (s *Service) handleDeleteServerStatusRunning(ctx context.Context, server *hv.BareMetalDevice) (*ctrl.Result, error) {
-	return nil, fmt.Errorf("todo: handleDeleteServerStatusRunning()")
+	// Check if the server has been tried to shut down already and if so,
+	// if time of last condition change + maxWaitTime is already in the past.
+	// With one of these two conditions true, delete server immediately. Otherwise, shut it down and requeue.
+	if conditions.IsTrue(s.scope.HivelocityMachine, infrav1.InstanceReadyCondition) ||
+		conditions.IsFalse(s.scope.HivelocityMachine, infrav1.InstanceReadyCondition) &&
+			conditions.GetReason(s.scope.HivelocityMachine, infrav1.InstanceReadyCondition) == infrav1.InstanceTerminatedReason &&
+			time.Now().Before(conditions.GetLastTransitionTime(s.scope.HivelocityMachine, infrav1.InstanceReadyCondition).Time.Add(maxShutDownTime)) {
+		if err := s.scope.HVClient.ShutdownServer(ctx, server.DeviceId); err != nil {
+			if hvclient.IsRateLimitExceededError(err) {
+				conditions.MarkTrue(s.scope.HivelocityMachine, infrav1.RateLimitExceeded)
+				record.Event(s.scope.HivelocityMachine,
+					"RateLimitExceeded",
+					"exceeded rate limit with calling Hivelocity function ShutdownServer",
+				)
+			}
+			return &reconcile.Result{}, fmt.Errorf("failed to shutdown server: %w", err)
+		}
+		conditions.MarkFalse(s.scope.HivelocityMachine,
+			infrav1.InstanceReadyCondition,
+			infrav1.InstanceTerminatedReason,
+			clusterv1.ConditionSeverityInfo,
+			"Instance has been shut down")
+		return &ctrl.Result{RequeueAfter: 30 * time.Second}, nil
+	}
+	if err := s.scope.HVClient.DeleteServer(ctx, server.DeviceId); err != nil {
+		if hvclient.IsRateLimitExceededError(err) {
+			conditions.MarkTrue(s.scope.HivelocityMachine, infrav1.RateLimitExceeded)
+			record.Event(s.scope.HivelocityMachine,
+				"RateLimitExceeded",
+				"exceeded rate limit with calling Hivelocity function DeleteServer",
+			)
+		}
+		record.Warnf(s.scope.HivelocityMachine, "FailedDeleteHivelocityServer", "Failed to delete Hivelocity server %s", s.scope.Name())
+		return &reconcile.Result{}, fmt.Errorf("failed to delete server: %w", err)
+	}
+
+	record.Eventf(
+		s.scope.HivelocityMachine,
+		"HivelocityServerDeleted",
+		"Hivelocity server %s deleted",
+		s.scope.Name(),
+	)
+	return nil, nil
 }
 
 func (s *Service) handleDeleteServerStatusOff(ctx context.Context, server *hv.BareMetalDevice) (*ctrl.Result, error) {
@@ -283,61 +359,34 @@ func setStatusFromAPI(server *hv.BareMetalDevice) infrav1.HivelocityMachineStatu
 	return status
 }
 
-func (s *Service) reconcileLoadBalancerAttachment(ctx context.Context, server *hv.BareMetalDevice) error {
-	return fmt.Errorf("todo: reconcileLoadBalancerAttachment()")
-}
-
-func (s *Service) deleteServerOfLoadBalancer(ctx context.Context, server *hv.BareMetalDevice) error {
-	return fmt.Errorf("todo: deleteServerOfLoadBalancer()")
-}
-
 // We write the server name in the labels, so that all labels are or should be unique.
 func (s *Service) findServer(ctx context.Context) (*hv.BareMetalDevice, error) {
-	return nil, fmt.Errorf("todo: Service.findServer()")
-	/*
-		opts := hv.ServerListOpts{}
-		opts.LabelSelector = utils.LabelsToLabelSelector(createLabels(s.scope.HivelocityCluster.Name, s.scope.Name(), s.scope.IsControlPlane()))
-		servers, err := s.scope.HVClient.ListServers(ctx, opts)
-		if err != nil {
-			if errors.Is(err, hvclient.ErrRateLimitExceeded) {
-				conditions.MarkTrue(s.scope.HivelocityMachine, infrav1.RateLimitExceeded)
-				record.Event(s.scope.HivelocityMachine,
-					"RateLimitExceeded",
-					"exceeded rate limit with calling Hivelocity function ListServers",
-				)
-			}
-			return nil, err
+	clusterTag := hvclient.GetClusterTag(s.scope.ClusterScope.Name())
+	machineTag := hvclient.GetMachineTag(s.scope.Name())
+	servers, err := s.scope.HVClient.ListServers(ctx)
+	if err != nil {
+		if hvclient.IsRateLimitExceededError(err) {
+			conditions.MarkTrue(s.scope.HivelocityMachine, infrav1.RateLimitExceeded)
+			record.Event(s.scope.HivelocityMachine,
+				"RateLimitExceeded",
+				"exceeded rate limit with calling ListServers",
+			)
 		}
-		if len(servers) > 1 {
-			record.Warnf(s.scope.HivelocityMachine,
-				"MultipleInstances",
-				"Found %v servers of name %s",
-				len(servers),
-				s.scope.Name())
-			return nil, fmt.Errorf("found %v servers with name %s", len(servers), s.scope.Name())
-		} else if len(servers) == 0 {
-			return nil, nil
-		}
-
-		return servers[0], nil
-	*/
+		return nil, err
+	}
+	return hvutils.FindServerByTags(clusterTag, machineTag, servers)
 }
 
-func createLabels(hivelocityClusterName, hivelocityMachineName string, isControlPlane bool) map[string]string {
-	return map[string]string{}
-	/*
-		m := map[string]string{
-			infrav1.ClusterTagKey(hivelocityClusterName): string(infrav1.ResourceLifecycleOwned),
-			infrav1.MachineNameTagKey:                hivelocityMachineName,
-		}
-
-		var machineType string
-		if isControlPlane {
-			machineType = "control_plane"
-		} else {
-			machineType = "worker"
-		}
-		m["machine_type"] = machineType
-		return m
-	*/
+func createTags(clusterName string, machineName string, isControlPlane bool) []string {
+	var machineType string
+	if isControlPlane {
+		machineType = "control_plane"
+	} else {
+		machineType = "worker"
+	}
+	return []string{
+		hvclient.GetClusterTag(clusterName),
+		hvclient.GetMachineTag(machineName),
+		"caphv-machinetype=" + machineType,
+	}
 }

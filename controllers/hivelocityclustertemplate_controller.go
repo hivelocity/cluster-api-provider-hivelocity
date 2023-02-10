@@ -26,7 +26,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 )
 
-// HivelocityClusterTemplateReconciler reconciles a HivelocityClusterTemplate object
+// HivelocityClusterTemplateReconciler reconciles a HivelocityClusterTemplate object.
 type HivelocityClusterTemplateReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme

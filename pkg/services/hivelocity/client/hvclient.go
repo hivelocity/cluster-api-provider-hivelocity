@@ -5,23 +5,30 @@ package hvclient
 
 import (
 	"context"
+	"errors"
 	"fmt"
-	"time"
+	"net/http"
+	"strings"
 
-	apiClient "github.com/hivelocity/hivelocity-client-go/client"
 	hv "github.com/hivelocity/hivelocity-client-go/client"
 )
 
+// PowerStatusOff is "OFF".
 const PowerStatusOff = "OFF"
-const PowerStatusOn = "ON"
 
-var ErrRateLimitExceeded = fmt.Errorf("Hivelocity API rate limited exceeded")
+// PowerStatusOn is "ON".
+const PowerStatusOn = "ON"
 
 // Client collects all methods used by the controller in the Hivelocity API.
 type Client interface {
 	Close()
-	PowerOnServer(context.Context, *hv.BareMetalDevice) error
-	CreateServer(context.Context, *hv.BareMetalDeviceUpdate) (*hv.BareMetalDevice, error)
+	PowerOnServer(ctx context.Context, deviceID int32) error
+	CreateServer(ctx context.Context, deviceID int32, opts hv.BareMetalDeviceUpdate) (hv.BareMetalDevice, error)
+	ListServers(context.Context) ([]*hv.BareMetalDevice, error)
+	ShutdownServer(ctx context.Context, deviceID int32) error
+	DeleteServer(ctx context.Context, deviceID int32) error
+	ListImages(ctx context.Context, productID int32) ([]string, error)
+	ListSSHKeys(context.Context) ([]hv.SshKeyResponse, error)
 }
 
 // Factory is the interface for creating new Client objects.
@@ -29,23 +36,26 @@ type Factory interface {
 	NewClient(hvAPIKey string) Client
 }
 
-type factory struct{}
+// HivelocityFactory implements the Factory interface.
+type HivelocityFactory struct{}
+
+// ErrDeviceNotFound gets returned if no matching device was found.
+var ErrDeviceNotFound = fmt.Errorf("device was not found")
+
+var _ Factory = &HivelocityFactory{}
 
 // NewClient creates new Hivelocity clients.
-func (f *factory) NewClient(hvAPIKey string) Client {
-	authContext := context.WithValue(context.Background(), apiClient.ContextAPIKey, apiClient.APIKey{
-		Key: hvAPIKey,
-	})
-	apiClient := apiClient.NewAPIClient(apiClient.NewConfiguration())
+func (f *HivelocityFactory) NewClient(hvAPIKey string) Client {
+	config := hv.NewConfiguration()
+	config.AddDefaultHeader("X-API-KEY", hvAPIKey)
+	apiClient := hv.NewAPIClient(config)
 	return &realClient{
-		client:      apiClient,
-		authContext: &authContext,
+		client: apiClient,
 	}
 }
 
 type realClient struct {
-	client      *apiClient.APIClient
-	authContext *context.Context
+	client *hv.APIClient
 }
 
 var _ Client = &realClient{}
@@ -53,12 +63,48 @@ var _ Client = &realClient{}
 // Close implements the Close method of the HVClient interface.
 func (c *realClient) Close() {}
 
-func (c *realClient) PowerOnServer(context.Context, *hv.BareMetalDevice) error {
+func (c *realClient) PowerOnServer(ctx context.Context, deviceID int32) error {
 	return nil // todo
 }
 
-func (c *realClient) CreateServer(context.Context, *hv.BareMetalDeviceUpdate) (*hv.BareMetalDevice, error) {
-	return nil, fmt.Errorf("todo")
+func (c *realClient) CreateServer(ctx context.Context, deviceID int32, opts hv.BareMetalDeviceUpdate) (hv.BareMetalDevice, error) {
+	return hv.BareMetalDevice{}, fmt.Errorf("todo")
+}
+
+func (c *realClient) ListServers(ctx context.Context) ([]*hv.BareMetalDevice, error) {
+	servers, _, err := c.client.BareMetalDevicesApi.GetBareMetalDeviceResource(ctx, nil)
+	ret := make([]*hv.BareMetalDevice, 0, len(servers))
+	for i := range servers {
+		ret = append(ret, &servers[i])
+	}
+	return ret, err
+}
+
+func (c *realClient) DeleteServer(ctx context.Context, deviceID int32) error {
+	return fmt.Errorf("todo DeleteServer")
+}
+
+func (c *realClient) ShutdownServer(ctx context.Context, deviceID int32) error {
+	return fmt.Errorf("todo ShutdownServer")
+}
+
+func (c *realClient) ListImages(ctx context.Context, productID int32) ([]string, error) {
+	// https://developers.hivelocity.net/reference/get_product_operating_systems_resource
+	opts, _, err := c.client.ProductApi.GetProductOperatingSystemsResource(ctx, productID, nil)
+	ret := make([]string, 0, len(opts))
+	if err != nil {
+		return []string{}, err
+	}
+	for i := range opts {
+		ret = append(ret, opts[i].Name)
+	}
+	return ret, nil
+}
+
+func (c *realClient) ListSSHKeys(ctx context.Context) ([]hv.SshKeyResponse, error) {
+	// https://developers.hivelocity.net/reference/get_ssh_key_resource
+	sshKeys, _, err := c.client.SshKeyApi.GetSshKeyResource(ctx, nil)
+	return sshKeys, err
 }
 
 // ServerStatus specifies a server's status.
@@ -91,35 +137,35 @@ const (
 
 	// ServerStatusUnknown is the status when a server's state is unknown.
 	ServerStatusUnknown ServerStatus = "unknown"
+
+	// TagKeyMachineName is the prefix for HV tags for machine names.
+	TagKeyMachineName = "caphv-machine-name"
+
+	// TagKeyClusterName is the prefix for HV tags for cluster names.
+	TagKeyClusterName = "caphv-cluster-name"
+
+	// TagKeyInstanceType is the prefix for HV tags for instance types.
+	TagKeyInstanceType = "caphv-instance-type"
 )
 
-type Server struct {
-	// todo: returned by findServer()
-
-	ID      int
-	Name    string
-	Status  ServerStatus
-	Created time.Time
-	//PublicNet       ServerPublicNet
-	//PrivateNet      []ServerPrivateNet
-	//ServerType      *ServerType
-	//Datacenter      *Datacenter
-	IncludedTraffic uint64
-	OutgoingTraffic uint64
-	IngoingTraffic  uint64
-	BackupWindow    string
-	RescueEnabled   bool
-	Locked          bool
-	//ISO             *ISO
-	//Image           *Image
-	//Protection      ServerProtection
-	Labels map[string]string
-	//Volumes         []*Volume
-	//PrimaryDiskSize int
+// GetMachineTag create tag for HV API. Example: "mymachine" --> "caphv-machine-name=mymachine".
+func GetMachineTag(machineName string) string {
+	return TagKeyMachineName + "=" + machineName
 }
 
-type SSHKey struct {
-	// We will only support one ssh-key for the cluster
-	// todo
-	// There is a second SSHKey struct in api. Maybe one struct is enough?
+// GetClusterTag create tag for HV API. Example: "mycluster" --> "caphv-cluster-name=mycluster".
+func GetClusterTag(clusterName string) string {
+	return TagKeyClusterName + "=" + clusterName
+}
+
+// IsRateLimitExceededError returns true, if the Hivelocity rate limit was reached.
+func IsRateLimitExceededError(err error) bool {
+	var swaggerErr hv.GenericSwaggerError
+	if !errors.As(err, &swaggerErr) {
+		return false
+	}
+	if strings.HasPrefix(swaggerErr.Error(), fmt.Sprint(http.StatusTooManyRequests)) {
+		return true
+	}
+	return false
 }

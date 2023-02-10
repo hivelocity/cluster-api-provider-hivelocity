@@ -23,7 +23,7 @@ Please see our [book](https://hivelocity.github.io/cluster-api-provider-hiveloci
 ## :sparkles: Features
 
 * Native Kubernetes manifests and API
-* Manages the bootstrapping of Networking, Loadbalancers and devices.
+* Manages the bootstrapping of Networking and devices.
 * Choice of Linux distribution
 * Support for single and multi-node control plane clusters (HA Kubernetes)
 * Doesn't use SSH for bootstrapping nodes.

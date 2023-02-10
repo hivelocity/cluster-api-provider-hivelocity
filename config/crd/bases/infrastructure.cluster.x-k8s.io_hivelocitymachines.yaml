@@ -51,7 +51,7 @@ spec:
     name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: HivelocityMachine is the Schema for the hivelocitymachines API
+        description: HivelocityMachine is the Schema for the hivelocitymachines API.
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
@@ -66,7 +66,7 @@ spec:
           metadata:
             type: object
           spec:
-            description: HivelocityMachineSpec defines the desired state of HivelocityMachine
+            description: HivelocityMachineSpec defines the desired state of HivelocityMachine.
             properties:
               imageName:
                 description: ImageName is the reference to the Machine Image from
@@ -80,14 +80,15 @@ spec:
               type:
                 description: Type is the Hivelocity Machine Type for this machine.
                 enum:
-                - todo question
+                - hvCustom
+                - todo-question
                 type: string
             required:
             - imageName
             - type
             type: object
           status:
-            description: HivelocityMachineStatus defines the observed state of HivelocityMachine
+            description: HivelocityMachineStatus defines the observed state of HivelocityMachine.
             properties:
               addresses:
                 description: Addresses contains the server's associated addresses.

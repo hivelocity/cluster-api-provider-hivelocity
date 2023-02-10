@@ -119,15 +119,15 @@ issues:
     - linters:
         - errcheck
       text: Error return value of .((os\.)?std(out|err)\..*|.*Close|.*Flush|os\.Remove(All)?|.*print(f|ln)?|os\.(Un)?Setenv). is not checked
-    # Exclude some packages or code to require comments, for example test code, or fake clients.
+    # Exclude some packages or code to require comments, for example test code, or mock clients.
     - linters:
         - revive
       text: exported (method|function|type|const) (.+) should have comment or be unexported
-      source: (func|type).*Fake.*
+      source: (func|type).*Mock.*
     - linters:
         - revive
       text: exported (method|function|type|const) (.+) should have comment or be unexported
-      path: fake_\.go
+      path: mock_\.go
     - linters:
         - revive
       text: exported (method|function|type|const) (.+) should have comment or be unexported

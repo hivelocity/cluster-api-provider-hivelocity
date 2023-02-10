@@ -36,7 +36,7 @@ func (r *HivelocityRemediation) SetupWebhookWithManager(mgr ctrl.Manager) error 
 
 var _ webhook.Defaulter = &HivelocityRemediation{}
 
-// Default implements webhook.Defaulter so a webhook will be registered for the type
+// Default implements webhook.Defaulter so a webhook will be registered for the type.
 func (r *HivelocityRemediation) Default() {
 	hivelocityremediationlog.Info("default", "name", r.Name)
 
@@ -48,7 +48,7 @@ func (r *HivelocityRemediation) Default() {
 
 var _ webhook.Validator = &HivelocityRemediation{}
 
-// ValidateCreate implements webhook.Validator so a webhook will be registered for the type
+// ValidateCreate implements webhook.Validator so a webhook will be registered for the type.
 func (r *HivelocityRemediation) ValidateCreate() error {
 	hivelocityremediationlog.Info("validate create", "name", r.Name)
 
@@ -56,7 +56,7 @@ func (r *HivelocityRemediation) ValidateCreate() error {
 	return nil
 }
 
-// ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
+// ValidateUpdate implements webhook.Validator so a webhook will be registered for the type.
 func (r *HivelocityRemediation) ValidateUpdate(old runtime.Object) error {
 	hivelocityremediationlog.Info("validate update", "name", r.Name)
 
@@ -64,7 +64,7 @@ func (r *HivelocityRemediation) ValidateUpdate(old runtime.Object) error {
 	return nil
 }
 
-// ValidateDelete implements webhook.Validator so a webhook will be registered for the type
+// ValidateDelete implements webhook.Validator so a webhook will be registered for the type.
 func (r *HivelocityRemediation) ValidateDelete() error {
 	hivelocityremediationlog.Info("validate delete", "name", r.Name)
 

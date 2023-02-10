@@ -20,7 +20,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// HivelocityRemediationSpec defines the desired state of HivelocityRemediation
+// HivelocityRemediationSpec defines the desired state of HivelocityRemediation.
 type HivelocityRemediationSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
@@ -29,7 +29,7 @@ type HivelocityRemediationSpec struct {
 	Foo string `json:"foo,omitempty"`
 }
 
-// HivelocityRemediationStatus defines the observed state of HivelocityRemediation
+// HivelocityRemediationStatus defines the observed state of HivelocityRemediation.
 type HivelocityRemediationStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
@@ -38,7 +38,7 @@ type HivelocityRemediationStatus struct {
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 
-// HivelocityRemediation is the Schema for the hivelocityremediations API
+// HivelocityRemediation is the Schema for the hivelocityremediations API.
 type HivelocityRemediation struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -49,7 +49,7 @@ type HivelocityRemediation struct {
 
 //+kubebuilder:object:root=true
 
-// HivelocityRemediationList contains a list of HivelocityRemediation
+// HivelocityRemediationList contains a list of HivelocityRemediation.
 type HivelocityRemediationList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`

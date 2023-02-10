@@ -19,22 +19,6 @@ package v1alpha1
 import clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 
 const (
-	// LoadBalancerAttached reports on whether the load balancer is attached.
-	LoadBalancerAttached clusterv1.ConditionType = "LoadBalancerAttached"
-	// LoadBalancerUnreachableReason is used when load balancer is unreachable.
-	LoadBalancerUnreachableReason = "LoadBalancerUnreachable"
-)
-
-const (
-	// LoadBalancerAttachedToNetworkCondition reports on whether the load balancer is attached to a network.
-	LoadBalancerAttachedToNetworkCondition clusterv1.ConditionType = "LoadBalancerAttachedToNetwork"
-	// LoadBalancerAttachFailedReason is used when load balancer could not be attached to network.
-	LoadBalancerAttachFailedReason = "LoadBalancerAttachFailed"
-	// LoadBalancerNoNetworkFoundReason is used when no network could be found.
-	LoadBalancerNoNetworkFoundReason = "LoadBalancerNoNetworkFound"
-)
-
-const (
 	// InstanceReadyCondition reports on current status of the instance. Ready indicates the instance is in a Running state.
 	InstanceReadyCondition clusterv1.ConditionType = "InstanceReady"
 	// InstanceTerminatedReason instance is in a terminated state.
@@ -80,11 +64,4 @@ const (
 const (
 	// HivelocityBareMetalHostReady reports on whether the Hivelocity cluster is in ready state.
 	HivelocityBareMetalHostReady clusterv1.ConditionType = "HivelocityBareMetalHostReady"
-	// RobotCredentialsInvalidReason indicates that credentials for Robot are invalid.
-	RobotCredentialsInvalidReason = "RobotCredentialsInvalid" // #nosec
-)
-
-const (
-	// AssociateBMHCondition reports on whether the Hivelocity cluster is in ready state.
-	AssociateBMHCondition clusterv1.ConditionType = "AssociateBMHCondition"
 )
