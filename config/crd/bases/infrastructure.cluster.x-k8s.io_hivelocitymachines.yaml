@@ -91,7 +91,7 @@ spec:
             description: HivelocityMachineStatus defines the observed state of HivelocityMachine.
             properties:
               addresses:
-                description: Addresses contains the server's associated addresses.
+                description: Addresses contains the devices's associated addresses.
                 items:
                   description: NodeAddress contains information for the node's address.
                   properties:
@@ -163,14 +163,14 @@ spec:
                   value suitable for machine interpretation.
                 type: string
               instanceState:
-                description: InstanceState is the state of the server for this machine.
+                description: InstanceState is the state of the device for this machine.
                 type: string
               ready:
                 description: Ready is true when the provider resource is ready.
                 type: boolean
               region:
                 description: Region contains the name of the Hivelocity location the
-                  server is running.
+                  device is running.
                 enum:
                 - TODO1
                 - TODO2

@@ -33,14 +33,14 @@ const DefaultCPUCores = 1
 const DefaultMemoryInGB = float32(4)
 
 type mockedHVClient struct {
-	store serverStore
+	store deviceStore
 }
 
 var _ hvclient.Client = &mockedHVClient{}
 
 // NewClient gives reference to the mock client using the in memory store.
 func (f *mockedHVClientFactory) NewClient(hvAPIKey string) hvclient.Client {
-	var store serverStore
+	var store deviceStore
 	store.idMap = make(map[int32]*hv.BareMetalDevice)
 	devices := []hv.BareMetalDevice{
 		{
@@ -78,7 +78,7 @@ func (f *mockedHVClientFactory) NewClient(hvAPIKey string) hvclient.Client {
 
 // Close implements Close method of HV client interface.
 func (c *mockedHVClient) Close() {
-	c.store = serverStore{
+	c.store = deviceStore{
 		idMap: make(map[int32]*hv.BareMetalDevice),
 	}
 }
@@ -92,8 +92,8 @@ func NewHVClientFactory() hvclient.Factory {
 
 var _ = hvclient.Factory(&mockedHVClientFactory{})
 
-// serverStore is an in memory store for the state for the mocked client.
-type serverStore struct {
+// deviceStore is an in memory store for the state for the mocked client.
+type deviceStore struct {
 	idMap map[int32]*hv.BareMetalDevice
 }
 
@@ -114,7 +114,7 @@ func (c *mockedHVClient) CreateDevice(ctx context.Context, deviceID int32, opts 
 		return hv.BareMetalDevice{}, fmt.Errorf("already exists")
 	}
 
-	server := hv.BareMetalDevice{
+	device := hv.BareMetalDevice{
 		Hostname:                 "",
 		PrimaryIp:                "",
 		Tags:                     []string{},
@@ -134,9 +134,9 @@ func (c *mockedHVClient) CreateDevice(ctx context.Context, deviceID int32, opts 
 		ProductId:                0,
 	}
 
-	// Add server to store
-	c.store.idMap[server.DeviceId] = &server
-	return server, nil
+	// Add device to store
+	c.store.idMap[device.DeviceId] = &device
+	return device, nil
 }
 
 func (c *mockedHVClient) ListDevices(ctx context.Context) ([]*hv.BareMetalDevice, error) {

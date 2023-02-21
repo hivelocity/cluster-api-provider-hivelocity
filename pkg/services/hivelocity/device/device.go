@@ -150,7 +150,7 @@ func (s *Service) handleDeviceStatusOff(ctx context.Context, device *hv.BareMeta
 	condition := conditions.Get(s.scope.HivelocityMachine, infrav1.InstanceReadyCondition)
 	if condition != nil &&
 		condition.Status == corev1.ConditionFalse &&
-		condition.Reason == infrav1.ServerOffReason {
+		condition.Reason == infrav1.DeviceOffReason {
 		if time.Now().Before(condition.LastTransitionTime.Time.Add(deviceOffTimeout)) {
 			// Not yet timed out, try again to power on
 			if err := s.scope.HVClient.PowerOnDevice(ctx, device.DeviceId); err != nil {
@@ -176,7 +176,7 @@ func (s *Service) handleDeviceStatusOff(ctx context.Context, device *hv.BareMeta
 		conditions.MarkFalse(
 			s.scope.HivelocityMachine,
 			infrav1.InstanceReadyCondition,
-			infrav1.ServerOffReason,
+			infrav1.DeviceOffReason,
 			clusterv1.ConditionSeverityInfo,
 			"device is switched off",
 		)

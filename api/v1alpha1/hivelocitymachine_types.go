@@ -56,13 +56,13 @@ type HivelocityMachineStatus struct {
 	// +optional
 	Ready bool `json:"ready"`
 
-	// Addresses contains the server's associated addresses.
+	// Addresses contains the devices's associated addresses.
 	Addresses []corev1.NodeAddress `json:"addresses,omitempty"`
 
-	// Region contains the name of the Hivelocity location the server is running.
+	// Region contains the name of the Hivelocity location the device is running.
 	Region Region `json:"region,omitempty"`
 
-	// InstanceState is the state of the server for this machine.
+	// InstanceState is the state of the device for this machine.
 	// +optional
 	InstanceState *hvclient.DeviceStatus `json:"instanceState,omitempty"`
 

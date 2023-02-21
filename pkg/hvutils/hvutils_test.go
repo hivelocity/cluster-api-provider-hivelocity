@@ -29,7 +29,7 @@ func Test_FindDeviceByTags(t *testing.T) {
 	type args struct {
 		clusterTag string
 		machineTag string
-		servers    []hv.BareMetalDevice
+		devices    []hv.BareMetalDevice
 	}
 	tests := []struct {
 		name    string
@@ -38,21 +38,21 @@ func Test_FindDeviceByTags(t *testing.T) {
 		wantErr error
 	}{
 		{
-			name: "no tags, no servers, no result, no error",
+			name: "no tags, no devices, no result, no error",
 			args: args{
 				clusterTag: "ct=foo",
 				machineTag: "mt=bar",
-				servers:    []hv.BareMetalDevice{},
+				devices:    []hv.BareMetalDevice{},
 			},
 			want:    nil,
 			wantErr: nil,
 		},
 		{
-			name: "matching tags, found server",
+			name: "matching tags, found device",
 			args: args{
 				clusterTag: "ct=foo",
 				machineTag: "mt=bar",
-				servers: []hv.BareMetalDevice{
+				devices: []hv.BareMetalDevice{
 					{
 						Tags: []string{"ct=foo", "mt=bar"},
 					},
@@ -67,11 +67,11 @@ func Test_FindDeviceByTags(t *testing.T) {
 			wantErr: nil,
 		},
 		{
-			name: "matching tags, but found two servers",
+			name: "matching tags, but found two devices",
 			args: args{
 				clusterTag: "ct=foo",
 				machineTag: "mt=bar",
-				servers: []hv.BareMetalDevice{
+				devices: []hv.BareMetalDevice{
 					{
 						Tags: []string{"ct=foo", "mt=bar"},
 					},
@@ -81,12 +81,12 @@ func Test_FindDeviceByTags(t *testing.T) {
 				},
 			},
 			want:    nil,
-			wantErr: errMultipleServerFound,
+			wantErr: errMultipleDevicesFound,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := FindDeviceByTags(tt.args.clusterTag, tt.args.machineTag, ToPointers(tt.args.servers))
+			got, err := FindDeviceByTags(tt.args.clusterTag, tt.args.machineTag, ToPointers(tt.args.devices))
 			if tt.wantErr != nil {
 				require.ErrorIs(t, err, tt.wantErr)
 			}
@@ -95,7 +95,7 @@ func Test_FindDeviceByTags(t *testing.T) {
 	}
 }
 
-func TestServerHasTagKey(t *testing.T) {
+func TestDeviceHasTagKey(t *testing.T) {
 	type args struct {
 		device *hv.BareMetalDevice
 		tagKey string
@@ -138,8 +138,8 @@ func TestServerHasTagKey(t *testing.T) {
 		}}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := ServerHasTagKey(tt.args.device, tt.args.tagKey); got != tt.want {
-				t.Errorf("ServerHasTagKey() = %v, want %v", got, tt.want)
+			if got := DeviceHasTagKey(tt.args.device, tt.args.tagKey); got != tt.want {
+				t.Errorf("DeviceHasTagKey() = %v, want %v", got, tt.want)
 			}
 		})
 	}

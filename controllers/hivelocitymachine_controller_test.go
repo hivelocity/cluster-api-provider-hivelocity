@@ -175,11 +175,11 @@ var _ = Describe("HivelocityMachineReconciler", func() {
 		It("creates the Hivelocity machine in Hivelocity", func() {
 			// Check that there is no machine yet.
 			Eventually(func() bool {
-				servers, err := hvClient.ListDevices(ctx)
+				devices, err := hvClient.ListDevices(ctx)
 				if err != nil {
 					return false
 				}
-				return len(servers) > 0
+				return len(devices) > 0
 			}).Should(BeTrue())
 
 			// Check whether bootstrap condition is not ready
@@ -211,11 +211,11 @@ var _ = Describe("HivelocityMachineReconciler", func() {
 			}, timeout, time.Second).Should(BeTrue())
 
 			Eventually(func() int {
-				servers, err := hvClient.ListDevices(ctx)
+				devices, err := hvClient.ListDevices(ctx)
 				if err != nil {
 					return 0
 				}
-				return len(servers)
+				return len(devices)
 			}, timeout, time.Second).Should(BeNumerically(">", 0))
 		})
 	})
@@ -283,11 +283,11 @@ var _ = Describe("HivelocityMachineReconciler", func() {
 
 			It("creates the Hivelocity machine in Hivelocity", func() {
 				Eventually(func() int {
-					servers, err := hvClient.ListDevices(ctx)
+					devices, err := hvClient.ListDevices(ctx)
 					if err != nil {
 						return 0
 					}
-					return len(servers)
+					return len(devices)
 				}, timeout, time.Second).Should(BeNumerically(">", 0))
 			})
 		})

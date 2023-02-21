@@ -53,15 +53,15 @@ func init() {
 }
 
 func cliTestListDevices(ctx context.Context, client hvclient.Client) {
-	allServers, err := client.ListDevices(ctx)
+	allDevices, err := client.ListDevices(ctx)
 	if err != nil {
 		panic(err.Error())
 	}
-	server, err := hvutils.FindDeviceByTags("cn=foo", "mn=bar", allServers)
+	device, err := hvutils.FindDeviceByTags("cn=foo", "mn=bar", allDevices)
 	if err != nil {
 		panic(err)
 	}
-	fmt.Printf("server: %+v\n", server)
+	fmt.Printf("device: %+v\n", device)
 }
 
 func cliTestListImages(ctx context.Context, client hvclient.Client) {

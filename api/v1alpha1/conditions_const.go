@@ -23,8 +23,8 @@ const (
 	InstanceReadyCondition clusterv1.ConditionType = "InstanceReady"
 	// InstanceTerminatedReason instance is in a terminated state.
 	InstanceTerminatedReason = "InstanceTerminated"
-	// ServerOffReason instance is off.
-	ServerOffReason = "ServerOff"
+	// DeviceOffReason instance is off.
+	DeviceOffReason = "DeviceOff"
 	// InstanceAsControlPlaneUnreachableReason control plane is (not yet) reachable.
 	InstanceAsControlPlaneUnreachableReason = "InstanceAsControlPlaneUnreachable"
 )

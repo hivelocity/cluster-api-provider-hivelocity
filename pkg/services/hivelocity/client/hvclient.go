@@ -74,10 +74,10 @@ func (c *realClient) CreateDevice(ctx context.Context, deviceID int32, opts hv.B
 }
 
 func (c *realClient) ListDevices(ctx context.Context) ([]*hv.BareMetalDevice, error) {
-	servers, _, err := c.client.BareMetalDevicesApi.GetBareMetalDeviceResource(ctx, nil)
-	ret := make([]*hv.BareMetalDevice, 0, len(servers))
-	for i := range servers {
-		ret = append(ret, &servers[i])
+	devices, _, err := c.client.BareMetalDevicesApi.GetBareMetalDeviceResource(ctx, nil)
+	ret := make([]*hv.BareMetalDevice, 0, len(devices))
+	for i := range devices {
+		ret = append(ret, &devices[i])
 	}
 	return ret, err
 }
@@ -109,35 +109,35 @@ func (c *realClient) ListSSHKeys(ctx context.Context) ([]hv.SshKeyResponse, erro
 	return sshKeys, err
 }
 
-// DeviceStatus specifies a server's status.
+// DeviceStatus specifies a device's status.
 type DeviceStatus string
 
 const (
-	// DeviceStatusInitializing is the status when a server is initializing.
+	// DeviceStatusInitializing is the status when a device is initializing.
 	DeviceStatusInitializing DeviceStatus = "initializing" // TODO AFAIK HV does not provide these detailed infos
 
-	// DeviceStatusOff is the status when a server is off.
+	// DeviceStatusOff is the status when a device is off.
 	DeviceStatusOff DeviceStatus = "off"
 
-	// DeviceStatusRunning is the status when a server is running.
+	// DeviceStatusRunning is the status when a device is running.
 	DeviceStatusRunning DeviceStatus = "running"
 
-	// DeviceStatusStarting is the status when a server is being started.
+	// DeviceStatusStarting is the status when a device is being started.
 	DeviceStatusStarting DeviceStatus = "starting"
 
-	// DeviceStatusStopping is the status when a server is being stopped.
+	// DeviceStatusStopping is the status when a device is being stopped.
 	DeviceStatusStopping DeviceStatus = "stopping"
 
-	// DeviceStatusMigrating is the status when a server is being migrated.
+	// DeviceStatusMigrating is the status when a device is being migrated.
 	DeviceStatusMigrating DeviceStatus = "migrating"
 
-	// DeviceStatusRebuilding is the status when a server is being rebuilt.
+	// DeviceStatusRebuilding is the status when a device is being rebuilt.
 	DeviceStatusRebuilding DeviceStatus = "rebuilding"
 
-	// DeviceStatusDeleting is the status when a server is being deleted.
+	// DeviceStatusDeleting is the status when a device is being deleted.
 	DeviceStatusDeleting DeviceStatus = "deleting"
 
-	// DeviceStatusUnknown is the status when a server's state is unknown.
+	// DeviceStatusUnknown is the status when a device's state is unknown.
 	DeviceStatusUnknown DeviceStatus = "unknown"
 
 	// TagKeyMachineName is the prefix for HV tags for machine names.
