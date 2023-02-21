@@ -55,7 +55,7 @@ func NewService(scope *scope.MachineScope) *Service {
 func (s *Service) Reconcile(ctx context.Context) (_ *ctrl.Result, err error) {
 	if s.scope.HivelocityCluster.Spec.HivelocitySecret.Key == "" {
 		record.Eventf(s.scope.HivelocityMachine, corev1.EventTypeWarning, "NoAPIKey", "No Hivelocity API Key found")
-		return nil, fmt.Errorf("no Hivelocity API Key provided - cannot reconcile Hivelocity server")
+		return nil, fmt.Errorf("no Hivelocity API Key provided - cannot reconcile Hivelocity device")
 	}
 
 	// detect failure domain. question: two names "failure domain" and "region". One name would be better.
@@ -83,33 +83,33 @@ func (s *Service) Reconcile(ctx context.Context) (_ *ctrl.Result, err error) {
 		infrav1.InstanceBootstrapReadyCondition,
 	)
 
-	// Try to find an existing server
-	server, err := s.findServer(ctx)
+	// Try to find the associate device.
+	device, err := s.findAssociateDevice(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get server: %w", err)
+		return nil, fmt.Errorf("failed to get device: %w", err)
 	}
 
-	// If no server is found we have to create one
-	if server == nil {
-		server, err = s.createServer(ctx)
+	// If no device is found we have to create one
+	if device == nil {
+		device, err = s.createServer(ctx)
 		if err != nil {
-			return nil, fmt.Errorf("failed to create server: %w", err)
+			return nil, fmt.Errorf("failed to create device: %w", err)
 		}
 		record.Eventf(
 			s.scope.HivelocityMachine,
 			"SuccessfulCreate",
-			"Created new server with id %d",
-			server.DeviceId,
+			"Created new device with id %d",
+			device.DeviceId,
 		)
 	}
 
 	c := s.scope.HivelocityMachine.Status.Conditions.DeepCopy()
-	s.scope.HivelocityMachine.Status = setStatusFromAPI(server)
+	s.scope.HivelocityMachine.Status = setStatusFromAPI(device)
 	s.scope.HivelocityMachine.Status.Conditions = c
 
-	switch server.PowerStatus {
+	switch device.PowerStatus {
 	case hvclient.PowerStatusOff:
-		return s.handleServerStatusOff(ctx, server)
+		return s.handleServerStatusOff(ctx, device)
 	/* todo: up to now we only get ON/OFF
 	case hv.BareMetalDeviceStatusStarting:
 		// Requeue here so that server does not switch back and forth between off and starting.
@@ -121,13 +121,13 @@ func (s *Service) Reconcile(ctx context.Context) (_ *ctrl.Result, err error) {
 	case hvclient.PowerStatusOn: // Do nothing
 	default:
 		s.scope.HivelocityMachine.Status.Ready = false
-		s.scope.V(1).Info("server not in running state",
-			"server", server.Hostname,
-			"powerStatus", server.PowerStatus)
+		s.scope.V(1).Info("device not in running state",
+			"device", device.Hostname,
+			"powerStatus", device.PowerStatus)
 		return &reconcile.Result{RequeueAfter: 2 * time.Second}, nil
 	}
 
-	providerID := fmt.Sprintf("hivelocity://%d", server.DeviceId)
+	providerID := fmt.Sprintf("hivelocity://%d", device.DeviceId)
 
 	if !s.scope.IsControlPlane() {
 		s.scope.HivelocityMachine.Spec.ProviderID = &providerID
@@ -280,25 +280,25 @@ func (s *Service) getSSHKeyIDFromSSHKeyName(ctx context.Context, sshKey *infrav1
 
 // Delete implements delete method of server.
 func (s *Service) Delete(ctx context.Context) (_ *ctrl.Result, err error) {
-	// find current server
-	server, err := s.findServer(ctx)
+	// find current device
+	device, err := s.findAssociateDevice(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to find Server: %w", err)
+		return nil, fmt.Errorf("failed to find device: %w", err)
 	}
 
-	// If no server has been found then nothing can be deleted
-	if server == nil {
-		s.scope.V(2).Info("Unable to locate Hivelocity server by ID or tags")
-		record.Warnf(s.scope.HivelocityMachine, "NoInstanceFound", "Unable to find matching Hivelocity server for %s", s.scope.Name())
+	// If no device has been found then nothing can be deleted
+	if device == nil {
+		s.scope.V(2).Info("Unable to locate Hivelocity device by ID or tags")
+		record.Warnf(s.scope.HivelocityMachine, "NoInstanceFound", "Unable to find matching Hivelocity device for %s", s.scope.Name())
 		return nil, nil
 	}
 
 	// First shut the server down, then delete it
-	switch status := server.PowerStatus; status {
+	switch status := device.PowerStatus; status {
 	case hvclient.PowerStatusOn:
-		return s.handleDeleteServerStatusRunning(ctx, server)
+		return s.handleDeleteServerStatusRunning(ctx, device)
 	case hvclient.PowerStatusOff:
-		return s.handleDeleteServerStatusOff(ctx, server)
+		return s.handleDeleteServerStatusOff(ctx, device)
 	default:
 		return &ctrl.Result{RequeueAfter: 5 * time.Second}, nil
 	}
@@ -360,11 +360,11 @@ func setStatusFromAPI(server *hv.BareMetalDevice) infrav1.HivelocityMachineStatu
 	return status
 }
 
-// We write the server name in the labels, so that all labels are or should be unique.
-func (s *Service) findServer(ctx context.Context) (*hv.BareMetalDevice, error) {
+// We write the machine name in the labels, so that all labels are or should be unique.
+func (s *Service) findAssociateDevice(ctx context.Context) (*hv.BareMetalDevice, error) {
 	clusterTag := hvclient.GetClusterTag(s.scope.ClusterScope.Name())
 	machineTag := hvclient.GetMachineTag(s.scope.Name())
-	servers, err := s.scope.HVClient.ListServers(ctx)
+	devices, err := s.scope.HVClient.ListServers(ctx)
 	if err != nil {
 		if hvclient.IsRateLimitExceededError(err) {
 			conditions.MarkTrue(s.scope.HivelocityMachine, infrav1.RateLimitExceeded)
@@ -375,7 +375,7 @@ func (s *Service) findServer(ctx context.Context) (*hv.BareMetalDevice, error) {
 		}
 		return nil, err
 	}
-	return hvutils.FindServerByTags(clusterTag, machineTag, servers)
+	return hvutils.FindDeviceByTags(clusterTag, machineTag, devices)
 }
 
 func createTags(clusterName string, machineName string, isControlPlane bool) []string {

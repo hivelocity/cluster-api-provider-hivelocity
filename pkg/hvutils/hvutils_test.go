@@ -25,7 +25,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func Test_findServerByTags(t *testing.T) {
+func Test_FindDeviceByTags(t *testing.T) {
 	type args struct {
 		clusterTag string
 		machineTag string
@@ -86,7 +86,7 @@ func Test_findServerByTags(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := FindServerByTags(tt.args.clusterTag, tt.args.machineTag, ToPointers(tt.args.servers))
+			got, err := FindDeviceByTags(tt.args.clusterTag, tt.args.machineTag, ToPointers(tt.args.servers))
 			if tt.wantErr != nil {
 				require.ErrorIs(t, err, tt.wantErr)
 			}

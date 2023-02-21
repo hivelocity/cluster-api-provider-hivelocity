@@ -31,9 +31,9 @@ var errMultipleServerFound = fmt.Errorf(
 	"multiple servers found while trying to find a single server",
 )
 
-// FindServerByTags returns the server with the given clusterTag and machineTag.
+// FindDeviceByTags returns the server with the given clusterTag and machineTag.
 // Returns nil if no server was found.
-func FindServerByTags(
+func FindDeviceByTags(
 	clusterTag string,
 	machineTag string,
 	servers []*hv.BareMetalDevice,
