@@ -175,7 +175,7 @@ var _ = Describe("HivelocityMachineReconciler", func() {
 		It("creates the Hivelocity machine in Hivelocity", func() {
 			// Check that there is no machine yet.
 			Eventually(func() bool {
-				servers, err := hvClient.ListServers(ctx)
+				servers, err := hvClient.ListDevices(ctx)
 				if err != nil {
 					return false
 				}
@@ -211,7 +211,7 @@ var _ = Describe("HivelocityMachineReconciler", func() {
 			}, timeout, time.Second).Should(BeTrue())
 
 			Eventually(func() int {
-				servers, err := hvClient.ListServers(ctx)
+				servers, err := hvClient.ListDevices(ctx)
 				if err != nil {
 					return 0
 				}
@@ -283,7 +283,7 @@ var _ = Describe("HivelocityMachineReconciler", func() {
 
 			It("creates the Hivelocity machine in Hivelocity", func() {
 				Eventually(func() int {
-					servers, err := hvClient.ListServers(ctx)
+					servers, err := hvClient.ListDevices(ctx)
 					if err != nil {
 						return 0
 					}

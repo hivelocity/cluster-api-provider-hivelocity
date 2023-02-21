@@ -109,7 +109,7 @@ func (c *mockedHVClient) ListImages(ctx context.Context, productID int32) ([]str
 	return []string{defaultImage}, nil
 }
 
-func (c *mockedHVClient) CreateServer(ctx context.Context, deviceID int32, opts hv.BareMetalDeviceUpdate) (hv.BareMetalDevice, error) {
+func (c *mockedHVClient) CreateDevice(ctx context.Context, deviceID int32, opts hv.BareMetalDeviceUpdate) (hv.BareMetalDevice, error) {
 	if _, found := c.store.idMap[deviceID]; found {
 		return hv.BareMetalDevice{}, fmt.Errorf("already exists")
 	}
@@ -139,29 +139,29 @@ func (c *mockedHVClient) CreateServer(ctx context.Context, deviceID int32, opts 
 	return server, nil
 }
 
-func (c *mockedHVClient) ListServers(ctx context.Context) ([]*hv.BareMetalDevice, error) {
+func (c *mockedHVClient) ListDevices(ctx context.Context) ([]*hv.BareMetalDevice, error) {
 	return maps.Values(c.store.idMap), nil
 }
 
-func (c *mockedHVClient) ShutdownServer(ctx context.Context, deviceID int32) error {
+func (c *mockedHVClient) ShutdownDevice(ctx context.Context, deviceID int32) error {
 	if _, found := c.store.idMap[deviceID]; !found {
-		return fmt.Errorf("[ShutdownServer] deviceID %d: %w", deviceID, hvclient.ErrDeviceNotFound)
+		return fmt.Errorf("[ShutdownDevice] deviceID %d: %w", deviceID, hvclient.ErrDeviceNotFound)
 	}
 	c.store.idMap[deviceID].PowerStatus = hvclient.PowerStatusOff
 	return nil
 }
 
-func (c *mockedHVClient) PowerOnServer(ctx context.Context, deviceID int32) error {
+func (c *mockedHVClient) PowerOnDevice(ctx context.Context, deviceID int32) error {
 	if _, found := c.store.idMap[deviceID]; !found {
-		return fmt.Errorf("[PowerOnServer] deviceID %d: %w", deviceID, hvclient.ErrDeviceNotFound)
+		return fmt.Errorf("[PowerOnDevice] deviceID %d: %w", deviceID, hvclient.ErrDeviceNotFound)
 	}
 	c.store.idMap[deviceID].PowerStatus = hvclient.PowerStatusOn
 	return nil
 }
 
-func (c *mockedHVClient) DeleteServer(ctx context.Context, deviceID int32) error {
+func (c *mockedHVClient) DeleteDevice(ctx context.Context, deviceID int32) error {
 	if _, found := c.store.idMap[deviceID]; !found {
-		return fmt.Errorf("[DeleteServer] deviceID %d: %w", deviceID, hvclient.ErrDeviceNotFound)
+		return fmt.Errorf("[DeleteDevice] deviceID %d: %w", deviceID, hvclient.ErrDeviceNotFound)
 	}
 	delete(c.store.idMap, deviceID)
 	return nil

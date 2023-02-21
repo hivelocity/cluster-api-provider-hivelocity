@@ -22,11 +22,11 @@ const PowerStatusOn = "ON"
 // Client collects all methods used by the controller in the Hivelocity API.
 type Client interface {
 	Close()
-	PowerOnServer(ctx context.Context, deviceID int32) error
-	CreateServer(ctx context.Context, deviceID int32, opts hv.BareMetalDeviceUpdate) (hv.BareMetalDevice, error)
-	ListServers(context.Context) ([]*hv.BareMetalDevice, error)
-	ShutdownServer(ctx context.Context, deviceID int32) error
-	DeleteServer(ctx context.Context, deviceID int32) error
+	PowerOnDevice(ctx context.Context, deviceID int32) error
+	CreateDevice(ctx context.Context, deviceID int32, opts hv.BareMetalDeviceUpdate) (hv.BareMetalDevice, error)
+	ListDevices(context.Context) ([]*hv.BareMetalDevice, error)
+	ShutdownDevice(ctx context.Context, deviceID int32) error
+	DeleteDevice(ctx context.Context, deviceID int32) error
 	ListImages(ctx context.Context, productID int32) ([]string, error)
 	ListSSHKeys(context.Context) ([]hv.SshKeyResponse, error)
 }
@@ -63,17 +63,17 @@ var _ Client = &realClient{}
 // Close implements the Close method of the HVClient interface.
 func (c *realClient) Close() {}
 
-func (c *realClient) PowerOnServer(ctx context.Context, deviceID int32) error {
+func (c *realClient) PowerOnDevice(ctx context.Context, deviceID int32) error {
 	return nil // todo
 }
 
-func (c *realClient) CreateServer(ctx context.Context, deviceID int32, opts hv.BareMetalDeviceUpdate) (hv.BareMetalDevice, error) {
+func (c *realClient) CreateDevice(ctx context.Context, deviceID int32, opts hv.BareMetalDeviceUpdate) (hv.BareMetalDevice, error) {
 	// https://developers.hivelocity.net/reference/put_bare_metal_device_id_resource
 	device, _, err := c.client.BareMetalDevicesApi.PutBareMetalDeviceIdResource(ctx, deviceID, opts, nil)
 	return device, err
 }
 
-func (c *realClient) ListServers(ctx context.Context) ([]*hv.BareMetalDevice, error) {
+func (c *realClient) ListDevices(ctx context.Context) ([]*hv.BareMetalDevice, error) {
 	servers, _, err := c.client.BareMetalDevicesApi.GetBareMetalDeviceResource(ctx, nil)
 	ret := make([]*hv.BareMetalDevice, 0, len(servers))
 	for i := range servers {
@@ -82,12 +82,12 @@ func (c *realClient) ListServers(ctx context.Context) ([]*hv.BareMetalDevice, er
 	return ret, err
 }
 
-func (c *realClient) DeleteServer(ctx context.Context, deviceID int32) error {
-	return fmt.Errorf("todo DeleteServer")
+func (c *realClient) DeleteDevice(ctx context.Context, deviceID int32) error {
+	return fmt.Errorf("todo DeleteDevice")
 }
 
-func (c *realClient) ShutdownServer(ctx context.Context, deviceID int32) error {
-	return fmt.Errorf("todo ShutdownServer")
+func (c *realClient) ShutdownDevice(ctx context.Context, deviceID int32) error {
+	return fmt.Errorf("todo ShutdownDevice")
 }
 
 func (c *realClient) ListImages(ctx context.Context, productID int32) ([]string, error) {
@@ -109,36 +109,36 @@ func (c *realClient) ListSSHKeys(ctx context.Context) ([]hv.SshKeyResponse, erro
 	return sshKeys, err
 }
 
-// ServerStatus specifies a server's status.
-type ServerStatus string
+// DeviceStatus specifies a server's status.
+type DeviceStatus string
 
 const (
-	// ServerStatusInitializing is the status when a server is initializing.
-	ServerStatusInitializing ServerStatus = "initializing" // TODO AFAIK HV does not provide these detailed infos
+	// DeviceStatusInitializing is the status when a server is initializing.
+	DeviceStatusInitializing DeviceStatus = "initializing" // TODO AFAIK HV does not provide these detailed infos
 
-	// ServerStatusOff is the status when a server is off.
-	ServerStatusOff ServerStatus = "off"
+	// DeviceStatusOff is the status when a server is off.
+	DeviceStatusOff DeviceStatus = "off"
 
-	// ServerStatusRunning is the status when a server is running.
-	ServerStatusRunning ServerStatus = "running"
+	// DeviceStatusRunning is the status when a server is running.
+	DeviceStatusRunning DeviceStatus = "running"
 
-	// ServerStatusStarting is the status when a server is being started.
-	ServerStatusStarting ServerStatus = "starting"
+	// DeviceStatusStarting is the status when a server is being started.
+	DeviceStatusStarting DeviceStatus = "starting"
 
-	// ServerStatusStopping is the status when a server is being stopped.
-	ServerStatusStopping ServerStatus = "stopping"
+	// DeviceStatusStopping is the status when a server is being stopped.
+	DeviceStatusStopping DeviceStatus = "stopping"
 
-	// ServerStatusMigrating is the status when a server is being migrated.
-	ServerStatusMigrating ServerStatus = "migrating"
+	// DeviceStatusMigrating is the status when a server is being migrated.
+	DeviceStatusMigrating DeviceStatus = "migrating"
 
-	// ServerStatusRebuilding is the status when a server is being rebuilt.
-	ServerStatusRebuilding ServerStatus = "rebuilding"
+	// DeviceStatusRebuilding is the status when a server is being rebuilt.
+	DeviceStatusRebuilding DeviceStatus = "rebuilding"
 
-	// ServerStatusDeleting is the status when a server is being deleted.
-	ServerStatusDeleting ServerStatus = "deleting"
+	// DeviceStatusDeleting is the status when a server is being deleted.
+	DeviceStatusDeleting DeviceStatus = "deleting"
 
-	// ServerStatusUnknown is the status when a server's state is unknown.
-	ServerStatusUnknown ServerStatus = "unknown"
+	// DeviceStatusUnknown is the status when a server's state is unknown.
+	DeviceStatusUnknown DeviceStatus = "unknown"
 
 	// TagKeyMachineName is the prefix for HV tags for machine names.
 	TagKeyMachineName = "caphv-machine-name"

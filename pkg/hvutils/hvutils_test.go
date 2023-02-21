@@ -97,7 +97,7 @@ func Test_FindDeviceByTags(t *testing.T) {
 
 func TestServerHasTagKey(t *testing.T) {
 	type args struct {
-		server *hv.BareMetalDevice
+		device *hv.BareMetalDevice
 		tagKey string
 	}
 	tests := []struct {
@@ -108,7 +108,7 @@ func TestServerHasTagKey(t *testing.T) {
 		{
 			name: "machine without tags",
 			args: args{
-				server: &hv.BareMetalDevice{},
+				device: &hv.BareMetalDevice{},
 				tagKey: "machine-name",
 			},
 			want: false,
@@ -116,7 +116,7 @@ func TestServerHasTagKey(t *testing.T) {
 		{
 			name: "machine with tags",
 			args: args{
-				server: &hv.BareMetalDevice{
+				device: &hv.BareMetalDevice{
 					Tags: []string{
 						"machine-name=foo",
 						"cluster-name=bar",
@@ -128,7 +128,7 @@ func TestServerHasTagKey(t *testing.T) {
 		{
 			name: "machine with tag without equal sign",
 			args: args{
-				server: &hv.BareMetalDevice{
+				device: &hv.BareMetalDevice{
 					Tags: []string{
 						"machine-name",
 					}},
@@ -138,7 +138,7 @@ func TestServerHasTagKey(t *testing.T) {
 		}}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := ServerHasTagKey(tt.args.server, tt.args.tagKey); got != tt.want {
+			if got := ServerHasTagKey(tt.args.device, tt.args.tagKey); got != tt.want {
 				t.Errorf("ServerHasTagKey() = %v, want %v", got, tt.want)
 			}
 		})

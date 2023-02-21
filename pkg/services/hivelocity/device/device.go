@@ -37,7 +37,7 @@ import (
 )
 
 const maxShutDownTime = 2 * time.Minute
-const serverOffTimeout = 10 * time.Minute
+const deviceOffTimeout = 10 * time.Minute
 
 // Service defines struct with machine scope to reconcile Hivelocity machines.
 type Service struct {
@@ -91,7 +91,7 @@ func (s *Service) Reconcile(ctx context.Context) (_ *ctrl.Result, err error) {
 
 	// If no device is found we have to create one
 	if device == nil {
-		device, err = s.createServer(ctx)
+		device, err = s.createDevice(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create device: %w", err)
 		}
@@ -109,13 +109,13 @@ func (s *Service) Reconcile(ctx context.Context) (_ *ctrl.Result, err error) {
 
 	switch device.PowerStatus {
 	case hvclient.PowerStatusOff:
-		return s.handleServerStatusOff(ctx, device)
+		return s.handleDeviceStatusOff(ctx, device)
 	/* todo: up to now we only get ON/OFF
 	case hv.BareMetalDeviceStatusStarting:
-		// Requeue here so that server does not switch back and forth between off and starting.
+		// Requeue here so that device does not switch back and forth between off and starting.
 		// If we don't return here, the condition InstanceReady would get marked as true in this
-		// case. However, if the server is stuck and does not power on, we should not mark the
-		// condition InstanceReady as true to be able to remediate the server after a timeout.
+		// case. However, if the device is stuck and does not power on, we should not mark the
+		// condition InstanceReady as true to be able to remediate the device after a timeout.
 		return &reconcile.Result{RequeueAfter: 10 * time.Second}, nil
 	*/
 	case hvclient.PowerStatusOn: // Do nothing
@@ -143,18 +143,18 @@ func (s *Service) Reconcile(ctx context.Context) (_ *ctrl.Result, err error) {
 	return nil, nil
 }
 
-func (s *Service) handleServerStatusOff(ctx context.Context, server *hv.BareMetalDevice) (*reconcile.Result, error) {
-	// Check if server is in ServerStatusOff and turn it on. This is to avoid a bug of Hivelocity where
+func (s *Service) handleDeviceStatusOff(ctx context.Context, device *hv.BareMetalDevice) (*reconcile.Result, error) {
+	// Check if device is in DeviceStatusOff and turn it on. This is to avoid a bug of Hivelocity where
 	// sometimes machines are created and not turned on
 
 	condition := conditions.Get(s.scope.HivelocityMachine, infrav1.InstanceReadyCondition)
 	if condition != nil &&
 		condition.Status == corev1.ConditionFalse &&
 		condition.Reason == infrav1.ServerOffReason {
-		if time.Now().Before(condition.LastTransitionTime.Time.Add(serverOffTimeout)) {
+		if time.Now().Before(condition.LastTransitionTime.Time.Add(deviceOffTimeout)) {
 			// Not yet timed out, try again to power on
-			if err := s.scope.HVClient.PowerOnServer(ctx, server.DeviceId); err != nil {
-				return nil, fmt.Errorf("failed to power on server: %w", err)
+			if err := s.scope.HVClient.PowerOnDevice(ctx, device.DeviceId); err != nil {
+				return nil, fmt.Errorf("failed to power on device: %w", err)
 			}
 		} else {
 			// Timed out. Set failure reason
@@ -162,23 +162,23 @@ func (s *Service) handleServerStatusOff(ctx context.Context, server *hv.BareMeta
 			return nil, nil
 		}
 	} else { // todo: too complicated. Is there a way to avoid the "else"?
-		// No condition set yet. Try to power server on.
-		if err := s.scope.HVClient.PowerOnServer(ctx, server.DeviceId); err != nil {
+		// No condition set yet. Try to power device on.
+		if err := s.scope.HVClient.PowerOnDevice(ctx, device.DeviceId); err != nil {
 			if hvclient.IsRateLimitExceededError(err) {
 				conditions.MarkTrue(s.scope.HivelocityMachine, infrav1.RateLimitExceeded)
 				record.Event(s.scope.HivelocityMachine,
 					"RateLimitExceeded",
-					"exceeded rate limit with calling hivelocity function PowerOnServer",
+					"exceeded rate limit with calling hivelocity function PowerOnDevice",
 				)
 			}
-			return nil, fmt.Errorf("failed to power on server: %w", err)
+			return nil, fmt.Errorf("failed to power on device: %w", err)
 		}
 		conditions.MarkFalse(
 			s.scope.HivelocityMachine,
 			infrav1.InstanceReadyCondition,
 			infrav1.ServerOffReason,
 			clusterv1.ConditionSeverityInfo,
-			"server is switched off",
+			"device is switched off",
 		)
 	}
 
@@ -186,7 +186,7 @@ func (s *Service) handleServerStatusOff(ctx context.Context, server *hv.BareMeta
 	return &reconcile.Result{RequeueAfter: 30 * time.Second}, nil
 }
 
-func (s *Service) createServer(ctx context.Context) (*hv.BareMetalDevice, error) {
+func (s *Service) createDevice(ctx context.Context) (*hv.BareMetalDevice, error) {
 	// get userData
 	userData, err := s.scope.GetRawBootstrapData(ctx)
 	if err != nil {
@@ -198,23 +198,23 @@ func (s *Service) createServer(ctx context.Context) (*hv.BareMetalDevice, error)
 		return nil, fmt.Errorf("failed to get raw bootstrap data: %s", err)
 	}
 
-	image, err := s.getServerImage(ctx)
+	image, err := s.getDeviceImage(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get server image: %w", err)
+		return nil, fmt.Errorf("failed to get device image: %w", err)
 	}
 
-	servers, err := s.scope.HVClient.ListServers(ctx)
+	devices, err := s.scope.HVClient.ListDevices(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("[Service.createServer] ListServers() failed. cluster %q: %w",
+		return nil, fmt.Errorf("[Service.createDevice] ListDevices() failed. cluster %q: %w",
 			s.scope.Name(), err)
 	}
-	unusedServer, err := hvutils.FindUnusedServer(servers, s.scope.Name(), "question instance-type")
+	unusedDevice, err := hvutils.FindUnusedDevice(devices, s.scope.Name(), "question instance-type")
 	if err != nil {
-		return nil, fmt.Errorf("[Service.createServer] FindUnusedServer() failed. cluster %q: %w",
+		return nil, fmt.Errorf("[Service.createDevice] FindUnusedDevice() failed. cluster %q: %w",
 			s.scope.Name(), err)
 	}
-	if unusedServer == nil {
-		return nil, fmt.Errorf("[Service.createServer] FindUnusedServer() found no unused server. cluster %q: %w",
+	if unusedDevice == nil {
+		return nil, fmt.Errorf("[Service.createDevice] FindUnusedDevice() found no unused device. cluster %q: %w",
 			s.scope.Name(), err)
 	}
 	opts := hv.BareMetalDeviceUpdate{
@@ -233,31 +233,31 @@ func (s *Service) createServer(ctx context.Context) (*hv.BareMetalDevice, error)
 		opts.PublicSshKeyId = sshKeyID
 	}
 
-	// Create the server
-	server, err := s.scope.HVClient.CreateServer(ctx, unusedServer.DeviceId, opts)
+	// Create the device
+	device, err := s.scope.HVClient.CreateDevice(ctx, unusedDevice.DeviceId, opts)
 	if err != nil {
 		if hvclient.IsRateLimitExceededError(err) {
 			conditions.MarkTrue(s.scope.HivelocityMachine, infrav1.RateLimitExceeded)
 			record.Event(s.scope.HivelocityMachine,
 				"RateLimitExceeded",
-				"exceeded rate limit with calling Hivelocity function CreateServer",
+				"exceeded rate limit with calling Hivelocity function CreateDevice",
 			)
 		}
 		record.Warnf(s.scope.HivelocityMachine,
-			"FailedCreateHivelocityServer",
-			"Failed to create Hivelocity server %s: %s",
+			"FailedCreateHivelocityDevice",
+			"Failed to create Hivelocity device %s: %s",
 			s.scope.Name(),
 			err,
 		)
-		return nil, fmt.Errorf("error while creating Hivelocity server %s: %s", s.scope.HivelocityMachine.Name, err)
+		return nil, fmt.Errorf("error while creating Hivelocity device %s: %s", s.scope.HivelocityMachine.Name, err)
 	}
 
-	return &server, nil
+	return &device, nil
 }
 
 const defaultImageName = "Ubuntu 20.x"
 
-func (s *Service) getServerImage(ctx context.Context) (string, error) {
+func (s *Service) getDeviceImage(ctx context.Context) (string, error) {
 	return defaultImageName, nil
 }
 
@@ -278,7 +278,7 @@ func (s *Service) getSSHKeyIDFromSSHKeyName(ctx context.Context, sshKey *infrav1
 		sshKey.Name)
 }
 
-// Delete implements delete method of server.
+// Delete implements delete method of the HV device.
 func (s *Service) Delete(ctx context.Context) (_ *ctrl.Result, err error) {
 	// find current device
 	device, err := s.findAssociateDevice(ctx)
@@ -293,34 +293,34 @@ func (s *Service) Delete(ctx context.Context) (_ *ctrl.Result, err error) {
 		return nil, nil
 	}
 
-	// First shut the server down, then delete it
+	// First shut the device down, then delete it
 	switch status := device.PowerStatus; status {
 	case hvclient.PowerStatusOn:
-		return s.handleDeleteServerStatusRunning(ctx, device)
+		return s.handleDeleteDeviceStatusRunning(ctx, device)
 	case hvclient.PowerStatusOff:
-		return s.handleDeleteServerStatusOff(ctx, device)
+		return s.handleDeleteDeviceStatusOff(ctx, device)
 	default:
 		return &ctrl.Result{RequeueAfter: 5 * time.Second}, nil
 	}
 }
 
-func (s *Service) handleDeleteServerStatusRunning(ctx context.Context, server *hv.BareMetalDevice) (*ctrl.Result, error) {
-	// Check if the server has been tried to shut down already and if so,
+func (s *Service) handleDeleteDeviceStatusRunning(ctx context.Context, device *hv.BareMetalDevice) (*ctrl.Result, error) {
+	// Check if the device has been tried to shut down already and if so,
 	// if time of last condition change + maxWaitTime is already in the past.
-	// With one of these two conditions true, delete server immediately. Otherwise, shut it down and requeue.
+	// With one of these two conditions true, delete device immediately. Otherwise, shut it down and requeue.
 	if conditions.IsTrue(s.scope.HivelocityMachine, infrav1.InstanceReadyCondition) ||
 		conditions.IsFalse(s.scope.HivelocityMachine, infrav1.InstanceReadyCondition) &&
 			conditions.GetReason(s.scope.HivelocityMachine, infrav1.InstanceReadyCondition) == infrav1.InstanceTerminatedReason &&
 			time.Now().Before(conditions.GetLastTransitionTime(s.scope.HivelocityMachine, infrav1.InstanceReadyCondition).Time.Add(maxShutDownTime)) {
-		if err := s.scope.HVClient.ShutdownServer(ctx, server.DeviceId); err != nil {
+		if err := s.scope.HVClient.ShutdownDevice(ctx, device.DeviceId); err != nil {
 			if hvclient.IsRateLimitExceededError(err) {
 				conditions.MarkTrue(s.scope.HivelocityMachine, infrav1.RateLimitExceeded)
 				record.Event(s.scope.HivelocityMachine,
 					"RateLimitExceeded",
-					"exceeded rate limit with calling Hivelocity function ShutdownServer",
+					"exceeded rate limit with calling Hivelocity function ShutdownDevice",
 				)
 			}
-			return &reconcile.Result{}, fmt.Errorf("failed to shutdown server: %w", err)
+			return &reconcile.Result{}, fmt.Errorf("failed to shutdown device: %w", err)
 		}
 		conditions.MarkFalse(s.scope.HivelocityMachine,
 			infrav1.InstanceReadyCondition,
@@ -329,34 +329,34 @@ func (s *Service) handleDeleteServerStatusRunning(ctx context.Context, server *h
 			"Instance has been shut down")
 		return &ctrl.Result{RequeueAfter: 30 * time.Second}, nil
 	}
-	if err := s.scope.HVClient.DeleteServer(ctx, server.DeviceId); err != nil {
+	if err := s.scope.HVClient.DeleteDevice(ctx, device.DeviceId); err != nil {
 		if hvclient.IsRateLimitExceededError(err) {
 			conditions.MarkTrue(s.scope.HivelocityMachine, infrav1.RateLimitExceeded)
 			record.Event(s.scope.HivelocityMachine,
 				"RateLimitExceeded",
-				"exceeded rate limit with calling Hivelocity function DeleteServer",
+				"exceeded rate limit with calling Hivelocity function DeleteDevice",
 			)
 		}
-		record.Warnf(s.scope.HivelocityMachine, "FailedDeleteHivelocityServer", "Failed to delete Hivelocity server %s", s.scope.Name())
-		return &reconcile.Result{}, fmt.Errorf("failed to delete server: %w", err)
+		record.Warnf(s.scope.HivelocityMachine, "FailedDeleteHivelocityDevice", "Failed to delete Hivelocity device %s", s.scope.Name())
+		return &reconcile.Result{}, fmt.Errorf("failed to delete device: %w", err)
 	}
 
 	record.Eventf(
 		s.scope.HivelocityMachine,
-		"HivelocityServerDeleted",
-		"Hivelocity server %s deleted",
+		"HivelocityDeviceDeleted",
+		"Hivelocity device %s deleted",
 		s.scope.Name(),
 	)
 	return nil, nil
 }
 
-func (s *Service) handleDeleteServerStatusOff(ctx context.Context, server *hv.BareMetalDevice) (*ctrl.Result, error) {
-	return nil, fmt.Errorf("todo: handleDeleteServerStatusOff()")
+func (s *Service) handleDeleteDeviceStatusOff(ctx context.Context, device *hv.BareMetalDevice) (*ctrl.Result, error) {
+	return nil, fmt.Errorf("todo: handleDeleteDeviceStatusOff()")
 }
 
-func setStatusFromAPI(server *hv.BareMetalDevice) infrav1.HivelocityMachineStatus {
+func setStatusFromAPI(device *hv.BareMetalDevice) infrav1.HivelocityMachineStatus {
 	var status infrav1.HivelocityMachineStatus
-	// todo: HV does not have a detailed status for their servers. Only ON or OFF.
+	// todo: HV does not have a detailed status for their devices. Only ON or OFF.
 	return status
 }
 
@@ -364,13 +364,13 @@ func setStatusFromAPI(server *hv.BareMetalDevice) infrav1.HivelocityMachineStatu
 func (s *Service) findAssociateDevice(ctx context.Context) (*hv.BareMetalDevice, error) {
 	clusterTag := hvclient.GetClusterTag(s.scope.ClusterScope.Name())
 	machineTag := hvclient.GetMachineTag(s.scope.Name())
-	devices, err := s.scope.HVClient.ListServers(ctx)
+	devices, err := s.scope.HVClient.ListDevices(ctx)
 	if err != nil {
 		if hvclient.IsRateLimitExceededError(err) {
 			conditions.MarkTrue(s.scope.HivelocityMachine, infrav1.RateLimitExceeded)
 			record.Event(s.scope.HivelocityMachine,
 				"RateLimitExceeded",
-				"exceeded rate limit with calling ListServers",
+				"exceeded rate limit with calling ListDevices",
 			)
 		}
 		return nil, err

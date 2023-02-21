@@ -64,7 +64,7 @@ type HivelocityMachineStatus struct {
 
 	// InstanceState is the state of the server for this machine.
 	// +optional
-	InstanceState *hvclient.ServerStatus `json:"instanceState,omitempty"`
+	InstanceState *hvclient.DeviceStatus `json:"instanceState,omitempty"`
 
 	// FailureReason will be set in the event that there is a terminal problem
 	// reconciling the Machine and will contain a succinct value suitable

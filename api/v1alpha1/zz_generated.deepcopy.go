@@ -314,7 +314,7 @@ func (in *HivelocityMachineStatus) DeepCopyInto(out *HivelocityMachineStatus) {
 	}
 	if in.InstanceState != nil {
 		in, out := &in.InstanceState, &out.InstanceState
-		*out = new(client.ServerStatus)
+		*out = new(client.DeviceStatus)
 		**out = **in
 	}
 	if in.FailureReason != nil {

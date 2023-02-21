@@ -52,8 +52,8 @@ func init() {
 	//+kubebuilder:scaffold:scheme
 }
 
-func cliTestListServers(ctx context.Context, client hvclient.Client) {
-	allServers, err := client.ListServers(ctx)
+func cliTestListDevices(ctx context.Context, client hvclient.Client) {
+	allServers, err := client.ListDevices(ctx)
 	if err != nil {
 		panic(err.Error())
 	}
@@ -89,8 +89,8 @@ func manualTests() {
 	client := factory.NewClient(os.Getenv("HIVELOCITY_API_KEY"))
 	ctx := context.Background()
 	switch arg := os.Args[1]; arg {
-	case "ListServers":
-		cliTestListServers(ctx, client)
+	case "ListDevices":
+		cliTestListDevices(ctx, client)
 	case "ListSSHKeys":
 		cliTestListSSHKeys(ctx, client)
 	case "ListImages":

@@ -38,12 +38,12 @@ func FindDeviceByTags(
 	machineTag string,
 	servers []*hv.BareMetalDevice,
 ) (*hv.BareMetalDevice, error) {
-	var server *hv.BareMetalDevice
+	var device *hv.BareMetalDevice
 	found := 0
 	for i := range servers {
 		if slices.Contains(servers[i].Tags, clusterTag) &&
 			slices.Contains(servers[i].Tags, machineTag) {
-			server = servers[i]
+			device = servers[i]
 			found++
 		}
 	}
@@ -53,16 +53,16 @@ func FindDeviceByTags(
 	} else if found == 0 {
 		return nil, nil
 	}
-	return server, nil
+	return device, nil
 }
 
-// FindUnusedServer returns an unused server. Returns nil if no server was found.
-func FindUnusedServer(servers []*hv.BareMetalDevice, clusterName string, instanceType string) (*hv.BareMetalDevice, error) {
+// FindUnusedDevice returns an unused server. Returns nil if no server was found.
+func FindUnusedDevice(servers []*hv.BareMetalDevice, clusterName string, instanceType string) (*hv.BareMetalDevice, error) {
 	for i := range servers {
 		server := servers[i]
 		it, err := GetInstanceType(server)
 		if err != nil {
-			return nil, fmt.Errorf("[FindUnusedServer] GetInstanceType() failed: %w", err)
+			return nil, fmt.Errorf("[FindUnusedDevice] GetInstanceType() failed: %w", err)
 		}
 		if it != instanceType {
 			continue
@@ -93,10 +93,10 @@ func FindUnusedServer(servers []*hv.BareMetalDevice, clusterName string, instanc
 
 // ServerHasTagKey returns true if the server has the tagKey set.
 // Example: Your can check if a machine has already a name by using tagKey="machine-name".
-func ServerHasTagKey(server *hv.BareMetalDevice, tagKey string) bool {
+func ServerHasTagKey(device *hv.BareMetalDevice, tagKey string) bool {
 	prefix := tagKey + "="
-	for i := range server.Tags {
-		if strings.HasPrefix(server.Tags[i], prefix) {
+	for i := range device.Tags {
+		if strings.HasPrefix(device.Tags[i], prefix) {
 			return true
 		}
 	}
@@ -114,31 +114,31 @@ var ErrNoMatchingTagFound = fmt.Errorf("no matching tag found")
 // Example: If a server has the tag "foo=bar", then ServerGetTagValue
 // will return "bar".
 // If there is no such tag, or there are two tags, then an error gets returned.
-func ServerGetTagValue(server *hv.BareMetalDevice, tagKey string) (string, error) {
+func ServerGetTagValue(device *hv.BareMetalDevice, tagKey string) (string, error) {
 	prefix := tagKey + "="
 	found := 0
 	value := ""
-	for i := range server.Tags {
-		if !strings.HasPrefix(server.Tags[i], prefix) {
+	for i := range device.Tags {
+		if !strings.HasPrefix(device.Tags[i], prefix) {
 			continue
 		}
 		if found > 0 {
 			return "", fmt.Errorf("[ServerGetTagValue] device %q, tagKey %q: %w",
-				server.Hostname, tagKey, ErrTooManyTagsFound)
+				device.Hostname, tagKey, ErrTooManyTagsFound)
 		}
 		found++
-		value = server.Tags[i][len(prefix):]
+		value = device.Tags[i][len(prefix):]
 	}
 	if found == 0 {
 		return "", fmt.Errorf("[ServerGetTagValue] device %q, tagKey %q: %w",
-			server.Hostname, tagKey, ErrNoMatchingTagFound)
+			device.Hostname, tagKey, ErrNoMatchingTagFound)
 	}
 	return value, nil
 }
 
 // GetInstanceType returns the instance-type of this BareMetalDevice.
-func GetInstanceType(server *hv.BareMetalDevice) (string, error) {
-	instanceType, err := ServerGetTagValue(server, hvclient.TagKeyInstanceType)
+func GetInstanceType(device *hv.BareMetalDevice) (string, error) {
+	instanceType, err := ServerGetTagValue(device, hvclient.TagKeyInstanceType)
 	if err != nil {
 		return "", fmt.Errorf("[GetInstanceType] ServerGetTagValue() failed: %w", err)
 	}
