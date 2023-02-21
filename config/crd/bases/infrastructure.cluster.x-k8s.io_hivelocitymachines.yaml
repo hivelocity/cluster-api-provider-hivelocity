@@ -28,21 +28,21 @@ spec:
       jsonPath: .spec.imageName
       name: Image
       type: string
-    - description: Server type
+    - description: Device type
       jsonPath: .spec.type
       name: Type
       type: string
-    - description: Hivelocity instance state
-      jsonPath: .status.instanceState
+    - description: Hivelocity device state
+      jsonPath: .status.deviceState
       name: State
       type: string
     - description: Machine ready status
       jsonPath: .status.ready
       name: Ready
       type: string
-    - description: Hivelocity instance ID
+    - description: Hivelocity device ID
       jsonPath: .spec.providerID
-      name: InstanceID
+      name: DeviceID
       type: string
     - description: Machine object which owns with this HivelocityMachine
       jsonPath: .metadata.ownerReferences[?(@.kind=="Machine")].name
@@ -70,7 +70,7 @@ spec:
             properties:
               imageName:
                 description: ImageName is the reference to the Machine Image from
-                  which to create the machine instance.
+                  which to create the device.
                 minLength: 1
                 type: string
               providerID:
@@ -91,7 +91,7 @@ spec:
             description: HivelocityMachineStatus defines the observed state of HivelocityMachine.
             properties:
               addresses:
-                description: Addresses contains the server's associated addresses.
+                description: Addresses contains the devices's associated addresses.
                 items:
                   description: NodeAddress contains information for the node's address.
                   properties:
@@ -152,6 +152,9 @@ spec:
                   - type
                   type: object
                 type: array
+              deviceState:
+                description: DeviceState is the state of the device for this machine.
+                type: string
               failureMessage:
                 description: FailureMessage will be set in the event that there is
                   a terminal problem reconciling the Machine and will contain a more
@@ -162,15 +165,12 @@ spec:
                   a terminal problem reconciling the Machine and will contain a succinct
                   value suitable for machine interpretation.
                 type: string
-              instanceState:
-                description: InstanceState is the state of the server for this machine.
-                type: string
               ready:
                 description: Ready is true when the provider resource is ready.
                 type: boolean
               region:
                 description: Region contains the name of the Hivelocity location the
-                  server is running.
+                  device is running.
                 enum:
                 - TODO1
                 - TODO2

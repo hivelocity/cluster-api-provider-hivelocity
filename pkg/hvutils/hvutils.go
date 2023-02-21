@@ -27,58 +27,58 @@ import (
 	"golang.org/x/exp/slices"
 )
 
-var errMultipleServerFound = fmt.Errorf(
-	"multiple servers found while trying to find a single server",
+var errMultipleDevicesFound = fmt.Errorf(
+	"multiple devices found while trying to find a single device",
 )
 
-// FindServerByTags returns the server with the given clusterTag and machineTag.
-// Returns nil if no server was found.
-func FindServerByTags(
+// FindDeviceByTags returns the device with the given clusterTag and machineTag.
+// Returns nil if no device was found.
+func FindDeviceByTags(
 	clusterTag string,
 	machineTag string,
-	servers []*hv.BareMetalDevice,
+	devices []*hv.BareMetalDevice,
 ) (*hv.BareMetalDevice, error) {
-	var server *hv.BareMetalDevice
+	var device *hv.BareMetalDevice
 	found := 0
-	for i := range servers {
-		if slices.Contains(servers[i].Tags, clusterTag) &&
-			slices.Contains(servers[i].Tags, machineTag) {
-			server = servers[i]
+	for i := range devices {
+		if slices.Contains(devices[i].Tags, clusterTag) &&
+			slices.Contains(devices[i].Tags, machineTag) {
+			device = devices[i]
 			found++
 		}
 	}
 	if found > 1 {
-		return nil, fmt.Errorf("found %v servers with tags %s and %s. Expected one: %w",
-			found, clusterTag, machineTag, errMultipleServerFound)
+		return nil, fmt.Errorf("found %v devices with tags %s and %s. Expected one: %w",
+			found, clusterTag, machineTag, errMultipleDevicesFound)
 	} else if found == 0 {
 		return nil, nil
 	}
-	return server, nil
+	return device, nil
 }
 
-// FindUnusedServer returns an unused server. Returns nil if no server was found.
-func FindUnusedServer(servers []*hv.BareMetalDevice, clusterName string, instanceType string) (*hv.BareMetalDevice, error) {
-	for i := range servers {
-		server := servers[i]
-		it, err := GetInstanceType(server)
+// FindUnusedDevice returns an unused device. Returns nil if no device was found.
+func FindUnusedDevice(devices []*hv.BareMetalDevice, clusterName, deviceType string) (*hv.BareMetalDevice, error) {
+	for i := range devices {
+		device := devices[i]
+		it, err := GetDeviceType(device)
 		if err != nil {
-			return nil, fmt.Errorf("[FindUnusedServer] GetInstanceType() failed: %w", err)
+			return nil, fmt.Errorf("[FindUnusedDevice] GetDeviceType() failed: %w", err)
 		}
-		if it != instanceType {
+		if it != deviceType {
 			continue
 		}
-		if ServerHasTagKey(server, hvclient.TagKeyMachineName) {
+		if DeviceHasTagKey(device, hvclient.TagKeyMachineName) {
 			continue
 		}
-		cn, err := ServerGetTagValue(server, hvclient.TagKeyClusterName)
+		cn, err := DeviceGetTagValue(device, hvclient.TagKeyClusterName)
 		if errors.Is(err, ErrTooManyTagsFound) {
 			continue
 		}
 		if errors.Is(err, ErrNoMatchingTagFound) {
 			// this could lead to a race-condition, if two controllers of two clusters
-			// try to fetch an unused server.
+			// try to fetch an unused device.
 			// TODO: re-check after N seconds if there is a second tag from a second controller.
-			return server, nil
+			return device, nil
 		}
 		if err != nil {
 			return nil, err
@@ -86,17 +86,17 @@ func FindUnusedServer(servers []*hv.BareMetalDevice, clusterName string, instanc
 		if cn != clusterName {
 			continue
 		}
-		return server, nil
+		return device, nil
 	}
 	return nil, nil
 }
 
-// ServerHasTagKey returns true if the server has the tagKey set.
+// DeviceHasTagKey returns true if the device has the tagKey set.
 // Example: Your can check if a machine has already a name by using tagKey="machine-name".
-func ServerHasTagKey(server *hv.BareMetalDevice, tagKey string) bool {
+func DeviceHasTagKey(device *hv.BareMetalDevice, tagKey string) bool {
 	prefix := tagKey + "="
-	for i := range server.Tags {
-		if strings.HasPrefix(server.Tags[i], prefix) {
+	for i := range device.Tags {
+		if strings.HasPrefix(device.Tags[i], prefix) {
 			return true
 		}
 	}
@@ -110,37 +110,37 @@ var ErrTooManyTagsFound = fmt.Errorf("too many tags found")
 // ErrNoMatchingTagFound gets returned, if no matching tag was found.
 var ErrNoMatchingTagFound = fmt.Errorf("no matching tag found")
 
-// ServerGetTagValue returns the value of a TagKey of a server.
-// Example: If a server has the tag "foo=bar", then ServerGetTagValue
+// DeviceGetTagValue returns the value of a TagKey of a device.
+// Example: If a device has the tag "foo=bar", then DeviceGetTagValue
 // will return "bar".
 // If there is no such tag, or there are two tags, then an error gets returned.
-func ServerGetTagValue(server *hv.BareMetalDevice, tagKey string) (string, error) {
+func DeviceGetTagValue(device *hv.BareMetalDevice, tagKey string) (string, error) {
 	prefix := tagKey + "="
 	found := 0
 	value := ""
-	for i := range server.Tags {
-		if !strings.HasPrefix(server.Tags[i], prefix) {
+	for i := range device.Tags {
+		if !strings.HasPrefix(device.Tags[i], prefix) {
 			continue
 		}
 		if found > 0 {
-			return "", fmt.Errorf("[ServerGetTagValue] device %q, tagKey %q: %w",
-				server.Hostname, tagKey, ErrTooManyTagsFound)
+			return "", fmt.Errorf("[DeviceGetTagValue] device %q, tagKey %q: %w",
+				device.Hostname, tagKey, ErrTooManyTagsFound)
 		}
 		found++
-		value = server.Tags[i][len(prefix):]
+		value = device.Tags[i][len(prefix):]
 	}
 	if found == 0 {
-		return "", fmt.Errorf("[ServerGetTagValue] device %q, tagKey %q: %w",
-			server.Hostname, tagKey, ErrNoMatchingTagFound)
+		return "", fmt.Errorf("[DeviceGetTagValue] device %q, tagKey %q: %w",
+			device.Hostname, tagKey, ErrNoMatchingTagFound)
 	}
 	return value, nil
 }
 
-// GetInstanceType returns the instance-type of this BareMetalDevice.
-func GetInstanceType(server *hv.BareMetalDevice) (string, error) {
-	instanceType, err := ServerGetTagValue(server, hvclient.TagKeyInstanceType)
+// GetDeviceType returns the device-type of this BareMetalDevice.
+func GetDeviceType(device *hv.BareMetalDevice) (string, error) {
+	deviceType, err := DeviceGetTagValue(device, hvclient.TagKeyDeviceType)
 	if err != nil {
-		return "", fmt.Errorf("[GetInstanceType] ServerGetTagValue() failed: %w", err)
+		return "", fmt.Errorf("[GetDeviceType] DeviceGetTagValue() failed: %w", err)
 	}
-	return instanceType, nil
+	return deviceType, nil
 }

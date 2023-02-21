@@ -61,7 +61,7 @@ func LabelSelectorToLabels(str string) (map[string]string, error) {
 }
 
 // DifferenceOfStringSlices returns the elements in `a` that aren't in `b` as well as elements of `a` not in `b`.
-func DifferenceOfStringSlices(a, b []string) (onlyInA []string, onlyInB []string) {
+func DifferenceOfStringSlices(a, b []string) (onlyInA, onlyInB []string) {
 	ma := make(map[string]struct{}, len(a))
 	mb := make(map[string]struct{}, len(b))
 	for _, x := range b {
@@ -86,7 +86,7 @@ func DifferenceOfStringSlices(a, b []string) (onlyInA []string, onlyInB []string
 }
 
 // DifferenceOfIntSlices returns the elements in `a` that aren't in `b` as well as elements of `a` not in `b`.
-func DifferenceOfIntSlices(a, b []int) (onlyInA []int, onlyInB []int) {
+func DifferenceOfIntSlices(a, b []int) (onlyInA, onlyInB []int) {
 	ma := make(map[int]struct{}, len(a))
 	mb := make(map[int]struct{}, len(b))
 	for _, x := range b {

@@ -30,9 +30,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
-	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
-	// to ensure that exec-entrypoint and run can make use of them.
-	_ "k8s.io/client-go/plugin/pkg/client/auth"
+	_ "k8s.io/client-go/plugin/pkg/client/auth" // Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.) to ensure that exec-entrypoint and run can make use of them.
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
@@ -51,16 +49,16 @@ func init() {
 	//+kubebuilder:scaffold:scheme
 }
 
-func cliTestListServers(ctx context.Context, client hvclient.Client) {
-	allServers, err := client.ListServers(ctx)
+func cliTestListDevices(ctx context.Context, client hvclient.Client) {
+	allDevices, err := client.ListDevices(ctx)
 	if err != nil {
 		panic(err.Error())
 	}
-	server, err := hvutils.FindServerByTags("cn=foo", "mn=bar", allServers)
+	device, err := hvutils.FindDeviceByTags("cn=foo", "mn=bar", allDevices)
 	if err != nil {
 		panic(err)
 	}
-	fmt.Printf("server: %+v\n", server)
+	fmt.Printf("device: %+v\n", device)
 }
 
 func cliTestListImages(ctx context.Context, client hvclient.Client) {
@@ -88,16 +86,18 @@ func manualTests() {
 	client := factory.NewClient(os.Getenv("HIVELOCITY_API_KEY"))
 	ctx := context.Background()
 	switch arg := os.Args[1]; arg {
-	case "ListServers":
-		cliTestListServers(ctx, client)
+	case "ListDevices":
+		cliTestListDevices(ctx, client)
+		os.Exit(0)
 	case "ListSSHKeys":
 		cliTestListSSHKeys(ctx, client)
+		os.Exit(0)
 	case "ListImages":
 		cliTestListImages(ctx, client)
+		os.Exit(0)
 	default:
-		panic(fmt.Sprintf("unknown argument %q", arg))
+		fmt.Printf("unknown argument %q", arg)
 	}
-	os.Exit(0)
 }
 
 func main() {

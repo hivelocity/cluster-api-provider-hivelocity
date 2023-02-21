@@ -43,7 +43,7 @@ type HivelocityMachineSpec struct {
 	// +kubebuilder:validation:Enum=hvCustom;todo-question
 	Type HivelocityMachineType `json:"type"`
 
-	// ImageName is the reference to the Machine Image from which to create the machine instance.
+	// ImageName is the reference to the Machine Image from which to create the device.
 	// +kubebuilder:validation:MinLength=1
 	ImageName string `json:"imageName"`
 }
@@ -56,15 +56,15 @@ type HivelocityMachineStatus struct {
 	// +optional
 	Ready bool `json:"ready"`
 
-	// Addresses contains the server's associated addresses.
+	// Addresses contains the devices's associated addresses.
 	Addresses []corev1.NodeAddress `json:"addresses,omitempty"`
 
-	// Region contains the name of the Hivelocity location the server is running.
+	// Region contains the name of the Hivelocity location the device is running.
 	Region Region `json:"region,omitempty"`
 
-	// InstanceState is the state of the server for this machine.
+	// DeviceState is the state of the device for this machine.
 	// +optional
-	InstanceState *hvclient.ServerStatus `json:"instanceState,omitempty"`
+	DeviceState *hvclient.DeviceStatus `json:"deviceState,omitempty"`
 
 	// FailureReason will be set in the event that there is a terminal problem
 	// reconciling the Machine and will contain a succinct value suitable
@@ -88,10 +88,10 @@ type HivelocityMachineStatus struct {
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="Cluster",type="string",JSONPath=".metadata.labels.cluster\\.x-k8s\\.io/cluster-name",description="Cluster to which this HivelocityMachine belongs"
 // +kubebuilder:printcolumn:name="Image",type="string",JSONPath=".spec.imageName",description="Image name"
-// +kubebuilder:printcolumn:name="Type",type="string",JSONPath=".spec.type",description="Server type"
-// +kubebuilder:printcolumn:name="State",type="string",JSONPath=".status.instanceState",description="Hivelocity instance state"
+// +kubebuilder:printcolumn:name="Type",type="string",JSONPath=".spec.type",description="Device type"
+// +kubebuilder:printcolumn:name="State",type="string",JSONPath=".status.deviceState",description="Hivelocity device state"
 // +kubebuilder:printcolumn:name="Ready",type="string",JSONPath=".status.ready",description="Machine ready status"
-// +kubebuilder:printcolumn:name="InstanceID",type="string",JSONPath=".spec.providerID",description="Hivelocity instance ID"
+// +kubebuilder:printcolumn:name="DeviceID",type="string",JSONPath=".spec.providerID",description="Hivelocity device ID"
 // +kubebuilder:printcolumn:name="Machine",type="string",JSONPath=".metadata.ownerReferences[?(@.kind==\"Machine\")].name",description="Machine object which owns with this HivelocityMachine"
 // +k8s:defaulter-gen=true
 

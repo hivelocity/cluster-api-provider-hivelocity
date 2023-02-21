@@ -80,7 +80,7 @@ type HivelocityClusterReconciler struct {
 func (r *HivelocityClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ ctrl.Result, reterr error) {
 	log := ctrl.LoggerFrom(ctx)
 
-	// Fetch the HivelocityCluster instance
+	// Fetch the HivelocityCluster
 	hvCluster := &infrav1.HivelocityCluster{}
 	err := r.Get(ctx, req.NamespacedName, hvCluster)
 	if err != nil {
@@ -280,7 +280,8 @@ func getAndValidateHivelocityAPIKey(ctx context.Context, namespace string, hvClu
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			return "", nil, &secretutil.ResolveSecretRefError{
-				Message: fmt.Sprintf("The Hivelocity secret %s does not exist", secretNamspacedName)}
+				Message: fmt.Sprintf("The Hivelocity secret %s does not exist", secretNamspacedName),
+			}
 		}
 		return "", nil, err
 	}

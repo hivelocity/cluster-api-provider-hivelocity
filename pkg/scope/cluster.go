@@ -138,7 +138,7 @@ func (s *ClusterScope) SetStatusFailureDomain(regions []infrav1.Region) {
 
 // ClientConfig return a kusecretbernetes client config for the cluster context.
 func (s *ClusterScope) ClientConfig(ctx context.Context) (clientcmd.ClientConfig, error) {
-	var cluster = client.ObjectKey{
+	cluster := client.ObjectKey{
 		Name:      fmt.Sprintf("%s-%s", s.Cluster.Name, secret.Kubeconfig),
 		Namespace: s.Cluster.Namespace,
 	}
@@ -178,7 +178,7 @@ func (s *ClusterScope) ClientConfigWithAPIEndpoint(ctx context.Context, endpoint
 func (s *ClusterScope) ListMachines(ctx context.Context) ([]*clusterv1.Machine, []*infrav1.HivelocityMachine, error) {
 	// get and index Machines by HivelocityMachine name
 	var machineListRaw clusterv1.MachineList
-	var machineByHivelocityMachineName = make(map[string]*clusterv1.Machine)
+	machineByHivelocityMachineName := make(map[string]*clusterv1.Machine)
 	if err := s.Client.List(ctx, &machineListRaw, client.InNamespace(s.Namespace())); err != nil {
 		return nil, nil, err
 	}

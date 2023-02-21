@@ -17,6 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	//+kubebuilder:scaffold:imports
 	"context"
 	"crypto/tls"
 	"fmt"
@@ -28,7 +29,6 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	admissionv1 "k8s.io/api/admission/v1"
-	//+kubebuilder:scaffold:imports
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -128,11 +128,11 @@ var _ = BeforeSuite(func() {
 	dialer := &net.Dialer{Timeout: time.Second}
 	addrPort := fmt.Sprintf("%s:%d", webhookInstallOptions.LocalServingHost, webhookInstallOptions.LocalServingPort)
 	Eventually(func() error {
-		conn, err := tls.DialWithDialer(dialer, "tcp", addrPort, &tls.Config{InsecureSkipVerify: true})
+		conn, err := tls.DialWithDialer(dialer, "tcp", addrPort, &tls.Config{InsecureSkipVerify: true}) // #nosec G402
 		if err != nil {
 			return err
 		}
-		conn.Close()
+		conn.Close() // #nosec G104
 		return nil
 	}).Should(Succeed())
 

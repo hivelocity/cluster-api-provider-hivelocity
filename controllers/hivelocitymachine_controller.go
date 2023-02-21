@@ -62,7 +62,7 @@ type HivelocityMachineReconciler struct {
 func (r *HivelocityMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ ctrl.Result, reterr error) {
 	log := ctrl.LoggerFrom(ctx)
 
-	// Fetch the HivelocityMachine instance.
+	// Fetch the HivelocityMachine device.
 	hivelocityMachine := &infrav1.HivelocityMachine{}
 	err := r.Get(ctx, req.NamespacedName, hivelocityMachine)
 	if err != nil {
@@ -118,7 +118,7 @@ func (r *HivelocityMachineReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	secretManager := secretutil.NewSecretManager(log, r.Client, r.APIReader)
 	hvAPIKey, hvSecret, err := getAndValidateHivelocityAPIKey(ctx, req.Namespace, hvCluster, secretManager)
 	if err != nil {
-		return hvAPIKeyErrorResult(ctx, err, hivelocityMachine, infrav1.InstanceReadyCondition, r.Client)
+		return hvAPIKeyErrorResult(ctx, err, hivelocityMachine, infrav1.DeviceReadyCondition, r.Client)
 	}
 
 	hvClient := r.HVClientFactory.NewClient(hvAPIKey)

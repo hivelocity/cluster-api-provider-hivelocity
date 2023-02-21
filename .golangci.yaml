@@ -191,7 +191,7 @@ issues:
     # revive (previously, golint) only allows these to be imported in a main.go, which wouldn't work for us.
     # This directive allows the embed package to be imported with an underscore everywhere.
     - linters:
-      - revive
+        - revive
       source: _ "embed"
 run:
   timeout: 10m

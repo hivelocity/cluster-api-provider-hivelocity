@@ -43,7 +43,7 @@ type HivelocitySecretRef struct {
 	Key string `json:"key,omitempty"`
 }
 
-// PublicNetworkSpec contains specs about public network spec of an Hivelocity server.
+// PublicNetworkSpec contains specs about public network spec of an Hivelocity device.
 type PublicNetworkSpec struct {
 	// +optional
 	// +kubebuilder:default=true
