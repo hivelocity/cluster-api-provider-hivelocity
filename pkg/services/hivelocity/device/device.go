@@ -70,8 +70,8 @@ func (s *Service) Reconcile(ctx context.Context) (_ *ctrl.Result, err error) {
 		s.scope.Info("Bootstrap not ready - requeuing")
 		conditions.MarkFalse(
 			s.scope.HivelocityMachine,
-			infrav1.InstanceBootstrapReadyCondition,
-			infrav1.InstanceBootstrapNotReadyReason,
+			infrav1.DeviceBootstrapReadyCondition,
+			infrav1.DeviceBootstrapNotReadyReason,
 			clusterv1.ConditionSeverityInfo,
 			"bootstrap not ready yet",
 		)
@@ -80,7 +80,7 @@ func (s *Service) Reconcile(ctx context.Context) (_ *ctrl.Result, err error) {
 
 	conditions.MarkTrue(
 		s.scope.HivelocityMachine,
-		infrav1.InstanceBootstrapReadyCondition,
+		infrav1.DeviceBootstrapReadyCondition,
 	)
 
 	// Try to find the associate device.
@@ -113,9 +113,9 @@ func (s *Service) Reconcile(ctx context.Context) (_ *ctrl.Result, err error) {
 	/* todo: up to now we only get ON/OFF
 	case hv.BareMetalDeviceStatusStarting:
 		// Requeue here so that device does not switch back and forth between off and starting.
-		// If we don't return here, the condition InstanceReady would get marked as true in this
+		// If we don't return here, the condition DeviceReady would get marked as true in this
 		// case. However, if the device is stuck and does not power on, we should not mark the
-		// condition InstanceReady as true to be able to remediate the device after a timeout.
+		// condition DeviceReady as true to be able to remediate the device after a timeout.
 		return &reconcile.Result{RequeueAfter: 10 * time.Second}, nil
 	*/
 	case hvclient.PowerStatusOn: // Do nothing
@@ -132,13 +132,13 @@ func (s *Service) Reconcile(ctx context.Context) (_ *ctrl.Result, err error) {
 	if !s.scope.IsControlPlane() {
 		s.scope.HivelocityMachine.Spec.ProviderID = &providerID
 		s.scope.HivelocityMachine.Status.Ready = true
-		conditions.MarkTrue(s.scope.HivelocityMachine, infrav1.InstanceReadyCondition)
+		conditions.MarkTrue(s.scope.HivelocityMachine, infrav1.DeviceReadyCondition)
 		return nil, nil
 	}
 
 	s.scope.HivelocityMachine.Spec.ProviderID = &providerID
 	s.scope.HivelocityMachine.Status.Ready = true
-	conditions.MarkTrue(s.scope.HivelocityMachine, infrav1.InstanceReadyCondition)
+	conditions.MarkTrue(s.scope.HivelocityMachine, infrav1.DeviceReadyCondition)
 
 	return nil, nil
 }
@@ -147,7 +147,7 @@ func (s *Service) handleDeviceStatusOff(ctx context.Context, device *hv.BareMeta
 	// Check if device is in DeviceStatusOff and turn it on. This is to avoid a bug of Hivelocity where
 	// sometimes machines are created and not turned on
 
-	condition := conditions.Get(s.scope.HivelocityMachine, infrav1.InstanceReadyCondition)
+	condition := conditions.Get(s.scope.HivelocityMachine, infrav1.DeviceReadyCondition)
 	if condition != nil &&
 		condition.Status == corev1.ConditionFalse &&
 		condition.Reason == infrav1.DeviceOffReason {
@@ -175,7 +175,7 @@ func (s *Service) handleDeviceStatusOff(ctx context.Context, device *hv.BareMeta
 		}
 		conditions.MarkFalse(
 			s.scope.HivelocityMachine,
-			infrav1.InstanceReadyCondition,
+			infrav1.DeviceReadyCondition,
 			infrav1.DeviceOffReason,
 			clusterv1.ConditionSeverityInfo,
 			"device is switched off",
@@ -208,7 +208,7 @@ func (s *Service) createDevice(ctx context.Context) (*hv.BareMetalDevice, error)
 		return nil, fmt.Errorf("[Service.createDevice] ListDevices() failed. cluster %q: %w",
 			s.scope.Name(), err)
 	}
-	unusedDevice, err := hvutils.FindUnusedDevice(devices, s.scope.Name(), "question instance-type")
+	unusedDevice, err := hvutils.FindUnusedDevice(devices, s.scope.Name(), "question device-type")
 	if err != nil {
 		return nil, fmt.Errorf("[Service.createDevice] FindUnusedDevice() failed. cluster %q: %w",
 			s.scope.Name(), err)
@@ -289,7 +289,7 @@ func (s *Service) Delete(ctx context.Context) (_ *ctrl.Result, err error) {
 	// If no device has been found then nothing can be deleted
 	if device == nil {
 		s.scope.V(2).Info("Unable to locate Hivelocity device by ID or tags")
-		record.Warnf(s.scope.HivelocityMachine, "NoInstanceFound", "Unable to find matching Hivelocity device for %s", s.scope.Name())
+		record.Warnf(s.scope.HivelocityMachine, "NoDeviceFound", "Unable to find matching Hivelocity device for %s", s.scope.Name())
 		return nil, nil
 	}
 
@@ -308,10 +308,10 @@ func (s *Service) handleDeleteDeviceStatusRunning(ctx context.Context, device *h
 	// Check if the device has been tried to shut down already and if so,
 	// if time of last condition change + maxWaitTime is already in the past.
 	// With one of these two conditions true, delete device immediately. Otherwise, shut it down and requeue.
-	if conditions.IsTrue(s.scope.HivelocityMachine, infrav1.InstanceReadyCondition) ||
-		conditions.IsFalse(s.scope.HivelocityMachine, infrav1.InstanceReadyCondition) &&
-			conditions.GetReason(s.scope.HivelocityMachine, infrav1.InstanceReadyCondition) == infrav1.InstanceTerminatedReason &&
-			time.Now().Before(conditions.GetLastTransitionTime(s.scope.HivelocityMachine, infrav1.InstanceReadyCondition).Time.Add(maxShutDownTime)) {
+	if conditions.IsTrue(s.scope.HivelocityMachine, infrav1.DeviceReadyCondition) ||
+		conditions.IsFalse(s.scope.HivelocityMachine, infrav1.DeviceReadyCondition) &&
+			conditions.GetReason(s.scope.HivelocityMachine, infrav1.DeviceReadyCondition) == infrav1.DeviceTerminatedReason &&
+			time.Now().Before(conditions.GetLastTransitionTime(s.scope.HivelocityMachine, infrav1.DeviceReadyCondition).Time.Add(maxShutDownTime)) {
 		if err := s.scope.HVClient.ShutdownDevice(ctx, device.DeviceId); err != nil {
 			if hvclient.IsRateLimitExceededError(err) {
 				conditions.MarkTrue(s.scope.HivelocityMachine, infrav1.RateLimitExceeded)
@@ -323,10 +323,10 @@ func (s *Service) handleDeleteDeviceStatusRunning(ctx context.Context, device *h
 			return &reconcile.Result{}, fmt.Errorf("failed to shutdown device: %w", err)
 		}
 		conditions.MarkFalse(s.scope.HivelocityMachine,
-			infrav1.InstanceReadyCondition,
-			infrav1.InstanceTerminatedReason,
+			infrav1.DeviceReadyCondition,
+			infrav1.DeviceTerminatedReason,
 			clusterv1.ConditionSeverityInfo,
-			"Instance has been shut down")
+			"Device has been shut down")
 		return &ctrl.Result{RequeueAfter: 30 * time.Second}, nil
 	}
 	if err := s.scope.HVClient.DeleteDevice(ctx, device.DeviceId); err != nil {

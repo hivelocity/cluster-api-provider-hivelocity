@@ -146,8 +146,8 @@ const (
 	// TagKeyClusterName is the prefix for HV tags for cluster names.
 	TagKeyClusterName = "caphv-cluster-name"
 
-	// TagKeyInstanceType is the prefix for HV tags for instance types.
-	TagKeyInstanceType = "caphv-instance-type"
+	// TagKeyDeviceType is the prefix for HV tags for device types.
+	TagKeyDeviceType = "caphv-device-type"
 )
 
 // GetMachineTag create tag for HV API. Example: "mymachine" --> "caphv-machine-name=mymachine".

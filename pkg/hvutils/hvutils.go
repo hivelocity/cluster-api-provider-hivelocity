@@ -57,14 +57,14 @@ func FindDeviceByTags(
 }
 
 // FindUnusedDevice returns an unused device. Returns nil if no device was found.
-func FindUnusedDevice(devices []*hv.BareMetalDevice, clusterName string, instanceType string) (*hv.BareMetalDevice, error) {
+func FindUnusedDevice(devices []*hv.BareMetalDevice, clusterName string, deviceType string) (*hv.BareMetalDevice, error) {
 	for i := range devices {
 		device := devices[i]
-		it, err := GetInstanceType(device)
+		it, err := GetDeviceType(device)
 		if err != nil {
-			return nil, fmt.Errorf("[FindUnusedDevice] GetInstanceType() failed: %w", err)
+			return nil, fmt.Errorf("[FindUnusedDevice] GetDeviceType() failed: %w", err)
 		}
-		if it != instanceType {
+		if it != deviceType {
 			continue
 		}
 		if DeviceHasTagKey(device, hvclient.TagKeyMachineName) {
@@ -136,11 +136,11 @@ func DeviceGetTagValue(device *hv.BareMetalDevice, tagKey string) (string, error
 	return value, nil
 }
 
-// GetInstanceType returns the instance-type of this BareMetalDevice.
-func GetInstanceType(device *hv.BareMetalDevice) (string, error) {
-	instanceType, err := DeviceGetTagValue(device, hvclient.TagKeyInstanceType)
+// GetDeviceType returns the device-type of this BareMetalDevice.
+func GetDeviceType(device *hv.BareMetalDevice) (string, error) {
+	deviceType, err := DeviceGetTagValue(device, hvclient.TagKeyDeviceType)
 	if err != nil {
-		return "", fmt.Errorf("[GetInstanceType] DeviceGetTagValue() failed: %w", err)
+		return "", fmt.Errorf("[GetDeviceType] DeviceGetTagValue() failed: %w", err)
 	}
-	return instanceType, nil
+	return deviceType, nil
 }

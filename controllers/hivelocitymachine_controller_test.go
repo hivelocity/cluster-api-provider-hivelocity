@@ -187,7 +187,7 @@ var _ = Describe("HivelocityMachineReconciler", func() {
 				if err := testEnv.Get(ctx, key, infraMachine); err != nil {
 					return false
 				}
-				return isPresentAndFalseWithReason(key, infraMachine, infrav1.InstanceBootstrapReadyCondition, infrav1.InstanceBootstrapNotReadyReason)
+				return isPresentAndFalseWithReason(key, infraMachine, infrav1.DeviceBootstrapReadyCondition, infrav1.DeviceBootstrapNotReadyReason)
 			}, timeout, time.Second).Should(BeTrue())
 
 			By("setting the bootstrap data")
@@ -205,9 +205,9 @@ var _ = Describe("HivelocityMachineReconciler", func() {
 				if err := testEnv.Get(ctx, key, infraMachine); err != nil {
 					return false
 				}
-				objectCondition := conditions.Get(infraMachine, infrav1.InstanceBootstrapReadyCondition)
+				objectCondition := conditions.Get(infraMachine, infrav1.DeviceBootstrapReadyCondition)
 				fmt.Println(objectCondition)
-				return isPresentAndTrue(key, infraMachine, infrav1.InstanceBootstrapReadyCondition)
+				return isPresentAndTrue(key, infraMachine, infrav1.DeviceBootstrapReadyCondition)
 			}, timeout, time.Second).Should(BeTrue())
 
 			Eventually(func() int {
@@ -428,7 +428,7 @@ var _ = Describe("Hivelocity secret", func() {
 				if err := testEnv.Get(ctx, key, hivelocityMachine); err != nil {
 					return false
 				}
-				return isPresentAndFalseWithReason(key, hivelocityMachine, infrav1.InstanceReadyCondition, expectedReason)
+				return isPresentAndFalseWithReason(key, hivelocityMachine, infrav1.DeviceReadyCondition, expectedReason)
 			}, timeout, time.Second).Should(BeTrue())
 		},
 		Entry("no Hivelocity secret/wrong reference", corev1.Secret{

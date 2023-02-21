@@ -312,8 +312,8 @@ func (in *HivelocityMachineStatus) DeepCopyInto(out *HivelocityMachineStatus) {
 		*out = make([]v1.NodeAddress, len(*in))
 		copy(*out, *in)
 	}
-	if in.InstanceState != nil {
-		in, out := &in.InstanceState, &out.InstanceState
+	if in.DeviceState != nil {
+		in, out := &in.DeviceState, &out.DeviceState
 		*out = new(client.DeviceStatus)
 		**out = **in
 	}

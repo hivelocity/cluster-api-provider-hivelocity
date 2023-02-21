@@ -19,21 +19,19 @@ package v1alpha1
 import clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 
 const (
-	// InstanceReadyCondition reports on current status of the instance. Ready indicates the instance is in a Running state.
-	InstanceReadyCondition clusterv1.ConditionType = "InstanceReady"
-	// InstanceTerminatedReason instance is in a terminated state.
-	InstanceTerminatedReason = "InstanceTerminated"
-	// DeviceOffReason instance is off.
+	// DeviceReadyCondition reports on current status of the device. Ready indicates the device is in a Running state.
+	DeviceReadyCondition clusterv1.ConditionType = "DeviceReady"
+	// DeviceTerminatedReason device is in a terminated state.
+	DeviceTerminatedReason = "DeviceTerminated"
+	// DeviceOffReason device is off.
 	DeviceOffReason = "DeviceOff"
-	// InstanceAsControlPlaneUnreachableReason control plane is (not yet) reachable.
-	InstanceAsControlPlaneUnreachableReason = "InstanceAsControlPlaneUnreachable"
 )
 
 const (
-	// InstanceBootstrapReadyCondition reports on current status of the instance. BootstrapReady indicates the bootstrap is ready.
-	InstanceBootstrapReadyCondition clusterv1.ConditionType = "InstanceBootstrapReady"
-	// InstanceBootstrapNotReadyReason bootstrap not ready yet.
-	InstanceBootstrapNotReadyReason = "InstanceBootstrapNotReady"
+	// DeviceBootstrapReadyCondition reports on current status of the device. BootstrapReady indicates the bootstrap is ready.
+	DeviceBootstrapReadyCondition clusterv1.ConditionType = "DeviceBootstrapReady"
+	// DeviceBootstrapNotReadyReason bootstrap not ready yet.
+	DeviceBootstrapNotReadyReason = "DeviceBootstrapNotReady"
 )
 
 const (
