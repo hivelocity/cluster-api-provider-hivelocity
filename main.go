@@ -88,14 +88,16 @@ func manualTests() {
 	switch arg := os.Args[1]; arg {
 	case "ListDevices":
 		cliTestListDevices(ctx, client)
+		os.Exit(0)
 	case "ListSSHKeys":
 		cliTestListSSHKeys(ctx, client)
+		os.Exit(0)
 	case "ListImages":
 		cliTestListImages(ctx, client)
+		os.Exit(0)
 	default:
-		panic(fmt.Sprintf("unknown argument %q", arg))
+		fmt.Printf("unknown argument %q", arg)
 	}
-	os.Exit(0)
 }
 
 func main() {
