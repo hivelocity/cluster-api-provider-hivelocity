@@ -120,7 +120,8 @@ func TestDeviceHasTagKey(t *testing.T) {
 					Tags: []string{
 						"machine-name=foo",
 						"cluster-name=bar",
-					}},
+					},
+				},
 				tagKey: "machine-name",
 			},
 			want: true,
@@ -131,11 +132,13 @@ func TestDeviceHasTagKey(t *testing.T) {
 				device: &hv.BareMetalDevice{
 					Tags: []string{
 						"machine-name",
-					}},
+					},
+				},
 				tagKey: "machine-name",
 			},
 			want: false,
-		}}
+		},
+	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			if got := DeviceHasTagKey(tt.args.device, tt.args.tagKey); got != tt.want {

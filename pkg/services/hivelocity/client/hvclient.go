@@ -69,12 +69,12 @@ func (c *realClient) PowerOnDevice(ctx context.Context, deviceID int32) error {
 
 func (c *realClient) CreateDevice(ctx context.Context, deviceID int32, opts hv.BareMetalDeviceUpdate) (hv.BareMetalDevice, error) {
 	// https://developers.hivelocity.net/reference/put_bare_metal_device_id_resource
-	device, _, err := c.client.BareMetalDevicesApi.PutBareMetalDeviceIdResource(ctx, deviceID, opts, nil)
+	device, _, err := c.client.BareMetalDevicesApi.PutBareMetalDeviceIdResource(ctx, deviceID, opts, nil) //nolint:bodyclose // Close() gets done in client
 	return device, err
 }
 
 func (c *realClient) ListDevices(ctx context.Context) ([]*hv.BareMetalDevice, error) {
-	devices, _, err := c.client.BareMetalDevicesApi.GetBareMetalDeviceResource(ctx, nil)
+	devices, _, err := c.client.BareMetalDevicesApi.GetBareMetalDeviceResource(ctx, nil) //nolint:bodyclose // Close() gets done in client
 	ret := make([]*hv.BareMetalDevice, 0, len(devices))
 	for i := range devices {
 		ret = append(ret, &devices[i])
@@ -92,7 +92,7 @@ func (c *realClient) ShutdownDevice(ctx context.Context, deviceID int32) error {
 
 func (c *realClient) ListImages(ctx context.Context, productID int32) ([]string, error) {
 	// https://developers.hivelocity.net/reference/get_product_operating_systems_resource
-	opts, _, err := c.client.ProductApi.GetProductOperatingSystemsResource(ctx, productID, nil)
+	opts, _, err := c.client.ProductApi.GetProductOperatingSystemsResource(ctx, productID, nil) //nolint:bodyclose // Close() gets done in client
 	ret := make([]string, 0, len(opts))
 	if err != nil {
 		return []string{}, err
@@ -105,7 +105,7 @@ func (c *realClient) ListImages(ctx context.Context, productID int32) ([]string,
 
 func (c *realClient) ListSSHKeys(ctx context.Context) ([]hv.SshKeyResponse, error) {
 	// https://developers.hivelocity.net/reference/get_ssh_key_resource
-	sshKeys, _, err := c.client.SshKeyApi.GetSshKeyResource(ctx, nil)
+	sshKeys, _, err := c.client.SshKeyApi.GetSshKeyResource(ctx, nil) //nolint:bodyclose // Close() gets done in client
 	return sshKeys, err
 }
 

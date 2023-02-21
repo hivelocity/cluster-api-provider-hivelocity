@@ -36,8 +36,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-const maxShutDownTime = 2 * time.Minute
-const deviceOffTimeout = 10 * time.Minute
+const (
+	maxShutDownTime  = 2 * time.Minute
+	deviceOffTimeout = 10 * time.Minute
+)
 
 // Service defines struct with machine scope to reconcile Hivelocity machines.
 type Service struct {
@@ -378,7 +380,7 @@ func (s *Service) findAssociateDevice(ctx context.Context) (*hv.BareMetalDevice,
 	return hvutils.FindDeviceByTags(clusterTag, machineTag, devices)
 }
 
-func createTags(clusterName string, machineName string, isControlPlane bool) []string {
+func createTags(clusterName, machineName string, isControlPlane bool) []string {
 	var machineType string
 	if isControlPlane {
 		machineType = "control_plane"

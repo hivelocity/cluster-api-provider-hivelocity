@@ -57,7 +57,7 @@ func FindDeviceByTags(
 }
 
 // FindUnusedDevice returns an unused device. Returns nil if no device was found.
-func FindUnusedDevice(devices []*hv.BareMetalDevice, clusterName string, deviceType string) (*hv.BareMetalDevice, error) {
+func FindUnusedDevice(devices []*hv.BareMetalDevice, clusterName, deviceType string) (*hv.BareMetalDevice, error) {
 	for i := range devices {
 		device := devices[i]
 		it, err := GetDeviceType(device)

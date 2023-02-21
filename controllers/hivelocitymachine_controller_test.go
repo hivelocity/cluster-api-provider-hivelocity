@@ -109,7 +109,6 @@ var _ = Describe("HivelocityMachineReconciler", func() {
 	})
 
 	Context("Basic test", func() {
-
 		BeforeEach(func() {
 			hivelocityMachineName := utils.GenerateName(nil, "hv-machine-")
 
@@ -221,7 +220,6 @@ var _ = Describe("HivelocityMachineReconciler", func() {
 	})
 
 	Context("various specs", func() {
-
 		BeforeEach(func() {
 			hivelocityMachineName := utils.GenerateName(nil, "hv-machine-")
 

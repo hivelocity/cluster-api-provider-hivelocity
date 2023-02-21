@@ -280,7 +280,8 @@ func getAndValidateHivelocityAPIKey(ctx context.Context, namespace string, hvClu
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			return "", nil, &secretutil.ResolveSecretRefError{
-				Message: fmt.Sprintf("The Hivelocity secret %s does not exist", secretNamspacedName)}
+				Message: fmt.Sprintf("The Hivelocity secret %s does not exist", secretNamspacedName),
+			}
 		}
 		return "", nil, err
 	}
