@@ -68,7 +68,9 @@ func (c *realClient) PowerOnServer(ctx context.Context, deviceID int32) error {
 }
 
 func (c *realClient) CreateServer(ctx context.Context, deviceID int32, opts hv.BareMetalDeviceUpdate) (hv.BareMetalDevice, error) {
-	return hv.BareMetalDevice{}, fmt.Errorf("todo")
+	// https://developers.hivelocity.net/reference/put_bare_metal_device_id_resource
+	device, _, err := c.client.BareMetalDevicesApi.PutBareMetalDeviceIdResource(ctx, deviceID, opts, nil)
+	return device, err
 }
 
 func (c *realClient) ListServers(ctx context.Context) ([]*hv.BareMetalDevice, error) {

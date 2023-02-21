@@ -536,11 +536,6 @@ func (r *HivelocityClusterReconciler) newTargetClusterManager(ctx context.Contex
 func (r *HivelocityClusterReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager, options controller.Options) error {
 	log := log.FromContext(ctx)
 
-	// later
-	// if r.targetClusterManagersStopCh == nil {
-	//		r.targetClusterManagersStopCh = make(map[types.NamespacedName]chan struct{})
-	//	}
-
 	controller, err := ctrl.NewControllerManagedBy(mgr).
 		WithOptions(options).
 		For(&infrav1.HivelocityCluster{}).
