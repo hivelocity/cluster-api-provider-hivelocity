@@ -25,7 +25,7 @@ import (
 	"github.com/hivelocity/cluster-api-provider-hivelocity/pkg/scope"
 	secretutil "github.com/hivelocity/cluster-api-provider-hivelocity/pkg/secrets"
 	hvclient "github.com/hivelocity/cluster-api-provider-hivelocity/pkg/services/hivelocity/client"
-	"github.com/hivelocity/cluster-api-provider-hivelocity/pkg/services/hivelocity/server"
+	"github.com/hivelocity/cluster-api-provider-hivelocity/pkg/services/hivelocity/device"
 	"github.com/pkg/errors"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/klog/v2"
@@ -171,9 +171,9 @@ func (r *HivelocityMachineReconciler) reconcileDelete(ctx context.Context, machi
 	machineScope.Info("Reconciling HivelocityMachine delete")
 	hivelocityMachine := machineScope.HivelocityMachine
 
-	// delete servers
-	if result, brk, err := breakReconcile(server.NewService(machineScope).Delete(ctx)); brk { // question: err message gets lost. .. breakReconcile ... too much magic
-		return result, fmt.Errorf("failed to delete servers for HivelocityMachine %s/%s: %w", hivelocityMachine.Namespace, hivelocityMachine.Name, err)
+	// delete devices
+	if result, brk, err := breakReconcile(device.NewService(machineScope).Delete(ctx)); brk {
+		return result, fmt.Errorf("failed to delete devices for HivelocityMachine %s/%s: %w", hivelocityMachine.Namespace, hivelocityMachine.Name, err)
 	}
 
 	// Machine is deleted so remove the finalizer.
@@ -189,15 +189,14 @@ func (r *HivelocityMachineReconciler) reconcileNormal(ctx context.Context, machi
 	// If the HivelocityMachine doesn't have our finalizer, add it.
 	controllerutil.AddFinalizer(machineScope.HivelocityMachine, infrav1.MachineFinalizer)
 
-	// question: I think this is only needed if a new Finalizer was added. But it gets done always. Too much load?
 	// Register the finalizer immediately to avoid orphaning Hivelocity resources on delete
 	if err := machineScope.PatchObject(ctx); err != nil {
 		return ctrl.Result{}, err
 	}
 
-	// reconcile server
-	if result, brk, err := breakReconcile(server.NewService(machineScope).Reconcile(ctx)); brk {
-		return result, fmt.Errorf("failed to reconcile server for HivelocityMachine %s/%s: %w", hivelocityMachine.Namespace, hivelocityMachine.Name, err)
+	// reconcile device
+	if result, brk, err := breakReconcile(device.NewService(machineScope).Reconcile(ctx)); brk {
+		return result, fmt.Errorf("failed to reconcile device for HivelocityMachine %s/%s: %w", hivelocityMachine.Namespace, hivelocityMachine.Name, err)
 	}
 
 	return reconcile.Result{}, nil
