@@ -22,6 +22,7 @@ import (
 
 	infrav1 "github.com/hivelocity/cluster-api-provider-hivelocity/api/v1alpha1"
 	hvclient "github.com/hivelocity/cluster-api-provider-hivelocity/pkg/services/hivelocity/client"
+	"github.com/hivelocity/cluster-api-provider-hivelocity/pkg/services/hivelocity/client/mock"
 	"github.com/hivelocity/cluster-api-provider-hivelocity/pkg/utils"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -40,8 +41,8 @@ var _ = Describe("HivelocityMachineReconciler", func() {
 		capiCluster *clusterv1.Cluster
 		capiMachine *clusterv1.Machine
 
-		infraCluster *infrav1.HivelocityCluster
-		infraMachine *infrav1.HivelocityMachine
+		hvCluster *infrav1.HivelocityCluster
+		hvMachine *infrav1.HivelocityMachine
 
 		testNs *corev1.Namespace
 
@@ -78,7 +79,7 @@ var _ = Describe("HivelocityMachineReconciler", func() {
 		}
 		Expect(testEnv.Create(ctx, capiCluster)).To(Succeed())
 
-		infraCluster = &infrav1.HivelocityCluster{
+		hvCluster = &infrav1.HivelocityCluster{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "hv-test1",
 				Namespace: testNs.Name,
@@ -104,8 +105,8 @@ var _ = Describe("HivelocityMachineReconciler", func() {
 	})
 
 	AfterEach(func() {
-		Expect(testEnv.Cleanup(ctx, testNs, capiCluster, infraCluster, capiMachine,
-			infraMachine, hvSecret, bootstrapSecret)).To(Succeed())
+		Expect(testEnv.Cleanup(ctx, testNs, capiCluster, hvCluster, capiMachine,
+			hvMachine, hvSecret, bootstrapSecret)).To(Succeed())
 	})
 
 	Context("Basic test", func() {
@@ -133,7 +134,7 @@ var _ = Describe("HivelocityMachineReconciler", func() {
 			}
 			Expect(testEnv.Create(ctx, capiMachine)).To(Succeed())
 
-			infraMachine = &infrav1.HivelocityMachine{
+			hvMachine = &infrav1.HivelocityMachine{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      hivelocityMachineName,
 					Namespace: testNs.Name,
@@ -151,20 +152,20 @@ var _ = Describe("HivelocityMachineReconciler", func() {
 					},
 				},
 				Spec: infrav1.HivelocityMachineSpec{
-					ImageName: "fedora-control-plane",
+					ImageName: "Ubuntu 20.x",
 					Type:      "hvCustom",
 				},
 			}
 
-			Expect(testEnv.Create(ctx, infraMachine)).To(Succeed())
-			Expect(testEnv.Create(ctx, infraCluster)).To(Succeed())
+			Expect(testEnv.Create(ctx, hvMachine)).To(Succeed())
+			Expect(testEnv.Create(ctx, hvCluster)).To(Succeed())
 
-			key = client.ObjectKey{Namespace: testNs.Name, Name: infraMachine.Name}
+			key = client.ObjectKey{Namespace: testNs.Name, Name: hvMachine.Name}
 		})
 
 		It("creates the infra machine", func() {
 			Eventually(func() bool {
-				if err := testEnv.Get(ctx, key, infraMachine); err != nil {
+				if err := testEnv.Get(ctx, key, hvMachine); err != nil {
 					return false
 				}
 				return true
@@ -173,20 +174,16 @@ var _ = Describe("HivelocityMachineReconciler", func() {
 
 		It("creates the Hivelocity machine in Hivelocity", func() {
 			// Check that there is no machine yet.
-			Eventually(func() bool {
-				devices, err := hvClient.ListDevices(ctx)
-				if err != nil {
-					return false
-				}
-				return len(devices) > 0
-			}).Should(BeTrue())
+			device, err := hvClient.GetDevice(ctx, mock.FreeDevice.DeviceId)
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(device.Tags).To(BeEquivalentTo([]string{"caphv-device-type=hvCustom"}))
 
 			// Check whether bootstrap condition is not ready
 			Eventually(func() bool {
-				if err := testEnv.Get(ctx, key, infraMachine); err != nil {
+				if err := testEnv.Get(ctx, key, hvMachine); err != nil {
 					return false
 				}
-				return isPresentAndFalseWithReason(key, infraMachine, infrav1.DeviceBootstrapReadyCondition, infrav1.DeviceBootstrapNotReadyReason)
+				return isPresentAndFalseWithReason(key, hvMachine, infrav1.DeviceBootstrapReadyCondition, infrav1.DeviceBootstrapNotReadyReason)
 			}, timeout, time.Second).Should(BeTrue())
 
 			By("setting the bootstrap data")
@@ -201,95 +198,41 @@ var _ = Describe("HivelocityMachineReconciler", func() {
 
 			// Check whether bootstrap condition is ready
 			Eventually(func() bool {
-				if err := testEnv.Get(ctx, key, infraMachine); err != nil {
+				if err := testEnv.Get(ctx, key, hvMachine); err != nil {
 					return false
 				}
-				objectCondition := conditions.Get(infraMachine, infrav1.DeviceBootstrapReadyCondition)
+				objectCondition := conditions.Get(hvMachine, infrav1.DeviceBootstrapReadyCondition)
 				fmt.Println(objectCondition)
-				return isPresentAndTrue(key, infraMachine, infrav1.DeviceBootstrapReadyCondition)
+				return isPresentAndTrue(key, hvMachine, infrav1.DeviceBootstrapReadyCondition)
 			}, timeout, time.Second).Should(BeTrue())
 
-			Eventually(func() int {
-				devices, err := hvClient.ListDevices(ctx)
-				if err != nil {
-					return 0
+			testEnv.GetLogger().Info("############################################################################")
+			testEnv.GetLogger().Info("############################################################################")
+			testEnv.GetLogger().Info("############################################################################")
+			// E0227 21:43:45.573773  375938 controller.go:326]  "msg"="Reconciler error"
+			// "error"="failed to reconcile target secret: failed to acquire secret:
+			// failed to find secret:
+			// secrets \"test1-5dp9s-kubeconfig\" not found" "HivelocityCluster"={"name":"hv-test1",
+			// "namespace":"hivelocitymachine-reconciler-892ln"}
+			// "controller"="hivelocitycluster" "controllerGroup"="infrastructure.cluster.x-k8s.io"
+			// "controllerKind"="HivelocityCluster" "name"="hv-test1"
+			// "namespace"="hivelocitymachine-reconciler-892ln"
+			// "reconcileID"="423f4888-a685-4c36-be6e-78ccd04e6c5d"
+			/*Eventually(func() bool {
+				var hivelocityMachine *infrav1.HivelocityMachine
+				if err := testEnv.Get(ctx, key, hivelocityMachine); err != nil {
+					return false
 				}
-				return len(devices)
-			}, timeout, time.Second).Should(BeNumerically(">", 0))
+				// todo: get the HivelocityMachine with
+				// ProviderID "hivelocity://" + mock.FreeDeviceID
+				// then wait until the machine is in state ready.
+				// panic(*hivelocityMachine)
+				return true
+			}, timeout, time.Second).Should(BeTrue())
+			*/
 		})
 	})
 
-	Context("various specs", func() {
-		BeforeEach(func() {
-			hivelocityMachineName := utils.GenerateName(nil, "hv-machine-")
-
-			capiMachine = &clusterv1.Machine{
-				ObjectMeta: metav1.ObjectMeta{
-					GenerateName: "capi-machine-",
-					Namespace:    testNs.Name,
-					Finalizers:   []string{clusterv1.MachineFinalizer},
-					Labels: map[string]string{
-						clusterv1.ClusterLabelName: capiCluster.Name,
-					},
-				},
-				Spec: clusterv1.MachineSpec{
-					ClusterName: capiCluster.Name,
-					InfrastructureRef: corev1.ObjectReference{
-						APIVersion: "infrastructure.cluster.x-k8s.io/v1beta1",
-						Kind:       "HivelocityMachine",
-						Name:       hivelocityMachineName,
-					},
-					FailureDomain: &defaultFailureDomain,
-					Bootstrap: clusterv1.Bootstrap{
-						DataSecretName: pointer.String("bootstrap-secret"),
-					},
-				},
-			}
-			Expect(testEnv.Create(ctx, capiMachine)).To(Succeed())
-
-			infraMachine = &infrav1.HivelocityMachine{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      hivelocityMachineName,
-					Namespace: testNs.Name,
-					Labels: map[string]string{
-						clusterv1.ClusterLabelName:             capiCluster.Name,
-						clusterv1.MachineControlPlaneLabelName: "",
-					},
-					OwnerReferences: []metav1.OwnerReference{
-						{
-							APIVersion: clusterv1.GroupVersion.String(),
-							Kind:       "Machine",
-							Name:       capiMachine.Name,
-							UID:        capiMachine.UID,
-						},
-					},
-				},
-				Spec: infrav1.HivelocityMachineSpec{
-					ImageName: "fedora-control-plane",
-					Type:      "hvCustom",
-				},
-			}
-
-			key = client.ObjectKey{Namespace: testNs.Name, Name: infraMachine.Name}
-		})
-
-		Context("with public network specs", func() {
-			BeforeEach(func() {
-				Expect(testEnv.Create(ctx, infraCluster)).To(Succeed())
-				Expect(testEnv.Create(ctx, infraMachine)).To(Succeed())
-			})
-
-			It("creates the Hivelocity machine in Hivelocity", func() {
-				Eventually(func() int {
-					devices, err := hvClient.ListDevices(ctx)
-					if err != nil {
-						return 0
-					}
-					return len(devices)
-				}, timeout, time.Second).Should(BeNumerically(">", 0))
-			})
-		})
-	})
 })
 
 var _ = Describe("Hivelocity secret", func() {
@@ -386,7 +329,7 @@ var _ = Describe("Hivelocity secret", func() {
 				},
 			},
 			Spec: infrav1.HivelocityMachineSpec{
-				ImageName: "fedora-control-plane",
+				ImageName: "Ubuntu 20.x",
 				Type:      "hvCustom",
 			},
 		}
@@ -461,8 +404,8 @@ var _ = Describe("Hivelocity secret", func() {
 
 var _ = Describe("HivelocityMachine validation", func() {
 	var (
-		infraMachine *infrav1.HivelocityMachine
-		testNs       *corev1.Namespace
+		hvMachine *infrav1.HivelocityMachine
+		testNs    *corev1.Namespace
 	)
 
 	BeforeEach(func() {
@@ -470,29 +413,29 @@ var _ = Describe("HivelocityMachine validation", func() {
 		testNs, err = testEnv.CreateNamespace(ctx, "hivelocitymachine-validation")
 		Expect(err).NotTo(HaveOccurred())
 
-		infraMachine = &infrav1.HivelocityMachine{
+		hvMachine = &infrav1.HivelocityMachine{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "hv-validation-machine",
 				Namespace: testNs.Name,
 			},
 			Spec: infrav1.HivelocityMachineSpec{
-				ImageName: "fedora-control-plane",
+				ImageName: "Ubuntu 20.x",
 				Type:      "hvCustom",
 			},
 		}
 	})
 
 	AfterEach(func() {
-		Expect(testEnv.Cleanup(ctx, testNs, infraMachine)).To(Succeed())
+		Expect(testEnv.Cleanup(ctx, testNs, hvMachine)).To(Succeed())
 	})
 
 	It("should fail with wrong type", func() {
-		infraMachine.Spec.Type = "wrong-type"
-		Expect(testEnv.Create(ctx, infraMachine)).ToNot(Succeed())
+		hvMachine.Spec.Type = "wrong-type"
+		Expect(testEnv.Create(ctx, hvMachine)).ToNot(Succeed())
 	})
 
 	It("should fail without imageName", func() {
-		infraMachine.Spec.ImageName = ""
-		Expect(testEnv.Create(ctx, infraMachine)).ToNot(Succeed())
+		hvMachine.Spec.ImageName = ""
+		Expect(testEnv.Create(ctx, hvMachine)).ToNot(Succeed())
 	})
 })

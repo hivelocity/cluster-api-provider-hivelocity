@@ -89,7 +89,7 @@ func (r *HivelocityMachineReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	// Fetch the Cluster.
 	cluster, err := util.GetClusterFromMetadata(ctx, r.Client, machine.ObjectMeta)
 	if err != nil {
-		log.Info("Machine is missing cluster label or cluster does not exist: %s", err) // question: added %s+err
+		log.Info("Machine is missing cluster label or cluster does not exist", "error", err)
 		return ctrl.Result{}, nil
 	}
 
@@ -107,7 +107,7 @@ func (r *HivelocityMachineReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		Name:      cluster.Spec.InfrastructureRef.Name,
 	}
 	if err := r.Client.Get(ctx, hvClusterName, hvCluster); err != nil {
-		log.Info("HivelocityCluster is not available yet: %s", err.Error())
+		log.Info("HivelocityCluster is not available yet", "error", err)
 		return reconcile.Result{}, nil
 	}
 
@@ -159,21 +159,18 @@ func (r *HivelocityMachineReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	return r.reconcileNormal(ctx, machineScope)
 }
 
-func breakReconcile(ctrl *reconcile.Result, err error) (reconcile.Result, bool, error) { // why name "ctrl"? This is already the package "sigs.k8s.io/controller-runtime"
-	c := reconcile.Result{}
-	if ctrl != nil {
-		c = *ctrl
-	}
-	return c, ctrl != nil || err != nil, err
-}
-
 func (r *HivelocityMachineReconciler) reconcileDelete(ctx context.Context, machineScope *scope.MachineScope) (reconcile.Result, error) {
 	machineScope.Info("Reconciling HivelocityMachine delete")
 	hivelocityMachine := machineScope.HivelocityMachine
 
 	// delete devices
-	if result, brk, err := breakReconcile(device.NewService(machineScope).Delete(ctx)); brk {
-		return result, fmt.Errorf("failed to delete devices for HivelocityMachine %s/%s: %w", hivelocityMachine.Namespace, hivelocityMachine.Name, err)
+	result, err := device.NewService(machineScope).Delete(ctx)
+	if err != nil {
+		return reconcile.Result{}, fmt.Errorf("failed to delete devices for HivelocityMachine %s/%s: %w", hivelocityMachine.Namespace, hivelocityMachine.Name, err)
+	}
+
+	if result != nil {
+		return *result, nil
 	}
 
 	// Machine is deleted so remove the finalizer.
@@ -195,11 +192,14 @@ func (r *HivelocityMachineReconciler) reconcileNormal(ctx context.Context, machi
 	}
 
 	// reconcile device
-	if result, brk, err := breakReconcile(device.NewService(machineScope).Reconcile(ctx)); brk {
-		return result, fmt.Errorf("failed to reconcile device for HivelocityMachine %s/%s: %w", hivelocityMachine.Namespace, hivelocityMachine.Name, err)
+	result, err := device.NewService(machineScope).Reconcile(ctx)
+	if result == nil {
+		result = &reconcile.Result{}
 	}
-
-	return reconcile.Result{}, nil
+	if err != nil {
+		return *result, fmt.Errorf("failed to reconcile device for HivelocityMachine %s/%s: %w", hivelocityMachine.Namespace, hivelocityMachine.Name, err)
+	}
+	return *result, nil
 }
 
 // SetupWithManager sets up the controller with the Manager.

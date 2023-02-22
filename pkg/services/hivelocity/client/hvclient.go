@@ -39,12 +39,16 @@ const PowerStatusOn = "ON"
 type Client interface {
 	Close()
 	PowerOnDevice(ctx context.Context, deviceID int32) error
-	CreateDevice(ctx context.Context, deviceID int32, opts hv.BareMetalDeviceUpdate) (hv.BareMetalDevice, error)
+	ProvisionDevice(ctx context.Context, deviceID int32, opts hv.BareMetalDeviceUpdate) (hv.BareMetalDevice, error)
 	ListDevices(context.Context) ([]*hv.BareMetalDevice, error)
 	ShutdownDevice(ctx context.Context, deviceID int32) error
 	DeleteDevice(ctx context.Context, deviceID int32) error
 	ListImages(ctx context.Context, productID int32) ([]string, error)
 	ListSSHKeys(context.Context) ([]hv.SshKeyResponse, error)
+	GetDevice(ctx context.Context, deviceID int32) (hv.BareMetalDevice, error)
+
+	// SetTags sets the tags to the given list.
+	SetTags(ctx context.Context, deviceID int32, tags []string) error
 }
 
 // Factory is the interface for creating new Client objects.
@@ -79,11 +83,27 @@ var _ Client = &realClient{}
 // Close implements the Close method of the HVClient interface.
 func (c *realClient) Close() {}
 
+func (c *realClient) GetDevice(ctx context.Context, deviceID int32) (hv.BareMetalDevice, error) {
+	// https://developers.hivelocity.net/reference/get_bare_metal_device_id_resource
+	device, _, err := c.client.BareMetalDevicesApi.GetBareMetalDeviceIdResource(ctx, deviceID, nil) //nolint:bodyclose // Close() gets done in client
+	return device, err
+}
+
+func (c *realClient) SetTags(ctx context.Context, deviceID int32, tags []string) error {
+	// https://developers.hivelocity.net/reference/put_device_tag_id_resource
+	// Existing Tags will be removed by the HV API.
+	deviceTags := hv.DeviceTag{
+		Tags: tags,
+	}
+	_, _, err := c.client.DeviceApi.PutDeviceTagIdResource(ctx, deviceID, deviceTags, nil) //nolint:bodyclose // Close() gets done in client
+	return err
+}
+
 func (c *realClient) PowerOnDevice(ctx context.Context, deviceID int32) error {
 	return nil // todo
 }
 
-func (c *realClient) CreateDevice(ctx context.Context, deviceID int32, opts hv.BareMetalDeviceUpdate) (hv.BareMetalDevice, error) {
+func (c *realClient) ProvisionDevice(ctx context.Context, deviceID int32, opts hv.BareMetalDeviceUpdate) (hv.BareMetalDevice, error) {
 	// https://developers.hivelocity.net/reference/put_bare_metal_device_id_resource
 	device, _, err := c.client.BareMetalDevicesApi.PutBareMetalDeviceIdResource(ctx, deviceID, opts, nil) //nolint:bodyclose // Close() gets done in client
 	return device, err

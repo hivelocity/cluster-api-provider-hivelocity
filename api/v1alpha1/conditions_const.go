@@ -21,10 +21,16 @@ import clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 const (
 	// DeviceReadyCondition reports on current status of the device. Ready indicates the device is in a Running state.
 	DeviceReadyCondition clusterv1.ConditionType = "DeviceReady"
+
 	// DeviceTerminatedReason device is in a terminated state.
 	DeviceTerminatedReason = "DeviceTerminated"
+
 	// DeviceOffReason device is off.
 	DeviceOffReason = "DeviceOff"
+
+	// DeviceDeletedReason (Severity=Error) documents a HivelocityMachine controller detecting
+	// the underlying device has been deleted unexpectedly.
+	DeviceDeletedReason = "DeviceDeleted"
 )
 
 const (

@@ -27,6 +27,7 @@ import (
 	"github.com/hivelocity/cluster-api-provider-hivelocity/controllers"
 	"github.com/hivelocity/cluster-api-provider-hivelocity/pkg/hvutils"
 	hvclient "github.com/hivelocity/cluster-api-provider-hivelocity/pkg/services/hivelocity/client"
+	hv "github.com/hivelocity/hivelocity-client-go/client"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -42,6 +43,8 @@ var (
 	setupLog = ctrl.Log.WithName("setup")
 )
 
+const manualDeviceID = 14730
+
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 
@@ -55,6 +58,21 @@ func cliTestListDevices(ctx context.Context, client hvclient.Client) {
 		panic(err.Error())
 	}
 	device, err := hvutils.FindDeviceByTags("cn=foo", "mn=bar", allDevices)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Printf("device: %+v\n", device)
+}
+
+func cliTestSetTags(ctx context.Context, client hvclient.Client) {
+	err := client.SetTags(ctx, manualDeviceID, []string{"foo"})
+	if err != nil {
+		panic(err)
+	}
+}
+
+func cliTestGetDevice(ctx context.Context, client hvclient.Client) {
+	device, err := client.GetDevice(ctx, manualDeviceID)
 	if err != nil {
 		panic(err)
 	}
@@ -81,6 +99,20 @@ func cliTestListSSHKeys(ctx context.Context, client hvclient.Client) {
 	}
 }
 
+func cliTestProvisionDevice(ctx context.Context, client hvclient.Client) {
+	opts := hv.BareMetalDeviceUpdate{
+		Hostname: "my-host-name",
+		//Tags:     createTags("my-cluster-name", "my-host-name", false),
+		OsName:         "Ubuntu 20.x",
+		PublicSshKeyId: 861,
+	}
+	device, err := client.ProvisionDevice(ctx, manualDeviceID, opts)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Printf("device: %+v\n", device)
+}
+
 func manualTests() {
 	factory := hvclient.HivelocityFactory{}
 	client := factory.NewClient(os.Getenv("HIVELOCITY_API_KEY"))
@@ -94,6 +126,15 @@ func manualTests() {
 		os.Exit(0)
 	case "ListImages":
 		cliTestListImages(ctx, client)
+		os.Exit(0)
+	case "SetTags":
+		cliTestSetTags(ctx, client)
+		os.Exit(0)
+	case "GetDevice":
+		cliTestGetDevice(ctx, client)
+		os.Exit(0)
+	case "ProvisionDevice":
+		cliTestProvisionDevice(ctx, client)
 		os.Exit(0)
 	default:
 		fmt.Printf("unknown argument %q", arg)
