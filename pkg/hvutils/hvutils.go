@@ -18,6 +18,7 @@ limitations under the License.
 package hvutils
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"strings"
@@ -91,6 +92,11 @@ func FindUnusedDevice(devices []*hv.BareMetalDevice, clusterName, deviceType str
 	return nil, nil
 }
 
+func ClaimDevice(client *hvclient.Client, device *hv.BareMetalDevice, clusterName string, machineName string) error {
+	panic("todo")
+}
+
+
 // DeviceHasTagKey returns true if the device has the tagKey set.
 // Example: Your can check if a machine has already a name by using tagKey="machine-name".
 func DeviceHasTagKey(device *hv.BareMetalDevice, tagKey string) bool {
@@ -143,4 +149,10 @@ func GetDeviceType(device *hv.BareMetalDevice) (string, error) {
 		return "", fmt.Errorf("[GetDeviceType] DeviceGetTagValue() failed: %w", err)
 	}
 	return deviceType, nil
+}
+
+// AddTags adds the given Tags. Existing tags are not deleted.
+func AddTags(ctx context.Context, client hvclient.Client, device *hv.BareMetalDevice, tags []string) error {
+	device.Tags = append(device.Tags, tags...)
+	return client.SetTags(ctx, device.DeviceId, device.Tags)
 }

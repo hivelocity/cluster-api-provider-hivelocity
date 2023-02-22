@@ -109,7 +109,7 @@ func (c *mockedHVClient) ListImages(ctx context.Context, productID int32) ([]str
 	return []string{defaultImage}, nil
 }
 
-func (c *mockedHVClient) CreateDevice(ctx context.Context, deviceID int32, opts hv.BareMetalDeviceUpdate) (hv.BareMetalDevice, error) {
+func (c *mockedHVClient) ProvisionDevice(ctx context.Context, deviceID int32, opts hv.BareMetalDeviceUpdate) (hv.BareMetalDevice, error) {
 	if _, found := c.store.idMap[deviceID]; found {
 		return hv.BareMetalDevice{}, fmt.Errorf("already exists")
 	}
@@ -169,4 +169,10 @@ func (c *mockedHVClient) DeleteDevice(ctx context.Context, deviceID int32) error
 
 func (c *mockedHVClient) ListSSHKeys(ctx context.Context) ([]hv.SshKeyResponse, error) {
 	return []hv.SshKeyResponse{defaultSSHKey}, nil
+}
+
+func (c *mockedHVClient) SetTags(ctx context.Context, deviceID int32, tags []string) error {
+	device := c.store.idMap[deviceID]
+	device.Tags = append([]string(nil), tags...)
+	return nil
 }

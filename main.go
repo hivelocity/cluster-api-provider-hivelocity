@@ -42,6 +42,8 @@ var (
 	setupLog = ctrl.Log.WithName("setup")
 )
 
+const manualDeviceID = 14730
+
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 
@@ -59,6 +61,13 @@ func cliTestListDevices(ctx context.Context, client hvclient.Client) {
 		panic(err)
 	}
 	fmt.Printf("device: %+v\n", device)
+}
+
+func cliTestSetTags(ctx context.Context, client hvclient.Client) {
+	err := client.SetTags(ctx, manualDeviceID, []string{"foo"})
+	if err != nil {
+		panic(err)
+	}
 }
 
 func cliTestListImages(ctx context.Context, client hvclient.Client) {
@@ -94,6 +103,9 @@ func manualTests() {
 		os.Exit(0)
 	case "ListImages":
 		cliTestListImages(ctx, client)
+		os.Exit(0)
+	case "SetTags":
+		cliTestSetTags(ctx, client)
 		os.Exit(0)
 	default:
 		fmt.Printf("unknown argument %q", arg)

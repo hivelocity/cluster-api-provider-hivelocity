@@ -27,7 +27,7 @@ type SSHKey struct {
 }
 
 // HivelocityMachineType defines the Hivelocity Machine type.
-type HivelocityMachineType string
+type HivelocityMachineType string // question: rename to HivelocityDeviceType ?
 
 // ResourceLifecycle configures the lifecycle of a resource.
 type ResourceLifecycle string
