@@ -45,10 +45,11 @@ type Client interface {
 	DeleteDevice(ctx context.Context, deviceID int32) error
 	ListImages(ctx context.Context, productID int32) ([]string, error)
 	ListSSHKeys(context.Context) ([]hv.SshKeyResponse, error)
+	GetDevice(ctx context.Context, deviceID int32) (hv.BareMetalDevice, error)
 
 	// SetTags sets the tags to the given list. Exiting tags which are not in deviceTag will
 	// be removed.
-	SetTags(ctx context.Context, deviceId int32, tags []string) error
+	SetTags(ctx context.Context, deviceID int32, tags []string) error
 }
 
 // Factory is the interface for creating new Client objects.
@@ -74,8 +75,6 @@ func (f *HivelocityFactory) NewClient(hvAPIKey string) Client {
 	}
 }
 
-
-
 type realClient struct {
 	client *hv.APIClient
 }
@@ -85,12 +84,19 @@ var _ Client = &realClient{}
 // Close implements the Close method of the HVClient interface.
 func (c *realClient) Close() {}
 
+func (c *realClient) GetDevice(ctx context.Context, deviceID int32) (hv.BareMetalDevice, error) {
+	// https://developers.hivelocity.net/reference/get_bare_metal_device_id_resource
+	device, _, err := c.client.BareMetalDevicesApi.GetBareMetalDeviceIdResource(ctx, deviceID, nil) //nolint:bodyclose // Close() gets done in client
+	return device, err
+}
+
 func (c *realClient) SetTags(ctx context.Context, deviceID int32, tags []string) error {
 	// https://developers.hivelocity.net/reference/put_device_tag_id_resource
+	// Existing Tags will be removed by the HV API.
 	deviceTags := hv.DeviceTag{
 		Tags: tags,
 	}
-	_, _, err := c.client.DeviceApi.PutDeviceTagIdResource(ctx, deviceID, deviceTags, nil)
+	_, _, err := c.client.DeviceApi.PutDeviceTagIdResource(ctx, deviceID, deviceTags, nil) //nolint:bodyclose // Close() gets done in client
 	return err
 }
 

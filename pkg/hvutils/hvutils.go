@@ -92,10 +92,10 @@ func FindUnusedDevice(devices []*hv.BareMetalDevice, clusterName, deviceType str
 	return nil, nil
 }
 
-func ClaimDevice(client *hvclient.Client, device *hv.BareMetalDevice, clusterName string, machineName string) error {
+// ClaimDevice claims an unused HV device.
+func ClaimDevice(client hvclient.Client, device *hv.BareMetalDevice, clusterName string, machineName string) error {
 	panic("todo")
 }
-
 
 // DeviceHasTagKey returns true if the device has the tagKey set.
 // Example: Your can check if a machine has already a name by using tagKey="machine-name".
@@ -153,6 +153,13 @@ func GetDeviceType(device *hv.BareMetalDevice) (string, error) {
 
 // AddTags adds the given Tags. Existing tags are not deleted.
 func AddTags(ctx context.Context, client hvclient.Client, device *hv.BareMetalDevice, tags []string) error {
-	device.Tags = append(device.Tags, tags...)
-	return client.SetTags(ctx, device.DeviceId, device.Tags)
+	var newTags []string
+	newTags = append(newTags, device.Tags...)
+	newTags = append(newTags, tags...)
+
+	// remove duplicates
+	slices.Sort(newTags)
+	newTags = slices.Compact(newTags)
+
+	return client.SetTags(ctx, device.DeviceId, newTags)
 }

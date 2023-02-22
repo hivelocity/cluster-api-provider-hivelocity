@@ -41,8 +41,8 @@ const (
 	deviceOffTimeout = 10 * time.Minute
 )
 
-// question: why is Service needed?
 // Service defines struct with machine scope to reconcile Hivelocity machines.
+// question: why is Service needed?
 type Service struct {
 	scope *scope.MachineScope
 }

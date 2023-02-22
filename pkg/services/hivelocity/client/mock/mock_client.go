@@ -32,6 +32,9 @@ const DefaultCPUCores = 1
 // DefaultMemoryInGB defines the default memory in GB for Hivelocity machines' capacities.
 const DefaultMemoryInGB = float32(4)
 
+// FirstDeviceID can be used for testing. This device is available if create a new mocked Client.
+const FirstDeviceID = 1
+
 type mockedHVClient struct {
 	store deviceStore
 }
@@ -175,4 +178,12 @@ func (c *mockedHVClient) SetTags(ctx context.Context, deviceID int32, tags []str
 	device := c.store.idMap[deviceID]
 	device.Tags = append([]string(nil), tags...)
 	return nil
+}
+
+func (c *mockedHVClient) GetDevice(ctx context.Context, deviceID int32) (hv.BareMetalDevice, error) {
+	device, ok := c.store.idMap[deviceID]
+	if !ok {
+		return hv.BareMetalDevice{}, fmt.Errorf("no such device: %d", deviceID)
+	}
+	return *device, nil
 }

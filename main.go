@@ -70,6 +70,14 @@ func cliTestSetTags(ctx context.Context, client hvclient.Client) {
 	}
 }
 
+func cliTestGetDevice(ctx context.Context, client hvclient.Client) {
+	device, err := client.GetDevice(ctx, manualDeviceID)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Printf("device: %+v\n", device)
+}
+
 func cliTestListImages(ctx context.Context, client hvclient.Client) {
 	images, err := client.ListImages(ctx, 504)
 	if err != nil {
@@ -106,6 +114,9 @@ func manualTests() {
 		os.Exit(0)
 	case "SetTags":
 		cliTestSetTags(ctx, client)
+		os.Exit(0)
+	case "GetDevice":
+		cliTestGetDevice(ctx, client)
 		os.Exit(0)
 	default:
 		fmt.Printf("unknown argument %q", arg)

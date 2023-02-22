@@ -19,8 +19,10 @@ limitations under the License.
 package hvutils
 
 import (
+	"context"
 	"testing"
 
+	mockclient "github.com/hivelocity/cluster-api-provider-hivelocity/pkg/services/hivelocity/client/mock"
 	hv "github.com/hivelocity/hivelocity-client-go/client"
 	"github.com/stretchr/testify/require"
 )
@@ -86,7 +88,7 @@ func Test_FindDeviceByTags(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := FindDeviceByTags(tt.args.clusterTag, tt.args.machineTag, ToPointers(tt.args.devices))
+			got, err := FindDeviceByTags(tt.args.clusterTag, tt.args.machineTag, toPointers(tt.args.devices))
 			if tt.wantErr != nil {
 				require.ErrorIs(t, err, tt.wantErr)
 			}
@@ -148,10 +150,44 @@ func TestDeviceHasTagKey(t *testing.T) {
 	}
 }
 
-func ToPointers[T any](s []T) []*T {
+func toPointers[T any](s []T) []*T {
 	ret := make([]*T, 0, len(s))
 	for i := range s {
 		ret = append(ret, &s[i])
 	}
 	return ret
+}
+
+func TestAddTags(t *testing.T) {
+	client := mockclient.NewHVClientFactory().NewClient("my-api-key")
+	ctx := context.Background()
+	device, err := client.GetDevice(ctx, mockclient.FirstDeviceID)
+	require.NoError(t, err)
+	require.Equal(t, []string{}, device.Tags)
+
+	err = AddTags(ctx, client, &device, []string{"foo"})
+	require.NoError(t, err)
+	device, err = client.GetDevice(ctx, mockclient.FirstDeviceID)
+	require.NoError(t, err)
+	require.Equal(t, []string{"foo"}, device.Tags)
+
+	err = AddTags(ctx, client, &device, []string{"bar"})
+	require.NoError(t, err)
+	device, err = client.GetDevice(ctx, mockclient.FirstDeviceID)
+	require.NoError(t, err)
+	require.Equal(t, []string{"bar", "foo"}, device.Tags)
+
+	// don't create duplicates
+	err = AddTags(ctx, client, &device, []string{"bar"})
+	require.NoError(t, err)
+	device, err = client.GetDevice(ctx, mockclient.FirstDeviceID)
+	require.NoError(t, err)
+	require.Equal(t, []string{"bar", "foo"}, device.Tags)
+
+	err = AddTags(ctx, client, &device, []string{})
+	require.NoError(t, err)
+	device, err = client.GetDevice(ctx, mockclient.FirstDeviceID)
+	require.NoError(t, err)
+	require.Equal(t, []string{"bar", "foo"}, device.Tags)
+
 }
