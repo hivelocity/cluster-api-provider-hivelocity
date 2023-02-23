@@ -285,16 +285,14 @@ func (s *Service) updateDevice(ctx context.Context, log logr.Logger, device *hv.
 	}
 	if err := setMachineAddress(s.scope.HivelocityMachine, &provisionedDevice); err != nil {
 		log.Error(err, "failed to set the machine address")
-		//return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
+		//question: from capd: return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
 	}
 
 	// Set ProviderID so the Cluster API Machine Controller can pull it
-	providerID := device.ProviderID()
-	dockerMachine.Spec.ProviderID = &providerID
-	dockerMachine.Status.Ready = true
-	conditions.MarkTrue(dockerMachine, infrav1.ContainerProvisionedCondition)
-
-
+	providerID := hvutils.DeviceIDToProviderID(provisionedDevice.DeviceId)
+	s.scope.HivelocityMachine.Spec.ProviderID = &providerID
+	s.scope.HivelocityMachine.Status.Ready = true
+	conditions.MarkTrue(s.scope.HivelocityMachine, infrav1.DeviceReadyCondition)
 	return nil
 }
 

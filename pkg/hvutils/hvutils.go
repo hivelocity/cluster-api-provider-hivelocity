@@ -231,4 +231,6 @@ func ProviderIDToDeviceID(providerID string) (int32, error) {
 	return int32(deviceID), nil
 }
 
-func DeviceIDToProviderID(deviceID )
+func DeviceIDToProviderID(deviceID int32) string {
+	return fmt.Sprintf("hivelocity://%d", deviceID)
+}
