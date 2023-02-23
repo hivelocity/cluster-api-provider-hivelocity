@@ -115,41 +115,8 @@ func (s *Service) Reconcile(ctx context.Context) (_ *ctrl.Result, err error) {
 			device.DeviceId, err)
 	}
 
-	// question: Why not pass the old conditions to setStatusFromAPI()? This would avoid the DeepCopy.
-	c := s.scope.HivelocityMachine.Status.Conditions.DeepCopy()
-	s.scope.HivelocityMachine.Status = setStatusFromAPI(device)
-	s.scope.HivelocityMachine.Status.Conditions = c
-
-	// question: if handleDeviceStatusOff() is not needed, then
-	// the whole block can get removed.
-	switch device.PowerStatus {
-	case hvclient.PowerStatusOff:
-		return s.handleDeviceStatusOff(ctx, device)
-	/* todo: up to now we only get ON/OFF
-	case hv.BareMetalDeviceStatusStarting:
-		// Requeue here so that device does not switch back and forth between off and starting.
-		// If we don't return here, the condition DeviceReady would get marked as true in this
-		// case. However, if the device is stuck and does not power on, we should not mark the
-		// condition DeviceReady as true to be able to remediate the device after a timeout.
-		return &reconcile.Result{RequeueAfter: 10 * time.Second}, nil
-	*/
-	case hvclient.PowerStatusOn: // Do nothing
-	default:
-		s.scope.HivelocityMachine.Status.Ready = false
-		s.scope.V(1).Info("device not in running state",
-			"device", device.Hostname,
-			"powerStatus", device.PowerStatus)
-		return &reconcile.Result{RequeueAfter: 2 * time.Second}, nil
-	}
-
-	providerID := fmt.Sprintf("hivelocity://%d", device.DeviceId)
-
-	if !s.scope.IsControlPlane() {
-		s.scope.HivelocityMachine.Spec.ProviderID = &providerID
-		s.scope.HivelocityMachine.Status.Ready = true
-		conditions.MarkTrue(s.scope.HivelocityMachine, infrav1.DeviceReadyCondition)
-		return nil, nil
-	}
+	// Set ProviderID so the Cluster API Machine Controller can pull it
+	providerID := hvutils.DeviceIDToProviderID(device.DeviceId)
 
 	s.scope.HivelocityMachine.Spec.ProviderID = &providerID
 	s.scope.HivelocityMachine.Status.Ready = true
@@ -287,13 +254,8 @@ func (s *Service) updateDevice(ctx context.Context, log logr.Logger, device *hv.
 		log.Error(err, "failed to set the machine address")
 		//question: from capd: return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
 	}
-
-	// Set ProviderID so the Cluster API Machine Controller can pull it
-	providerID := hvutils.DeviceIDToProviderID(provisionedDevice.DeviceId)
-	s.scope.HivelocityMachine.Spec.ProviderID = &providerID
-	s.scope.HivelocityMachine.Status.Ready = true
-	conditions.MarkTrue(s.scope.HivelocityMachine, infrav1.DeviceReadyCondition)
 	return nil
+
 }
 
 const defaultImageName = "Ubuntu 20.x"
@@ -395,11 +357,6 @@ func (s *Service) handleDeleteDeviceStatusOff(ctx context.Context, device *hv.Ba
 	return nil, fmt.Errorf("todo: handleDeleteDeviceStatusOff()")
 }
 
-func setStatusFromAPI(device *hv.BareMetalDevice) infrav1.HivelocityMachineStatus {
-	var status infrav1.HivelocityMachineStatus
-	// todo: HV does not have a detailed status for their devices. Only ON or OFF.
-	return status
-}
 
 // We write the machine name in the labels, so that all labels are or should be unique.
 func (s *Service) getAssociatedDevice(ctx context.Context) (*hv.BareMetalDevice, error) {
