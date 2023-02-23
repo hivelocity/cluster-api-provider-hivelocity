@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/go-logr/logr"
 	infrav1 "github.com/hivelocity/cluster-api-provider-hivelocity/api/v1alpha1"
 	hvutils "github.com/hivelocity/cluster-api-provider-hivelocity/pkg/hvutils"
 	"github.com/hivelocity/cluster-api-provider-hivelocity/pkg/scope"
@@ -56,6 +57,7 @@ func NewService(scope *scope.MachineScope) *Service {
 
 // Reconcile implements reconcilement of Hivelocity machines.
 func (s *Service) Reconcile(ctx context.Context) (_ *ctrl.Result, err error) {
+	log := ctrl.LoggerFrom(ctx)
 	if s.scope.HivelocityCluster.Spec.HivelocitySecret.Key == "" {
 		record.Eventf(s.scope.HivelocityMachine, corev1.EventTypeWarning, "NoAPIKey", "No Hivelocity API Key found")
 		return nil, fmt.Errorf("no Hivelocity API Key provided - cannot reconcile Hivelocity device")
@@ -107,7 +109,7 @@ func (s *Service) Reconcile(ctx context.Context) (_ *ctrl.Result, err error) {
 		)
 	}
 
-	err = s.updateDevice(ctx, device)
+	err = s.updateDevice(ctx, log, device)
 	if err != nil {
 		return nil, fmt.Errorf("[Service.Reconcile] updateDevice() failed. deviceID %d. %w",
 			device.DeviceId, err)
@@ -200,12 +202,40 @@ func (s *Service) handleDeviceStatusOff(ctx context.Context, device *hv.BareMeta
 	return &reconcile.Result{RequeueAfter: 30 * time.Second}, nil
 }
 
-func (s *Service) updateDevice(ctx context.Context, device *hv.BareMetalDevice) error {
-	// todo...
-	return nil
-}
+func (s *Service) updateDevice(ctx context.Context, log logr.Logger, device *hv.BareMetalDevice) error {
+	log.V(1).Info("Updating machine")
 
-func (s *Service) provisionDevice(ctx context.Context, deviceID int32) (*hv.BareMetalDevice, error) {
+	// if the machine is already provisioned, return
+	if s.scope.Machine.Spec.ProviderID != nil {
+		// ensure ready state is set.
+		// This is required after move, because status is not moved to the target cluster.
+		s.scope.HivelocityMachine.Status.Ready = true
+		deviceID, err := hvutils.ProviderIDToDeviceID(*s.scope.Machine.Spec.ProviderID)
+		if err != nil {
+			return fmt.Errorf("[updateDevice] ProviderIDToDeviceID failed: %w", err)
+		}
+		exists, err := hvutils.DeviceExists(ctx, s.scope.HVClient, deviceID)
+		if err != nil {
+			return fmt.Errorf("[updateDevice] DeviceExists failed: %w", err)
+		}
+		if exists {
+			conditions.MarkTrue(s.scope.HivelocityMachine, infrav1.DeviceReadyCondition)
+			// Setting address is required after move, because Status field is not retained during move.
+			if err := setMachineAddress(s.scope.HivelocityMachine, device); err != nil {
+				return fmt.Errorf("failed to set the machine address: %w", err)
+			}
+		} else {
+			conditions.MarkFalse(s.scope.HivelocityMachine,
+				infrav1.DeviceReadyCondition,
+				infrav1.DeviceDeletedReason,
+				clusterv1.ConditionSeverityError,
+				fmt.Sprintf("device %d does not exists anymore", device.DeviceId))
+		}
+		return nil
+	}
+
+	// question: this is from server.go. In CAPD conditions get updated.
+	// Make sure bootstrap data is available and populated.
 	userData, err := s.scope.GetRawBootstrapData(ctx)
 	if err != nil {
 		record.Warnf(
@@ -213,12 +243,12 @@ func (s *Service) provisionDevice(ctx context.Context, deviceID int32) (*hv.Bare
 			"FailedGetBootstrapData",
 			err.Error(),
 		)
-		return nil, fmt.Errorf("failed to get raw bootstrap data: %s", err)
+		return fmt.Errorf("failed to get raw bootstrap data: %s", err)
 	}
 
 	image, err := s.getDeviceImage(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get device image: %w", err)
+		return fmt.Errorf("failed to get device image: %w", err)
 	}
 	opts := hv.BareMetalDeviceUpdate{
 		Hostname: s.scope.Name(),
@@ -230,14 +260,13 @@ func (s *Service) provisionDevice(ctx context.Context, deviceID int32) (*hv.Bare
 	if s.scope.HivelocityCluster.Spec.SSHKey != nil {
 		sshKeyID, err := s.getSSHKeyIDFromSSHKeyName(ctx, s.scope.HivelocityCluster.Spec.SSHKey)
 		if err != nil {
-			return nil, fmt.Errorf("error with ssh keys: %w", err)
+			return fmt.Errorf("error with ssh keys: %w", err)
 		}
-
 		opts.PublicSshKeyId = sshKeyID
 	}
 
 	// Provision the device
-	device, err := s.scope.HVClient.ProvisionDevice(ctx, deviceID, opts)
+	provisionedDevice, err := s.scope.HVClient.ProvisionDevice(ctx, device.DeviceId, opts)
 	if err != nil {
 		if hvclient.IsRateLimitExceededError(err) {
 			conditions.MarkTrue(s.scope.HivelocityMachine, infrav1.RateLimitExceeded)
@@ -252,9 +281,21 @@ func (s *Service) provisionDevice(ctx context.Context, deviceID int32) (*hv.Bare
 			s.scope.Name(),
 			err,
 		)
-		return nil, fmt.Errorf("error while provisioning Hivelocity device %s: %s", s.scope.HivelocityMachine.Name, err)
+		return fmt.Errorf("error while provisioning Hivelocity device %s: %s", s.scope.HivelocityMachine.Name, err)
 	}
-	return &device, nil
+	if err := setMachineAddress(s.scope.HivelocityMachine, &provisionedDevice); err != nil {
+		log.Error(err, "failed to set the machine address")
+		//return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
+	}
+
+	// Set ProviderID so the Cluster API Machine Controller can pull it
+	providerID := device.ProviderID()
+	dockerMachine.Spec.ProviderID = &providerID
+	dockerMachine.Status.Ready = true
+	conditions.MarkTrue(dockerMachine, infrav1.ContainerProvisionedCondition)
+
+
+	return nil
 }
 
 const defaultImageName = "Ubuntu 20.x"
@@ -392,4 +433,23 @@ func createTags(clusterName, machineName string, isControlPlane bool) []string {
 		hvclient.GetMachineTag(machineName),
 		"caphv-machinetype=" + machineType,
 	}
+}
+
+// setMachineAddress gets the address from the device and sets it on the Machine object.
+func setMachineAddress(hvMachine *infrav1.HivelocityMachine, hvDevice *hv.BareMetalDevice) error {
+	hvMachine.Status.Addresses = []corev1.NodeAddress{
+		{
+			Type:    corev1.NodeHostName,
+			Address: hvDevice.Hostname,
+		},
+		{
+			Type:    corev1.NodeInternalIP,
+			Address: hvDevice.PrimaryIp,
+		},
+		{
+			Type:    corev1.NodeExternalIP,
+			Address: hvDevice.PrimaryIp,
+		},
+	}
+	return nil
 }

@@ -25,6 +25,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 
 	hvclient "github.com/hivelocity/cluster-api-provider-hivelocity/pkg/services/hivelocity/client"
@@ -97,10 +98,11 @@ func FindUnusedDevice(devices []*hv.BareMetalDevice, clusterName, deviceType str
 }
 
 // AssociateDevice claims an unused HV device.
-func AssociateDevice(ctx context.Context, client hvclient.Client, device *hv.BareMetalDevice, clusterName string, machineName string) error {
+func AssociateDevice(ctx context.Context, client hvclient.Client, device *hv.BareMetalDevice, clusterName, machineName string) error {
 	return AddTags(ctx, client, device, []string{
 		hvclient.TagKeyClusterName + "=" + clusterName,
-		hvclient.TagKeyMachineName + "=" + machineName})
+		hvclient.TagKeyMachineName + "=" + machineName,
+	})
 }
 
 // DeviceHasTagKey returns true if the device has the tagKey set.
@@ -171,7 +173,7 @@ func AddTags(ctx context.Context, client hvclient.Client, device *hv.BareMetalDe
 }
 
 // FindAndAssociateDevice search for an unused device, and then associates the device.
-func FindAndAssociateDevice(ctx context.Context, client hvclient.Client, clusterName string, machineName string) (*hv.BareMetalDevice, error) {
+func FindAndAssociateDevice(ctx context.Context, client hvclient.Client, clusterName, machineName string) (*hv.BareMetalDevice, error) {
 	devices, err := client.ListDevices(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("[FindAndAssociateDevice] ListDevices() failed. machine %q: %w",
@@ -193,3 +195,40 @@ func FindAndAssociateDevice(ctx context.Context, client hvclient.Client, cluster
 	}
 	return device, nil
 }
+
+// DeviceExists returns true if the device exists.
+func DeviceExists(ctx context.Context, client hvclient.Client, deviceID int32) (bool, error) {
+	// question: should we check if the device is in the current cluster first?
+	device, err := client.GetDevice(ctx, deviceID)
+	if err != nil {
+		return false, err
+	}
+	if device.PrimaryIp != "" {
+		return true, nil
+	}
+	return false, nil
+}
+
+// ProviderIDToDeviceID converts the ProviderID (hivelocity://NNNN) to the DeviceID.
+func ProviderIDToDeviceID(providerID string) (int32, error) {
+	if providerID == "" {
+		return 0, fmt.Errorf("[ProviderIDToDeviceID] providerID is empty")
+	}
+	prefix := "hivelocity://"
+	if !strings.HasPrefix(providerID, prefix) {
+		return 0, fmt.Errorf("[ProviderIDToDeviceID] missing prefix %q in providerID %q",
+			prefix, providerID)
+	}
+	deviceID, err := strconv.ParseInt(
+		strings.TrimPrefix(providerID, prefix),
+		10,
+		32,
+	)
+	if err != nil {
+		return 0, fmt.Errorf("[ProviderIDToDeviceID] failed to convert providerID %q: %w",
+			providerID, err)
+	}
+	return int32(deviceID), nil
+}
+
+func DeviceIDToProviderID(deviceID )

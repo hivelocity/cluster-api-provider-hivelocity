@@ -41,6 +41,9 @@ const OtherClusterDeviceID = 2
 // NoTagsDeviceID is a deviceID which references a device which has no tags.
 const NoTagsDeviceID = 3
 
+// WithPrimaryIPDeviceID is a deviceID which references a device which has a PrimaryIp.
+const WithPrimaryIPDeviceID = 4
+
 type mockedHVClient struct {
 	store deviceStore
 }
@@ -74,6 +77,14 @@ func (f *mockedHVClientFactory) NewClient(hvAPIKey string) hvclient.Client {
 			DeviceId:    NoTagsDeviceID,
 			PowerStatus: "ON",
 			OsName:      defaultImage,
+		},
+		{
+			Hostname:    "host4-with-ip",
+			Tags:        []string{},
+			DeviceId:    WithPrimaryIPDeviceID,
+			PowerStatus: "ON",
+			OsName:      defaultImage,
+			PrimaryIp:   "127.0.0,1",
 		},
 	}
 	for i := range devices {

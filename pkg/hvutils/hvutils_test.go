@@ -189,7 +189,18 @@ func TestAddTags(t *testing.T) {
 	device, err = client.GetDevice(ctx, mockclient.NoTagsDeviceID)
 	require.NoError(t, err)
 	require.Equal(t, []string{"bar", "foo"}, device.Tags)
+}
 
+func Test_DeviceExists(t *testing.T) {
+	client := mockclient.NewHVClientFactory().NewClient("my-api-key")
+	ctx := context.Background()
+	exists, err := DeviceExists(ctx, client, mockclient.FreeDeviceID)
+	require.NoError(t, err)
+	require.False(t, exists)
+
+	exists, err = DeviceExists(ctx, client, mockclient.WithPrimaryIPDeviceID)
+	require.NoError(t, err)
+	require.True(t, exists)
 }
 
 func Test_AssociateDevice(t *testing.T) {
@@ -218,4 +229,32 @@ func Test_FindAndAssociateDevice(t *testing.T) {
 		"caphv-device-type=hvCustom",
 		"caphv-machine-name=my-machine",
 	}, device.Tags)
+}
+
+func Test_ProviderIDToDeviceID_broken(t *testing.T) {
+	for _, brokenID := range []string{
+		"",
+		"foo",
+		"hivelocity://",
+		"hivelocity://abc",
+		"hivelocity://999999999999999999999999999",
+	} {
+		_, err := ProviderIDToDeviceID(brokenID)
+		require.Errorf(t, err, brokenID)
+	}
+}
+
+func Test_ProviderIDToDeviceID_valid(t *testing.T) {
+	type stringToID struct {
+		s        string
+		expected int32
+	}
+	for _, validID := range []stringToID{
+		{"hivelocity://1", 1},
+		{"hivelocity://12345", 12345},
+	} {
+		id, err := ProviderIDToDeviceID(validID.s)
+		require.NoError(t, err)
+		require.Equal(t, validID.expected, id)
+	}
 }

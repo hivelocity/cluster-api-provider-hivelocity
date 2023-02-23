@@ -57,6 +57,7 @@ type HivelocityMachineStatus struct {
 	Ready bool `json:"ready"`
 
 	// Addresses contains the devices's associated addresses.
+	// question: CAPD uses this: []clusterv1.MachineAddress `json:"addresses,omitempty"`
 	Addresses []corev1.NodeAddress `json:"addresses,omitempty"`
 
 	// Region contains the name of the Hivelocity location the device is running.

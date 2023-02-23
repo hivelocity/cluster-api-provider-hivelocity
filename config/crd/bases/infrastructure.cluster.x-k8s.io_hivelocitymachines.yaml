@@ -91,7 +91,8 @@ spec:
             description: HivelocityMachineStatus defines the observed state of HivelocityMachine.
             properties:
               addresses:
-                description: Addresses contains the devices's associated addresses.
+                description: 'Addresses contains the devices''s associated addresses.
+                  question: CAPD uses this: []clusterv1.MachineAddress `json:"addresses,omitempty"`'
                 items:
                   description: NodeAddress contains information for the node's address.
                   properties:
