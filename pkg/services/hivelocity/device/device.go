@@ -357,7 +357,6 @@ func (s *Service) handleDeleteDeviceStatusOff(ctx context.Context, device *hv.Ba
 	return nil, fmt.Errorf("todo: handleDeleteDeviceStatusOff()")
 }
 
-
 // We write the machine name in the labels, so that all labels are or should be unique.
 func (s *Service) getAssociatedDevice(ctx context.Context) (*hv.BareMetalDevice, error) {
 	clusterTag := hvclient.GetClusterTag(s.scope.ClusterScope.Name())

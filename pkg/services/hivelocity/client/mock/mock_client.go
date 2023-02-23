@@ -53,7 +53,6 @@ var _ hvclient.Client = &mockedHVClient{}
 // NewClient gives reference to the mock client using the in memory store.
 func (f *mockedHVClientFactory) NewClient(hvAPIKey string) hvclient.Client {
 	var store deviceStore
-	store.idMap = make(map[int32]*hv.BareMetalDevice)
 	devices := []hv.BareMetalDevice{
 		{
 			Hostname:    "host1-unused",
@@ -87,6 +86,7 @@ func (f *mockedHVClientFactory) NewClient(hvAPIKey string) hvclient.Client {
 			PrimaryIp:   "127.0.0,1",
 		},
 	}
+	store.idMap = make(map[int32]*hv.BareMetalDevice, len(devices))
 	for i := range devices {
 		store.idMap[devices[i].DeviceId] = &devices[i]
 	}
