@@ -23,7 +23,6 @@ package hvutils
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -60,49 +59,6 @@ func FindDeviceByTags(
 		return nil, nil
 	}
 	return device, nil
-}
-
-// FindUnusedDevice returns an unused device. Returns nil if no device was found.
-func FindUnusedDevice(devices []*hv.BareMetalDevice, clusterName, deviceType string) (*hv.BareMetalDevice, error) {
-	for i := range devices {
-		device := devices[i]
-		it, err := GetDeviceType(device)
-		if err != nil {
-			return nil, fmt.Errorf("[FindUnusedDevice] GetDeviceType() failed: %w", err)
-		}
-		if it != deviceType {
-			continue
-		}
-		if DeviceHasTagKey(device, hvclient.TagKeyMachineName) {
-			continue
-		}
-		cn, err := DeviceGetTagValue(device, hvclient.TagKeyClusterName)
-		if errors.Is(err, ErrTooManyTagsFound) {
-			continue
-		}
-		if errors.Is(err, ErrNoMatchingTagFound) {
-			// this could lead to a race-condition, if two controllers of two clusters
-			// try to fetch an unused device.
-			// TODO: re-check after N seconds if there is a second tag from a second controller.
-			return device, nil
-		}
-		if err != nil {
-			return nil, err
-		}
-		if cn != clusterName {
-			continue
-		}
-		return device, nil
-	}
-	return nil, nil
-}
-
-// AssociateDevice claims an unused HV device.
-func AssociateDevice(ctx context.Context, client hvclient.Client, device *hv.BareMetalDevice, clusterName, machineName string) error {
-	return AddTags(ctx, client, device, []string{
-		hvclient.TagKeyClusterName + "=" + clusterName,
-		hvclient.TagKeyMachineName + "=" + machineName,
-	})
 }
 
 // DeviceHasTagKey returns true if the device has the tagKey set.
@@ -170,30 +126,6 @@ func AddTags(ctx context.Context, client hvclient.Client, device *hv.BareMetalDe
 	newTags = slices.Compact(newTags)
 
 	return client.SetTags(ctx, device.DeviceId, newTags)
-}
-
-// FindAndAssociateDevice search for an unused device, and then associates the device.
-func FindAndAssociateDevice(ctx context.Context, client hvclient.Client, clusterName, machineName string) (*hv.BareMetalDevice, error) {
-	devices, err := client.ListDevices(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("[FindAndAssociateDevice] ListDevices() failed. machine %q: %w",
-			machineName, err)
-	}
-	device, err := FindUnusedDevice(devices, clusterName, "hvCustom")
-	if err != nil {
-		return nil, fmt.Errorf("[FindAndAssociateDevice] FindUnusedDevice() failed. machine %q: %w",
-			machineName, err)
-	}
-	if device == nil {
-		return nil, fmt.Errorf("[FindAndAssociateDevice] FindUnusedDevice() found no unused device. machine %q: %w",
-			machineName, err)
-	}
-	err = AssociateDevice(ctx, client, device, clusterName, machineName)
-	if err != nil {
-		return nil, fmt.Errorf("[FindAndAssociateDevice] AssociateDevice() failed. machine %q: %w",
-			machineName, err)
-	}
-	return device, nil
 }
 
 // DeviceExists returns true if the device exists.

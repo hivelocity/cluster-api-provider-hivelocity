@@ -203,34 +203,6 @@ func Test_DeviceExists(t *testing.T) {
 	require.True(t, exists)
 }
 
-func Test_AssociateDevice(t *testing.T) {
-	client := mockclient.NewHVClientFactory().NewClient("my-api-key")
-	ctx := context.Background()
-	device, err := client.GetDevice(ctx, mockclient.FreeDeviceID)
-	require.NoError(t, err)
-	err = AssociateDevice(ctx, client, &device, "my-cluster", "my-machine")
-	require.NoError(t, err)
-	device, err = client.GetDevice(ctx, mockclient.FreeDeviceID)
-	require.NoError(t, err)
-	require.ElementsMatch(t, []string{
-		"caphv-cluster-name=my-cluster",
-		"caphv-device-type=hvCustom",
-		"caphv-machine-name=my-machine",
-	}, device.Tags)
-}
-
-func Test_FindAndAssociateDevice(t *testing.T) {
-	client := mockclient.NewHVClientFactory().NewClient("my-api-key")
-	ctx := context.Background()
-	device, err := FindAndAssociateDevice(ctx, client, "my-cluster", "my-machine")
-	require.NoError(t, err)
-	require.ElementsMatch(t, []string{
-		"caphv-cluster-name=my-cluster",
-		"caphv-device-type=hvCustom",
-		"caphv-machine-name=my-machine",
-	}, device.Tags)
-}
-
 func Test_ProviderIDToDeviceID_broken(t *testing.T) {
 	for _, brokenID := range []string{
 		"",

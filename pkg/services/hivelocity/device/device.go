@@ -20,6 +20,7 @@ package device
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -95,11 +96,14 @@ func (s *Service) Reconcile(ctx context.Context) (_ *ctrl.Result, err error) {
 
 	// If no device is found we have to find one
 	if device == nil {
-		device, err = hvutils.FindAndAssociateDevice(ctx, s.scope.HVClient, s.scope.ClusterScope.Name(),
-			s.scope.Name())
+		device, err = s.chooseDevice(ctx)
 		if err != nil {
-			return nil, fmt.Errorf("failed to find device: %w", err)
+			return nil, fmt.Errorf("failed to choose device: %w", err)
 		}
+		if err := s.associateDevice(ctx, device); err != nil {
+			return nil, fmt.Errorf("failed to associate device: %w", err)
+		}
+
 		record.Eventf(
 			s.scope.HivelocityMachine,
 			"SuccessfulFound",
@@ -205,7 +209,6 @@ func (s *Service) updateDevice(ctx context.Context, log logr.Logger, device *hv.
 	}
 	setMachineAddress(s.scope.HivelocityMachine, &provisionedDevice)
 	return nil
-
 }
 
 const defaultImageName = "Ubuntu 20.x"
@@ -355,4 +358,113 @@ func setMachineAddress(hvMachine *infrav1.HivelocityMachine, hvDevice *hv.BareMe
 			Address: hvDevice.PrimaryIp,
 		},
 	}
+}
+
+// associateDevice claims an unused HV device.
+func (s *Service) associateDevice(ctx context.Context, device *hv.BareMetalDevice) error {
+	deviceTags := append(device.Tags, clusterAndMachineTag(s.scope.HivelocityCluster.Name, s.scope.Name())...)
+	if err := s.scope.HVClient.SetTags(ctx, device.DeviceId, deviceTags); err != nil {
+		return fmt.Errorf("failed to set tags on machine %s :%w", s.scope.Name(), err)
+	}
+	// Set update tags of device to have the latest device for the next steps in reconcile
+	device.Tags = deviceTags
+	return nil
+}
+
+func clusterAndMachineTag(clusterName, machineName string) []string {
+	return []string{
+		hvclient.TagKeyClusterName + "=" + clusterName,
+		hvclient.TagKeyMachineName + "=" + machineName,
+	}
+}
+
+// chooseDevice search for an unused device, and then associates the device.
+func (s *Service) chooseDevice(ctx context.Context) (*hv.BareMetalDevice, error) {
+	devices, err := s.scope.HVClient.ListDevices(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("[chooseDevice] ListDevices() failed. machine %q: %w",
+			s.scope.Name(), err)
+	}
+	return chooseAvailableFromList(devices, s.scope.HivelocityMachine.Spec.Type, s.scope.Cluster.Name)
+}
+
+func chooseAvailableFromList(devices []*hv.BareMetalDevice, deviceType infrav1.HivelocityMachineType, clusterName string) (*hv.BareMetalDevice, error) {
+	for _, device := range devices {
+		// Ignore if associated already
+		if isAssociated(device) {
+			continue
+		}
+
+		// Ignore if has wrong device type
+		it, err := getDeviceType(device)
+		if err != nil {
+			return nil, fmt.Errorf("[findAvailableDevice] getDeviceType() failed: %w", err)
+		}
+		if it != string(deviceType) {
+			continue
+		}
+
+		// Ignore if associated to other cluster
+		cn, found := findAssociatedCluster(device)
+		if found && clusterName != cn {
+			continue
+		}
+		return device, nil
+	}
+	return nil, errNoDeviceAvailable
+}
+
+var errNoDeviceAvailable = fmt.Errorf("no available device found")
+
+// getDeviceType returns the device-type of this BareMetalDevice.
+func getDeviceType(device *hv.BareMetalDevice) (string, error) {
+	deviceType, err := findValueForKeyInTags(device.Tags, hvclient.TagKeyDeviceType)
+	if err != nil {
+		return "", fmt.Errorf("[getDeviceType] DeviceGetTagValue() failed: %w", err)
+	}
+	return deviceType, nil
+}
+
+// isAssociated returns the device-type of this BareMetalDevice.
+func isAssociated(device *hv.BareMetalDevice) bool {
+	deviceType, _ := findValueForKeyInTags(device.Tags, hvclient.TagKeyMachineName)
+	return deviceType != ""
+}
+
+// findAssociatedCluster tries to find a cluster name in the tags. If it finds on, it returns true.
+func findAssociatedCluster(device *hv.BareMetalDevice) (string, bool) {
+	cluster, _ := findValueForKeyInTags(device.Tags, hvclient.TagKeyClusterName)
+	return cluster, cluster != ""
+}
+
+// ErrTooManyTagsFound gets returned, if there are multiple tags with the same key,
+// and the key should be unique.
+var ErrTooManyTagsFound = fmt.Errorf("too many tags found")
+
+// ErrNoMatchingTagFound gets returned, if no matching tag was found.
+var ErrNoMatchingTagFound = fmt.Errorf("no matching tag found")
+
+// findValueForKeyInTags returns the value of a TagKey of a device.
+// Example: If a device has the tag "foo=bar", then getValueOfTag
+// will return "bar".
+// If there is no such tag, or there are two tags, then an error gets returned.
+func findValueForKeyInTags(tagList []string, key string) (string, error) {
+	prefix := key + "="
+	found := 0
+	var value string
+
+	for _, tag := range tagList {
+		if !strings.HasPrefix(tag, prefix) {
+			continue
+		}
+		if found > 1 {
+			return "", ErrTooManyTagsFound
+		}
+		found++
+		value = tag[len(prefix):]
+	}
+	if found == 0 {
+		return "", ErrNoMatchingTagFound
+	}
+	return value, nil
 }
