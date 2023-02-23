@@ -30,7 +30,6 @@ import (
 	hv "github.com/hivelocity/hivelocity-client-go/client"
 	corev1 "k8s.io/api/core/v1"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
-	capierrors "sigs.k8s.io/cluster-api/errors"
 	"sigs.k8s.io/cluster-api/util/conditions"
 	"sigs.k8s.io/cluster-api/util/record"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -125,50 +124,6 @@ func (s *Service) Reconcile(ctx context.Context) (_ *ctrl.Result, err error) {
 	return nil, nil
 }
 
-func (s *Service) handleDeviceStatusOff(ctx context.Context, device *hv.BareMetalDevice) (*reconcile.Result, error) {
-	// question: Is handleDeviceStatusOff needed?
-	// Check if device is in DeviceStatusOff and turn it on. This is to avoid a bug of Hivelocity where
-	// sometimes machines are created and not turned on
-
-	condition := conditions.Get(s.scope.HivelocityMachine, infrav1.DeviceReadyCondition)
-	if condition != nil &&
-		condition.Status == corev1.ConditionFalse &&
-		condition.Reason == infrav1.DeviceOffReason {
-		if time.Now().Before(condition.LastTransitionTime.Time.Add(deviceOffTimeout)) {
-			// Not yet timed out, try again to power on
-			if err := s.scope.HVClient.PowerOnDevice(ctx, device.DeviceId); err != nil {
-				return nil, fmt.Errorf("failed to power on device: %w", err)
-			}
-		} else {
-			// Timed out. Set failure reason
-			s.scope.SetError("reached timeout of waiting for machines that are switched off", capierrors.CreateMachineError)
-			return nil, nil
-		}
-	} else { // todo: too complicated. Is there a way to avoid the "else"?
-		// No condition set yet. Try to power device on.
-		if err := s.scope.HVClient.PowerOnDevice(ctx, device.DeviceId); err != nil {
-			if hvclient.IsRateLimitExceededError(err) {
-				conditions.MarkTrue(s.scope.HivelocityMachine, infrav1.RateLimitExceeded)
-				record.Event(s.scope.HivelocityMachine,
-					"RateLimitExceeded",
-					"exceeded rate limit with calling hivelocity function PowerOnDevice",
-				)
-			}
-			return nil, fmt.Errorf("failed to power on device: %w", err)
-		}
-		conditions.MarkFalse(
-			s.scope.HivelocityMachine,
-			infrav1.DeviceReadyCondition,
-			infrav1.DeviceOffReason,
-			clusterv1.ConditionSeverityInfo,
-			"device is switched off",
-		)
-	}
-
-	// Try again in 30 sec.
-	return &reconcile.Result{RequeueAfter: 30 * time.Second}, nil
-}
-
 func (s *Service) updateDevice(ctx context.Context, log logr.Logger, device *hv.BareMetalDevice) error {
 	log.V(1).Info("Updating machine")
 
@@ -188,9 +143,7 @@ func (s *Service) updateDevice(ctx context.Context, log logr.Logger, device *hv.
 		if exists {
 			conditions.MarkTrue(s.scope.HivelocityMachine, infrav1.DeviceReadyCondition)
 			// Setting address is required after move, because Status field is not retained during move.
-			if err := setMachineAddress(s.scope.HivelocityMachine, device); err != nil {
-				return fmt.Errorf("failed to set the machine address: %w", err)
-			}
+			setMachineAddress(s.scope.HivelocityMachine, device)
 		} else {
 			conditions.MarkFalse(s.scope.HivelocityMachine,
 				infrav1.DeviceReadyCondition,
@@ -250,10 +203,7 @@ func (s *Service) updateDevice(ctx context.Context, log logr.Logger, device *hv.
 		)
 		return fmt.Errorf("error while provisioning Hivelocity device %s: %s", s.scope.HivelocityMachine.Name, err)
 	}
-	if err := setMachineAddress(s.scope.HivelocityMachine, &provisionedDevice); err != nil {
-		log.Error(err, "failed to set the machine address")
-		//question: from capd: return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
-	}
+	setMachineAddress(s.scope.HivelocityMachine, &provisionedDevice)
 	return nil
 
 }
@@ -390,7 +340,7 @@ func createTags(clusterName, machineName string, isControlPlane bool) []string {
 }
 
 // setMachineAddress gets the address from the device and sets it on the Machine object.
-func setMachineAddress(hvMachine *infrav1.HivelocityMachine, hvDevice *hv.BareMetalDevice) error {
+func setMachineAddress(hvMachine *infrav1.HivelocityMachine, hvDevice *hv.BareMetalDevice) {
 	hvMachine.Status.Addresses = []corev1.NodeAddress{
 		{
 			Type:    corev1.NodeHostName,
@@ -405,5 +355,4 @@ func setMachineAddress(hvMachine *infrav1.HivelocityMachine, hvDevice *hv.BareMe
 			Address: hvDevice.PrimaryIp,
 		},
 	}
-	return nil
 }

@@ -231,6 +231,7 @@ func ProviderIDToDeviceID(providerID string) (int32, error) {
 	return int32(deviceID), nil
 }
 
+// DeviceIDToProviderID converts a deviceID to ProviderID.
 func DeviceIDToProviderID(deviceID int32) string {
 	return fmt.Sprintf("hivelocity://%d", deviceID)
 }
