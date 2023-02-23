@@ -94,7 +94,8 @@ func (s *Service) Reconcile(ctx context.Context) (_ *ctrl.Result, err error) {
 
 	// If no device is found we have to find one
 	if device == nil {
-		device, err = s.findDevice(ctx)
+		device, err = hvutils.FindAndAssociateDevice(ctx, s.scope.HVClient, s.scope.ClusterScope.Name(),
+			s.scope.Name())
 		if err != nil {
 			return nil, fmt.Errorf("failed to find device: %w", err)
 		}
@@ -254,25 +255,6 @@ func (s *Service) provisionDevice(ctx context.Context, deviceID int32) (*hv.Bare
 		return nil, fmt.Errorf("error while provisioning Hivelocity device %s: %s", s.scope.HivelocityMachine.Name, err)
 	}
 	return &device, nil
-}
-
-func (s *Service) findDevice(ctx context.Context) (*hv.BareMetalDevice, error) {
-
-	devices, err := s.scope.HVClient.ListDevices(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("[Service.findDevice] ListDevices() failed. cluster %q: %w",
-			s.scope.Name(), err)
-	}
-	device, err := hvutils.FindUnusedDevice(devices, s.scope.Name(), "question: device-type?")
-	if err != nil {
-		return nil, fmt.Errorf("[Service.findDevice] FindUnusedDevice() failed. cluster %q: %w",
-			s.scope.Name(), err)
-	}
-	if device == nil {
-		return nil, fmt.Errorf("[Service.findDevice] FindUnusedDevice() found no unused device. cluster %q: %w",
-			s.scope.Name(), err)
-	}
-	return device, nil
 }
 
 const defaultImageName = "Ubuntu 20.x"

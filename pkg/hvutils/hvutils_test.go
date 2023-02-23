@@ -161,33 +161,61 @@ func toPointers[T any](s []T) []*T {
 func TestAddTags(t *testing.T) {
 	client := mockclient.NewHVClientFactory().NewClient("my-api-key")
 	ctx := context.Background()
-	device, err := client.GetDevice(ctx, mockclient.FirstDeviceID)
+	device, err := client.GetDevice(ctx, mockclient.NoTagsDeviceID)
 	require.NoError(t, err)
 	require.Equal(t, []string{}, device.Tags)
 
 	err = AddTags(ctx, client, &device, []string{"foo"})
 	require.NoError(t, err)
-	device, err = client.GetDevice(ctx, mockclient.FirstDeviceID)
+	device, err = client.GetDevice(ctx, mockclient.NoTagsDeviceID)
 	require.NoError(t, err)
 	require.Equal(t, []string{"foo"}, device.Tags)
 
 	err = AddTags(ctx, client, &device, []string{"bar"})
 	require.NoError(t, err)
-	device, err = client.GetDevice(ctx, mockclient.FirstDeviceID)
+	device, err = client.GetDevice(ctx, mockclient.NoTagsDeviceID)
 	require.NoError(t, err)
 	require.Equal(t, []string{"bar", "foo"}, device.Tags)
 
 	// don't create duplicates
 	err = AddTags(ctx, client, &device, []string{"bar"})
 	require.NoError(t, err)
-	device, err = client.GetDevice(ctx, mockclient.FirstDeviceID)
+	device, err = client.GetDevice(ctx, mockclient.NoTagsDeviceID)
 	require.NoError(t, err)
 	require.Equal(t, []string{"bar", "foo"}, device.Tags)
 
 	err = AddTags(ctx, client, &device, []string{})
 	require.NoError(t, err)
-	device, err = client.GetDevice(ctx, mockclient.FirstDeviceID)
+	device, err = client.GetDevice(ctx, mockclient.NoTagsDeviceID)
 	require.NoError(t, err)
 	require.Equal(t, []string{"bar", "foo"}, device.Tags)
 
+}
+
+func Test_AssociateDevice(t *testing.T) {
+	client := mockclient.NewHVClientFactory().NewClient("my-api-key")
+	ctx := context.Background()
+	device, err := client.GetDevice(ctx, mockclient.FreeDeviceID)
+	require.NoError(t, err)
+	err = AssociateDevice(ctx, client, &device, "my-cluster", "my-machine")
+	require.NoError(t, err)
+	device, err = client.GetDevice(ctx, mockclient.FreeDeviceID)
+	require.NoError(t, err)
+	require.ElementsMatch(t, []string{
+		"caphv-cluster-name=my-cluster",
+		"caphv-device-type=hvCustom",
+		"caphv-machine-name=my-machine",
+	}, device.Tags)
+}
+
+func Test_FindAndAssociateDevice(t *testing.T) {
+	client := mockclient.NewHVClientFactory().NewClient("my-api-key")
+	ctx := context.Background()
+	device, err := FindAndAssociateDevice(ctx, client, "my-cluster", "my-machine")
+	require.NoError(t, err)
+	require.ElementsMatch(t, []string{
+		"caphv-cluster-name=my-cluster",
+		"caphv-device-type=hvCustom",
+		"caphv-machine-name=my-machine",
+	}, device.Tags)
 }

@@ -89,7 +89,7 @@ func (r *HivelocityMachineReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	// Fetch the Cluster.
 	cluster, err := util.GetClusterFromMetadata(ctx, r.Client, machine.ObjectMeta)
 	if err != nil {
-		log.Info("Machine is missing cluster label or cluster does not exist: %s", err) // question: added %s+err
+		log.Info("Machine is missing cluster label or cluster does not exist: %s", err)
 		return ctrl.Result{}, nil
 	}
 
@@ -159,7 +159,8 @@ func (r *HivelocityMachineReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	return r.reconcileNormal(ctx, machineScope)
 }
 
-func breakReconcile(ctrl *reconcile.Result, err error) (reconcile.Result, bool, error) { // why name "ctrl"? This is already the package "sigs.k8s.io/controller-runtime"
+func breakReconcile(ctrl *reconcile.Result, err error) (reconcile.Result, bool, error) { // question: why name "ctrl"? This is already the package "sigs.k8s.io/controller-runtime"
+	// question: it is hard to understand what this function does. It gets used twice. Maybe inline it?
 	c := reconcile.Result{}
 	if ctrl != nil {
 		c = *ctrl

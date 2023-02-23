@@ -32,8 +32,14 @@ const DefaultCPUCores = 1
 // DefaultMemoryInGB defines the default memory in GB for Hivelocity machines' capacities.
 const DefaultMemoryInGB = float32(4)
 
-// FirstDeviceID can be used for testing. This device is available if create a new mocked Client.
-const FirstDeviceID = 1
+// FreeDeviceID is a deviceID which references a device which has is not associated with a node.
+const FreeDeviceID = 1
+
+// OtherClusterDeviceID is a deviceID which references a device which is from an other cluster.
+const OtherClusterDeviceID = 2
+
+// NoTagsDeviceID is a deviceID which references a device which has no tags.
+const NoTagsDeviceID = 3
 
 type mockedHVClient struct {
 	store deviceStore
@@ -48,8 +54,8 @@ func (f *mockedHVClientFactory) NewClient(hvAPIKey string) hvclient.Client {
 	devices := []hv.BareMetalDevice{
 		{
 			Hostname:    "host1-unused",
-			Tags:        []string{},
-			DeviceId:    1,
+			Tags:        []string{hvclient.TagKeyDeviceType + "=hvCustom"},
+			DeviceId:    FreeDeviceID,
 			PowerStatus: "ON",
 			OsName:      defaultImage,
 		},
@@ -58,14 +64,14 @@ func (f *mockedHVClientFactory) NewClient(hvAPIKey string) hvclient.Client {
 			Tags: []string{
 				hvclient.GetClusterTag("other-cluster"),
 			},
-			DeviceId:    2,
+			DeviceId:    OtherClusterDeviceID,
 			PowerStatus: "ON",
 			OsName:      defaultImage,
 		},
 		{
 			Hostname:    "host3-unused",
 			Tags:        []string{},
-			DeviceId:    3,
+			DeviceId:    NoTagsDeviceID,
 			PowerStatus: "ON",
 			OsName:      defaultImage,
 		},

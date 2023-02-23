@@ -15,6 +15,10 @@ limitations under the License.
 */
 
 // Package hvutils implements helper functions for the HV API.
+// This package is a layer between the Reconcile methods of the controllers and
+// our hvclient.Client interface.
+// This makes testing easier. The package hvutils gets tests with traditional unittests,
+// and the Reconcile methods get tested with Ginko.
 package hvutils
 
 import (
@@ -92,9 +96,11 @@ func FindUnusedDevice(devices []*hv.BareMetalDevice, clusterName, deviceType str
 	return nil, nil
 }
 
-// ClaimDevice claims an unused HV device.
-func ClaimDevice(client hvclient.Client, device *hv.BareMetalDevice, clusterName string, machineName string) error {
-	panic("todo")
+// AssociateDevice claims an unused HV device.
+func AssociateDevice(ctx context.Context, client hvclient.Client, device *hv.BareMetalDevice, clusterName string, machineName string) error {
+	return AddTags(ctx, client, device, []string{
+		hvclient.TagKeyClusterName + "=" + clusterName,
+		hvclient.TagKeyMachineName + "=" + machineName})
 }
 
 // DeviceHasTagKey returns true if the device has the tagKey set.
@@ -162,4 +168,28 @@ func AddTags(ctx context.Context, client hvclient.Client, device *hv.BareMetalDe
 	newTags = slices.Compact(newTags)
 
 	return client.SetTags(ctx, device.DeviceId, newTags)
+}
+
+// FindAndAssociateDevice search for an unused device, and then associates the device.
+func FindAndAssociateDevice(ctx context.Context, client hvclient.Client, clusterName string, machineName string) (*hv.BareMetalDevice, error) {
+	devices, err := client.ListDevices(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("[FindAndAssociateDevice] ListDevices() failed. machine %q: %w",
+			machineName, err)
+	}
+	device, err := FindUnusedDevice(devices, clusterName, "hvCustom")
+	if err != nil {
+		return nil, fmt.Errorf("[FindAndAssociateDevice] FindUnusedDevice() failed. machine %q: %w",
+			machineName, err)
+	}
+	if device == nil {
+		return nil, fmt.Errorf("[FindAndAssociateDevice] FindUnusedDevice() found no unused device. machine %q: %w",
+			machineName, err)
+	}
+	err = AssociateDevice(ctx, client, device, clusterName, machineName)
+	if err != nil {
+		return nil, fmt.Errorf("[FindAndAssociateDevice] AssociateDevice() failed. machine %q: %w",
+			machineName, err)
+	}
+	return device, nil
 }
