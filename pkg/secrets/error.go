@@ -35,5 +35,5 @@ func (e ResolveSecretRefError) Error() string {
 type HivelocityAPIKeyValidationError struct{}
 
 func (e HivelocityAPIKeyValidationError) Error() string {
-	return "Hivelocity API-Key is invalid"
+	return "Hivelocity API key is invalid"
 }

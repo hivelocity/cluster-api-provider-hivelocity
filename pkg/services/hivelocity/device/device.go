@@ -69,13 +69,14 @@ func NewService(scope *scope.MachineScope) *Service {
 
 // Reconcile implements reconcilement of Hivelocity machines.
 func (s *Service) Reconcile(ctx context.Context) (_ ctrl.Result, err error) {
-	log := ctrl.LoggerFrom(ctx)
+	log := s.scope.Logger
+
 	if s.scope.HivelocityCluster.Spec.HivelocitySecret.Key == "" {
 		record.Eventf(s.scope.HivelocityMachine, corev1.EventTypeWarning, "NoAPIKey", "No Hivelocity API Key found")
 		return reconcile.Result{}, fmt.Errorf("no Hivelocity API Key provided - cannot reconcile Hivelocity device")
 	}
 
-	// detect failure domain. question: two names "failure domain" and "region". One name would be better.
+	// detect failure domain
 	failureDomain, err := s.scope.GetFailureDomain()
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed to get failure domain: %w", err)
@@ -84,7 +85,7 @@ func (s *Service) Reconcile(ctx context.Context) (_ ctrl.Result, err error) {
 
 	// Waiting for bootstrap data to be ready
 	if !s.scope.IsBootstrapDataReady(ctx) {
-		s.scope.Info("Bootstrap not ready - requeuing")
+		log.Info("Bootstrap not ready - requeuing")
 		conditions.MarkFalse(
 			s.scope.HivelocityMachine,
 			infrav1.DeviceBootstrapReadyCondition,
