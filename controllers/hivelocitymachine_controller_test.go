@@ -49,7 +49,7 @@ var _ = Describe("HivelocityMachineReconciler", func() {
 		hvSecret        *corev1.Secret
 		bootstrapSecret *corev1.Secret
 
-		key client.ObjectKey
+		machineKey client.ObjectKey
 
 		hvClient hvclient.Client
 	)
@@ -160,12 +160,12 @@ var _ = Describe("HivelocityMachineReconciler", func() {
 			Expect(testEnv.Create(ctx, hvMachine)).To(Succeed())
 			Expect(testEnv.Create(ctx, hvCluster)).To(Succeed())
 
-			key = client.ObjectKey{Namespace: testNs.Name, Name: hvMachine.Name}
+			machineKey = client.ObjectKey{Namespace: testNs.Name, Name: hvMachine.Name}
 		})
 
 		It("creates the infra machine", func() {
 			Eventually(func() bool {
-				if err := testEnv.Get(ctx, key, hvMachine); err != nil {
+				if err := testEnv.Get(ctx, machineKey, hvMachine); err != nil {
 					return false
 				}
 				return true
@@ -180,10 +180,10 @@ var _ = Describe("HivelocityMachineReconciler", func() {
 
 			// Check whether bootstrap condition is not ready
 			Eventually(func() bool {
-				if err := testEnv.Get(ctx, key, hvMachine); err != nil {
+				if err := testEnv.Get(ctx, machineKey, hvMachine); err != nil {
 					return false
 				}
-				return isPresentAndFalseWithReason(key, hvMachine, infrav1.DeviceBootstrapReadyCondition, infrav1.DeviceBootstrapNotReadyReason)
+				return isPresentAndFalseWithReason(machineKey, hvMachine, infrav1.DeviceBootstrapReadyCondition, infrav1.DeviceBootstrapNotReadyReason)
 			}, timeout, time.Second).Should(BeTrue())
 
 			By("setting the bootstrap data")
@@ -198,12 +198,12 @@ var _ = Describe("HivelocityMachineReconciler", func() {
 
 			// Check whether bootstrap condition is ready
 			Eventually(func() bool {
-				if err := testEnv.Get(ctx, key, hvMachine); err != nil {
+				if err := testEnv.Get(ctx, machineKey, hvMachine); err != nil {
 					return false
 				}
 				objectCondition := conditions.Get(hvMachine, infrav1.DeviceBootstrapReadyCondition)
 				fmt.Println(objectCondition)
-				return isPresentAndTrue(key, hvMachine, infrav1.DeviceBootstrapReadyCondition)
+				return isPresentAndTrue(machineKey, hvMachine, infrav1.DeviceBootstrapReadyCondition)
 			}, timeout, time.Second).Should(BeTrue())
 
 			testEnv.GetLogger().Info("############################################################################")
@@ -220,7 +220,7 @@ var _ = Describe("HivelocityMachineReconciler", func() {
 			// "reconcileID"="423f4888-a685-4c36-be6e-78ccd04e6c5d"
 			/*Eventually(func() bool {
 				var hivelocityMachine *infrav1.HivelocityMachine
-				if err := testEnv.Get(ctx, key, hivelocityMachine); err != nil {
+				if err := testEnv.Get(ctx, machineKey, hivelocityMachine); err != nil {
 					return false
 				}
 				// todo: get the HivelocityMachine with
