@@ -37,7 +37,7 @@ import (
 // ClusterScopeParams defines the input parameters used to create a new scope.
 type ClusterScopeParams struct {
 	Client            client.Client
-	Logger            *logr.Logger
+	Logger            logr.Logger
 	HVClient          hvclient.Client
 	Cluster           *clusterv1.Cluster
 	HivelocityCluster *infrav1.HivelocityCluster
@@ -54,9 +54,6 @@ func NewClusterScope(ctx context.Context, params ClusterScopeParams) (*ClusterSc
 	}
 	if params.HVClient == nil {
 		return nil, errors.New("failed to generate new scope from nil HVClient")
-	}
-	if params.Logger == nil {
-		return nil, errors.New("failed to generate new scope from nil logger")
 	}
 
 	helper, err := patch.NewHelper(params.HivelocityCluster, params.Client)
@@ -76,7 +73,7 @@ func NewClusterScope(ctx context.Context, params ClusterScopeParams) (*ClusterSc
 
 // ClusterScope defines the basic context for an actuator to operate upon.
 type ClusterScope struct {
-	*logr.Logger
+	logr.Logger
 	Client      client.Client
 	patchHelper *patch.Helper
 	HVClient    hvclient.Client

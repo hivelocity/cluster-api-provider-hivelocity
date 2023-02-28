@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/go-logr/logr"
 	infrav1 "github.com/hivelocity/cluster-api-provider-hivelocity/api/v1alpha1"
 	"github.com/hivelocity/cluster-api-provider-hivelocity/pkg/scope"
 	secretutil "github.com/hivelocity/cluster-api-provider-hivelocity/pkg/secrets"
@@ -38,7 +39,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
-	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
@@ -126,7 +126,7 @@ func (r *HivelocityMachineReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	machineScope, err := scope.NewMachineScope(ctx, scope.MachineScopeParams{
 		ClusterScopeParams: scope.ClusterScopeParams{
 			Client:            r.Client,
-			Logger:            &log,
+			Logger:            log,
 			Cluster:           cluster,
 			HivelocityCluster: hvCluster,
 			HVClient:          hvClient,
@@ -203,14 +203,14 @@ func (r *HivelocityMachineReconciler) SetupWithManager(ctx context.Context, mgr 
 	c, err := ctrl.NewControllerManagedBy(mgr).
 		WithOptions(options).
 		For(&infrav1.HivelocityMachine{}).
-		WithEventFilter(predicates.ResourceNotPausedAndHasFilterLabel(ctrl.LoggerFrom(ctx), r.WatchFilterValue)).
+		WithEventFilter(predicates.ResourceNotPausedAndHasFilterLabel(log, r.WatchFilterValue)).
 		Watches(
 			&source.Kind{Type: &clusterv1.Machine{}},
 			handler.EnqueueRequestsFromMapFunc(util.MachineToInfrastructureMapFunc(infrav1.GroupVersion.WithKind("HivelocityMachine"))),
 		).
 		Watches(
 			&source.Kind{Type: &infrav1.HivelocityCluster{}},
-			handler.EnqueueRequestsFromMapFunc(r.HivelocityClusterToHivelocityMachines(ctx)),
+			handler.EnqueueRequestsFromMapFunc(r.HivelocityClusterToHivelocityMachines(ctx, log)),
 		).
 		Build(r)
 	if err != nil {
@@ -236,11 +236,9 @@ func (r *HivelocityMachineReconciler) SetupWithManager(ctx context.Context, mgr 
 
 // HivelocityClusterToHivelocityMachines is a handler.ToRequestsFunc to be used to enqeue requests for reconciliation
 // of HivelocityMachines.
-func (r *HivelocityMachineReconciler) HivelocityClusterToHivelocityMachines(ctx context.Context) handler.MapFunc {
+func (r *HivelocityMachineReconciler) HivelocityClusterToHivelocityMachines(ctx context.Context, log logr.Logger) handler.MapFunc {
 	return func(o client.Object) []ctrl.Request {
 		result := []ctrl.Request{}
-
-		log := log.FromContext(ctx)
 
 		c, ok := o.(*infrav1.HivelocityCluster)
 		if !ok {
@@ -273,7 +271,7 @@ func (r *HivelocityMachineReconciler) HivelocityClusterToHivelocityMachines(ctx 
 			return nil
 		}
 		for _, m := range machineList.Items {
-			log.WithValues("machine", m.Name)
+			log = log.WithValues("machine", m.Name)
 			if m.Spec.InfrastructureRef.GroupVersionKind().Kind != "HivelocityMachine" {
 				log.V(1).Info("Machine has an InfrastructureRef for a different type, will not add to reconciliation request.")
 				continue
@@ -282,7 +280,7 @@ func (r *HivelocityMachineReconciler) HivelocityClusterToHivelocityMachines(ctx 
 				continue
 			}
 			name := client.ObjectKey{Namespace: m.Namespace, Name: m.Spec.InfrastructureRef.Name}
-			log.WithValues("hivelocityMachine", name.Name)
+			log = log.WithValues("hivelocityMachine", name.Name)
 			log.V(1).Info("Adding HivelocityMachine to reconciliation request.")
 			result = append(result, ctrl.Request{NamespacedName: name})
 		}
