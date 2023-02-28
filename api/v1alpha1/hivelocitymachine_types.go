@@ -30,6 +30,45 @@ const (
 	MachineFinalizer = "hivelocitymachine.infrastructure.cluster.x-k8s.io"
 )
 
+// ProvisioningState defines the states the provisioner will report the host has having.
+type ProvisioningState string
+
+const (
+	// StateNone means the state is unknown.
+	StateNone ProvisioningState = ""
+
+	// StateAssociateDevice .
+	StateAssociateDevice ProvisioningState = "associate-device"
+
+	// StateVerifyAssociate .
+	StateVerifyAssociate ProvisioningState = "verify-associate"
+
+	// StateShutDownDevice .
+	StateShutDownDevice ProvisioningState = "shut-down-device"
+
+	// StateEnsureDeviceShutDown .
+	StateEnsureDeviceShutDown ProvisioningState = "ensure-device-shut-down"
+
+	// StateProvisionDevice .
+	StateProvisionDevice ProvisioningState = "provision-device"
+
+	// StateDeviceProvisioned .
+	StateDeviceProvisioned ProvisioningState = "provisioned"
+)
+
+// ErrorType indicates the class of problem that has caused the Host resource
+// to enter an error state.
+type ErrorType string
+
+const (
+	// ProvisioningError is an error condition occurring when the controller
+	// fails to provision or deprovision the Host.
+	ProvisioningError ErrorType = "provisioning error"
+
+	// FatalError is a fatal error that triggers a failureMessage in the bm machine.
+	FatalError ErrorType = "fatal error"
+)
+
 // HivelocityMachineSpec defines the desired state of HivelocityMachine.
 type HivelocityMachineSpec struct {
 	// Important: Run "make" to regenerate code after modifying this file
@@ -45,6 +84,25 @@ type HivelocityMachineSpec struct {
 	// ImageName is the reference to the Machine Image from which to create the device.
 	// +kubebuilder:validation:MinLength=1
 	ImageName string `json:"imageName"`
+
+	// Status contains all status information of the controller. Do not edit these values!
+	// +optional
+	Status ControllerGeneratedStatus `json:"status,omitempty"`
+}
+
+// ControllerGeneratedStatus contains all status information which is important to persist.
+type ControllerGeneratedStatus struct {
+	// Information tracked by the provisioner.
+	// +optional
+	ProvisioningState ProvisioningState `json:"provisioningState"`
+
+	// the last error message reported by the provisioning subsystem.
+	// +optional
+	ActionTriggered string `json:"actionTriggered"`
+
+	// Time stamp of last update of status.
+	// +optional
+	LastUpdated *metav1.Time `json:"lastUpdated,omitempty"`
 }
 
 // HivelocityMachineStatus defines the observed state of HivelocityMachine.

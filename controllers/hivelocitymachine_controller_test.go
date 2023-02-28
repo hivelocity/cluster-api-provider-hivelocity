@@ -97,7 +97,6 @@ var _ = Describe("HivelocityMachineReconciler", func() {
 
 		bootstrapSecret = getDefaultBootstrapSecret(testNs.Name)
 		Expect(testEnv.Create(ctx, bootstrapSecret)).To(Succeed())
-
 	})
 
 	AfterEach(func() {
@@ -210,21 +209,31 @@ var _ = Describe("HivelocityMachineReconciler", func() {
 					return false
 				}
 				if hvMachine.Spec.ProviderID == nil {
+					testEnv.GetLogger().Info("ProviderID is nil")
 					return false
 				}
 				if *hvMachine.Spec.ProviderID == "" {
+					testEnv.GetLogger().Info("ProviderID is empty")
 					return false
 				}
-				Expect(hvMachine.Status.Ready).Should(BeTrue())
-				Expect(*hvMachine.Spec.ProviderID).Should(Equal(fmt.Sprintf("hivelocity://%d", mock.FreeDeviceID)))
+				if !hvMachine.Status.Ready {
+					testEnv.GetLogger().Info("Machine is not ready")
+					return false
+				}
+				if *hvMachine.Spec.ProviderID != fmt.Sprintf("hivelocity://%d", mock.FreeDeviceID) {
+					testEnv.GetLogger().Info("Machine has wrong providerID")
+					return false
+				}
 				return true
 			}, timeout, time.Second).Should(BeTrue())
 			hvClient := testEnv.HVClientFactory.NewClient("dummy-key")
 			device, err := hvClient.GetDevice(ctx, mock.FreeDeviceID)
 			Expect(err).ShouldNot(HaveOccurred())
-			Expect(device.Tags).Should(BeEquivalentTo([]string{"caphv-device-type=hvCustom",
+			Expect(device.Tags).Should(BeEquivalentTo([]string{
+				"caphv-device-type=hvCustom",
 				"caphv-cluster-name=hv-test1",
-				fmt.Sprintf("caphv-machine-name=%s", hvMachine.Name)}))
+				fmt.Sprintf("caphv-machine-name=%s", hvMachine.Name),
+			}))
 		})
 	})
 })

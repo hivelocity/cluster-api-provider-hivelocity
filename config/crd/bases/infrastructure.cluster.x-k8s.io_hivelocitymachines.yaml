@@ -77,6 +77,22 @@ spec:
                 description: ProviderID is the unique identifier as specified by the
                   cloud provider.
                 type: string
+              status:
+                description: Status contains all status information of the controller.
+                  Do not edit these values!
+                properties:
+                  actionTriggered:
+                    description: the last error message reported by the provisioning
+                      subsystem.
+                    type: string
+                  lastUpdated:
+                    description: Time stamp of last update of status.
+                    format: date-time
+                    type: string
+                  provisioningState:
+                    description: Information tracked by the provisioner.
+                    type: string
+                type: object
               type:
                 description: Type is the Hivelocity Machine Type for this machine.
                 enum:

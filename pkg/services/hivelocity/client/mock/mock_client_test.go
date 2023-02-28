@@ -20,6 +20,7 @@ import (
 	"context"
 	"testing"
 
+	hvclient "github.com/hivelocity/cluster-api-provider-hivelocity/pkg/services/hivelocity/client"
 	"github.com/stretchr/testify/require"
 )
 
@@ -42,6 +43,7 @@ func Test_GetDevice(t *testing.T) {
 
 	device, err = client.GetDevice(ctx, -1)
 	require.Error(t, err)
+	require.ErrorIs(t, err, hvclient.ErrDeviceNotFound)
 }
 func Test_NewMockedHVClientFactory(t *testing.T) {
 	factory := NewMockedHVClientFactory()

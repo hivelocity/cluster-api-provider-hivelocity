@@ -190,7 +190,7 @@ func (c *mockedHVClient) SetTags(ctx context.Context, deviceID int32, tags []str
 func (c *mockedHVClient) GetDevice(ctx context.Context, deviceID int32) (hv.BareMetalDevice, error) {
 	device, ok := c.store.idMap[deviceID]
 	if !ok {
-		return hv.BareMetalDevice{}, fmt.Errorf("no such device: %d", deviceID)
+		return hv.BareMetalDevice{}, hvclient.ErrDeviceNotFound
 	}
 	return *device, nil
 }
