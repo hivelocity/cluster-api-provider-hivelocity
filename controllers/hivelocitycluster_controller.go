@@ -135,7 +135,6 @@ func (r *HivelocityClusterReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		Cluster:           cluster,
 		HivelocityCluster: hvCluster,
 		HVClient:          hvClient,
-		HivelocitySecret:  hvSecret,
 	})
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed to create scope: %w", err)
@@ -154,7 +153,7 @@ func (r *HivelocityClusterReconciler) Reconcile(ctx context.Context, req ctrl.Re
 
 	// Handle deleted clusters
 	if !hvCluster.DeletionTimestamp.IsZero() {
-		return r.reconcileDelete(ctx, clusterScope)
+		return r.reconcileDelete(ctx, clusterScope, hvSecret)
 	}
 
 	return r.reconcileNormal(ctx, clusterScope)
@@ -189,7 +188,7 @@ func (r *HivelocityClusterReconciler) reconcileNormal(ctx context.Context, clust
 	return reconcile.Result{}, nil
 }
 
-func (r *HivelocityClusterReconciler) reconcileDelete(ctx context.Context, clusterScope *scope.ClusterScope) (reconcile.Result, error) {
+func (r *HivelocityClusterReconciler) reconcileDelete(ctx context.Context, clusterScope *scope.ClusterScope, hvSecret *corev1.Secret) (reconcile.Result, error) {
 	log := ctrl.LoggerFrom(ctx)
 
 	log.Info("Reconciling HivelocityCluster delete")
@@ -218,7 +217,7 @@ func (r *HivelocityClusterReconciler) reconcileDelete(ctx context.Context, clust
 
 	secretManager := secretutil.NewSecretManager(log, r.Client, r.APIReader)
 	// Remove finalizer of secret
-	if err := secretManager.ReleaseSecret(ctx, clusterScope.HivelocitySecret()); err != nil {
+	if err := secretManager.ReleaseSecret(ctx, hvSecret); err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed to release HivelocitySecret: %w", err)
 	}
 

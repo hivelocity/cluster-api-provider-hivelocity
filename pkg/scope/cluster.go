@@ -26,7 +26,6 @@ import (
 	secretutil "github.com/hivelocity/cluster-api-provider-hivelocity/pkg/secrets"
 	hvclient "github.com/hivelocity/cluster-api-provider-hivelocity/pkg/services/hivelocity/client"
 	"github.com/pkg/errors"
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
 	clientcmd "k8s.io/client-go/tools/clientcmd"
 	"k8s.io/klog/v2/klogr"
@@ -41,7 +40,6 @@ type ClusterScopeParams struct {
 	Client            client.Client
 	APIReader         client.Reader
 	Logger            *logr.Logger
-	HivelocitySecret  *corev1.Secret
 	HVClient          hvclient.Client
 	Cluster           *clusterv1.Cluster
 	HivelocityCluster *infrav1.HivelocityCluster
@@ -81,19 +79,16 @@ func NewClusterScope(ctx context.Context, params ClusterScopeParams) (*ClusterSc
 		HivelocityCluster: params.HivelocityCluster,
 		HVClient:          params.HVClient,
 		patchHelper:       helper,
-		hivelocitySecret:  params.HivelocitySecret,
 	}, nil
 }
 
 // ClusterScope defines the basic context for an actuator to operate upon.
 type ClusterScope struct {
 	*logr.Logger
-	Client           client.Client
-	APIReader        client.Reader
-	patchHelper      *patch.Helper
-	hivelocitySecret *corev1.Secret
-
-	HVClient hvclient.Client
+	Client      client.Client
+	APIReader   client.Reader
+	patchHelper *patch.Helper
+	HVClient    hvclient.Client
 
 	Cluster           *clusterv1.Cluster
 	HivelocityCluster *infrav1.HivelocityCluster
@@ -107,11 +102,6 @@ func (s *ClusterScope) Name() string {
 // Namespace returns the namespace name.
 func (s *ClusterScope) Namespace() string {
 	return s.HivelocityCluster.Namespace
-}
-
-// HivelocitySecret returns the hivelocity secret.
-func (s *ClusterScope) HivelocitySecret() *corev1.Secret {
-	return s.hivelocitySecret
 }
 
 // Close closes the current scope persisting the cluster configuration and status.

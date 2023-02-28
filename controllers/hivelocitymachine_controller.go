@@ -116,7 +116,7 @@ func (r *HivelocityMachineReconciler) Reconcile(ctx context.Context, req ctrl.Re
 
 	// Create the scope.
 	secretManager := secretutil.NewSecretManager(log, r.Client, r.APIReader)
-	hvAPIKey, hvSecret, err := getAndValidateHivelocityAPIKey(ctx, req.Namespace, hvCluster, secretManager)
+	hvAPIKey, _, err := getAndValidateHivelocityAPIKey(ctx, req.Namespace, hvCluster, secretManager)
 	if err != nil {
 		return hvAPIKeyErrorResult(ctx, err, hivelocityMachine, infrav1.DeviceReadyCondition, r.Client)
 	}
@@ -130,7 +130,6 @@ func (r *HivelocityMachineReconciler) Reconcile(ctx context.Context, req ctrl.Re
 			Cluster:           cluster,
 			HivelocityCluster: hvCluster,
 			HVClient:          hvClient,
-			HivelocitySecret:  hvSecret,
 			APIReader:         r.APIReader,
 		},
 		Machine:           machine,
