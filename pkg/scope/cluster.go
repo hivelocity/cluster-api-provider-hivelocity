@@ -125,8 +125,8 @@ func (s *ClusterScope) ClientConfig(ctx context.Context) (clientcmd.ClientConfig
 	}
 
 	// Look for secret in the filtered cache
-	var kubeConfigSecret *corev1.Secret
-	if err := s.Client.Get(ctx, cluster, kubeConfigSecret); err != nil {
+	var kubeConfigSecret corev1.Secret
+	if err := s.Client.Get(ctx, cluster, &kubeConfigSecret); err != nil {
 		return nil, fmt.Errorf("failed to find kube config secret: %w", err)
 	}
 

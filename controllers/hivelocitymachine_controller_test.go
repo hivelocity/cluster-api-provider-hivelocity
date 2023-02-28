@@ -172,7 +172,7 @@ var _ = Describe("HivelocityMachineReconciler", func() {
 			}, timeout).Should(BeTrue())
 		})
 
-		It("creates the Hivelocity machine in Hivelocity", func() {
+		FIt("creates the Hivelocity machine in Hivelocity", func() {
 			// Check that there is no machine yet.
 			device, err := hvClient.GetDevice(ctx, mock.FreeDevice.DeviceId)
 			Expect(err).ShouldNot(HaveOccurred())
@@ -209,30 +209,28 @@ var _ = Describe("HivelocityMachineReconciler", func() {
 			testEnv.GetLogger().Info("############################################################################")
 			testEnv.GetLogger().Info("############################################################################")
 			testEnv.GetLogger().Info("############################################################################")
-			// E0227 21:43:45.573773  375938 controller.go:326]  "msg"="Reconciler error"
-			// "error"="failed to reconcile target secret: failed to acquire secret:
-			// failed to find secret:
-			// secrets \"test1-5dp9s-kubeconfig\" not found" "HivelocityCluster"={"name":"hv-test1",
-			// "namespace":"hivelocitymachine-reconciler-892ln"}
-			// "controller"="hivelocitycluster" "controllerGroup"="infrastructure.cluster.x-k8s.io"
-			// "controllerKind"="HivelocityCluster" "name"="hv-test1"
-			// "namespace"="hivelocitymachine-reconciler-892ln"
-			// "reconcileID"="423f4888-a685-4c36-be6e-78ccd04e6c5d"
-			/*Eventually(func() bool {
-				var hivelocityMachine *infrav1.HivelocityMachine
-				if err := testEnv.Get(ctx, machineKey, hivelocityMachine); err != nil {
+
+			Eventually(func() bool {
+				if err := testEnv.Get(ctx, machineKey, hvMachine); err != nil {
 					return false
 				}
 				// todo: get the HivelocityMachine with
 				// ProviderID "hivelocity://" + mock.FreeDeviceID
 				// then wait until the machine is in state ready.
 				// panic(*hivelocityMachine)
-				return true
+				if hvMachine.Spec.ProviderID == nil {
+					testEnv.GetLogger().Info("########## ProviderID is nil.", "status", hvMachine.Status.Ready)
+					return false
+				}
+				if *hvMachine.Spec.ProviderID == "" {
+					testEnv.GetLogger().Info("########## ProviderID is empty string")
+					return false
+				}
+				panic(fmt.Sprintf("######## Greattttttttttttttttttt %s", *hvMachine.Spec.ProviderID))
+				//return true
 			}, timeout, time.Second).Should(BeTrue())
-			*/
 		})
 	})
-
 })
 
 var _ = Describe("Hivelocity secret", func() {
