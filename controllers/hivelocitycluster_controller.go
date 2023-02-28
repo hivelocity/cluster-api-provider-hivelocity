@@ -130,7 +130,6 @@ func (r *HivelocityClusterReconciler) Reconcile(ctx context.Context, req ctrl.Re
 
 	clusterScope, err := scope.NewClusterScope(ctx, scope.ClusterScopeParams{
 		Client:            r.Client,
-		APIReader:         r.APIReader,
 		Logger:            &log,
 		Cluster:           cluster,
 		HivelocityCluster: hvCluster,
@@ -180,7 +179,7 @@ func (r *HivelocityClusterReconciler) reconcileNormal(ctx context.Context, clust
 		return reconcile.Result{}, fmt.Errorf("failed to reconcile target cluster manager: %w", err)
 	}
 
-	if err := reconcileTargetSecret(ctx, clusterScope); err != nil {
+	if err := reconcileTargetSecret(ctx, clusterScope, r.APIReader); err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed to reconcile target secret: %w", err)
 	}
 
@@ -335,7 +334,7 @@ func hvAPIKeyErrorResult(
 	return res, err
 }
 
-func reconcileTargetSecret(ctx context.Context, clusterScope *scope.ClusterScope) error {
+func reconcileTargetSecret(ctx context.Context, clusterScope *scope.ClusterScope, apiReader client.Reader) error {
 	log := ctrl.LoggerFrom(ctx)
 
 	// Checking if control plane is ready
@@ -377,7 +376,7 @@ func reconcileTargetSecret(ctx context.Context, clusterScope *scope.ClusterScope
 			Namespace: clusterScope.HivelocityCluster.Namespace,
 			Name:      clusterScope.HivelocityCluster.Spec.HivelocitySecret.Name,
 		}
-		secretManager := secretutil.NewSecretManager(*clusterScope.Logger, clusterScope.Client, clusterScope.APIReader)
+		secretManager := secretutil.NewSecretManager(*clusterScope.Logger, clusterScope.Client, apiReader)
 		apiKeySecret, err := secretManager.AcquireSecret(ctx, apiKeySecretName, clusterScope.HivelocityCluster, false, clusterScope.HivelocityCluster.DeletionTimestamp.IsZero())
 		if err != nil {
 			return fmt.Errorf("failed to acquire secret: %w", err)

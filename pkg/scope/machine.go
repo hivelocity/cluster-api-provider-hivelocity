@@ -23,8 +23,8 @@ import (
 	"sort"
 
 	infrav1 "github.com/hivelocity/cluster-api-provider-hivelocity/api/v1alpha1"
-	secretutil "github.com/hivelocity/cluster-api-provider-hivelocity/pkg/secrets"
 	"github.com/pkg/errors"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	capierrors "sigs.k8s.io/cluster-api/errors"
@@ -155,10 +155,10 @@ func (m *MachineScope) GetRawBootstrapData(ctx context.Context) ([]byte, error) 
 	}
 
 	key := types.NamespacedName{Namespace: m.Namespace(), Name: *m.Machine.Spec.Bootstrap.DataSecretName}
-	secretManager := secretutil.NewSecretManager(*m.Logger, m.Client, m.APIReader)
-	secret, err := secretManager.AcquireSecret(ctx, key, m.HivelocityMachine, false, false)
-	if err != nil {
-		return nil, fmt.Errorf("failed to acquire secret: %w", err)
+	// Look for secret in the filtered cache
+	var secret *corev1.Secret
+	if err := m.Client.Get(ctx, key, secret); err != nil {
+		return nil, fmt.Errorf("failed to find bootstrap secret: %w", err)
 	}
 
 	value, ok := secret.Data["value"]
