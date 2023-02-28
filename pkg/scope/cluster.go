@@ -23,12 +23,11 @@ import (
 
 	"github.com/go-logr/logr"
 	infrav1 "github.com/hivelocity/cluster-api-provider-hivelocity/api/v1alpha1"
-	secretutil "github.com/hivelocity/cluster-api-provider-hivelocity/pkg/secrets"
 	hvclient "github.com/hivelocity/cluster-api-provider-hivelocity/pkg/services/hivelocity/client"
 	"github.com/pkg/errors"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
 	clientcmd "k8s.io/client-go/tools/clientcmd"
-	"k8s.io/klog/v2/klogr"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/cluster-api/util/patch"
 	"sigs.k8s.io/cluster-api/util/secret"
@@ -38,7 +37,6 @@ import (
 // ClusterScopeParams defines the input parameters used to create a new scope.
 type ClusterScopeParams struct {
 	Client            client.Client
-	APIReader         client.Reader
 	Logger            *logr.Logger
 	HVClient          hvclient.Client
 	Cluster           *clusterv1.Cluster
@@ -57,13 +55,8 @@ func NewClusterScope(ctx context.Context, params ClusterScopeParams) (*ClusterSc
 	if params.HVClient == nil {
 		return nil, errors.New("failed to generate new scope from nil HVClient")
 	}
-	if params.APIReader == nil {
-		return nil, errors.New("failed to generate new scope from nil APIReader")
-	}
-
 	if params.Logger == nil {
-		logger := klogr.New()
-		params.Logger = &logger
+		return nil, errors.New("failed to generate new scope from nil logger")
 	}
 
 	helper, err := patch.NewHelper(params.HivelocityCluster, params.Client)
@@ -74,7 +67,6 @@ func NewClusterScope(ctx context.Context, params ClusterScopeParams) (*ClusterSc
 	return &ClusterScope{
 		Logger:            params.Logger,
 		Client:            params.Client,
-		APIReader:         params.APIReader,
 		Cluster:           params.Cluster,
 		HivelocityCluster: params.HivelocityCluster,
 		HVClient:          params.HVClient,
@@ -86,7 +78,6 @@ func NewClusterScope(ctx context.Context, params ClusterScopeParams) (*ClusterSc
 type ClusterScope struct {
 	*logr.Logger
 	Client      client.Client
-	APIReader   client.Reader
 	patchHelper *patch.Helper
 	HVClient    hvclient.Client
 
@@ -133,12 +124,13 @@ func (s *ClusterScope) ClientConfig(ctx context.Context) (clientcmd.ClientConfig
 		Namespace: s.Cluster.Namespace,
 	}
 
-	secretManager := secretutil.NewSecretManager(*s.Logger, s.Client, s.APIReader)
-	kubeconfigSecret, err := secretManager.AcquireSecret(ctx, cluster, s.HivelocityCluster, false, false)
-	if err != nil {
-		return nil, fmt.Errorf("failed to acquire secret: %w", err)
+	// Look for secret in the filtered cache
+	var kubeConfigSecret *corev1.Secret
+	if err := s.Client.Get(ctx, cluster, kubeConfigSecret); err != nil {
+		return nil, fmt.Errorf("failed to find kube config secret: %w", err)
 	}
-	kubeconfigBytes, ok := kubeconfigSecret.Data[secret.KubeconfigDataName]
+
+	kubeconfigBytes, ok := kubeConfigSecret.Data[secret.KubeconfigDataName]
 	if !ok {
 		return nil, errors.Errorf("missing key %q in secret data", secret.KubeconfigDataName)
 	}
