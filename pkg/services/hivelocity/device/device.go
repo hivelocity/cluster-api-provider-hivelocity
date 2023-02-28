@@ -68,17 +68,17 @@ func NewService(scope *scope.MachineScope) *Service {
 }
 
 // Reconcile implements reconcilement of Hivelocity machines.
-func (s *Service) Reconcile(ctx context.Context) (_ *ctrl.Result, err error) {
+func (s *Service) Reconcile(ctx context.Context) (_ ctrl.Result, err error) {
 	log := ctrl.LoggerFrom(ctx)
 	if s.scope.HivelocityCluster.Spec.HivelocitySecret.Key == "" {
 		record.Eventf(s.scope.HivelocityMachine, corev1.EventTypeWarning, "NoAPIKey", "No Hivelocity API Key found")
-		return nil, fmt.Errorf("no Hivelocity API Key provided - cannot reconcile Hivelocity device")
+		return reconcile.Result{}, fmt.Errorf("no Hivelocity API Key provided - cannot reconcile Hivelocity device")
 	}
 
 	// detect failure domain. question: two names "failure domain" and "region". One name would be better.
 	failureDomain, err := s.scope.GetFailureDomain()
 	if err != nil {
-		return nil, fmt.Errorf("failed to get failure domain: %w", err)
+		return reconcile.Result{}, fmt.Errorf("failed to get failure domain: %w", err)
 	}
 	s.scope.HivelocityMachine.Status.Region = infrav1.Region(failureDomain)
 
@@ -92,7 +92,7 @@ func (s *Service) Reconcile(ctx context.Context) (_ *ctrl.Result, err error) {
 			clusterv1.ConditionSeverityInfo,
 			"bootstrap not ready yet",
 		)
-		return &ctrl.Result{RequeueAfter: 10 * time.Second}, nil
+		return ctrl.Result{RequeueAfter: 10 * time.Second}, nil
 	}
 
 	conditions.MarkTrue(
@@ -103,17 +103,17 @@ func (s *Service) Reconcile(ctx context.Context) (_ *ctrl.Result, err error) {
 	// Try to find the associate device.
 	device, err := s.getAssociatedDevice(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get device: %w", err)
+		return reconcile.Result{}, fmt.Errorf("failed to get device: %w", err)
 	}
 
 	// If no device is found we have to find one
 	if device == nil {
 		device, err = s.chooseDevice(ctx)
 		if err != nil {
-			return nil, fmt.Errorf("failed to choose device: %w", err)
+			return reconcile.Result{}, fmt.Errorf("failed to choose device: %w", err)
 		}
 		if err := s.associateDevice(ctx, device); err != nil {
-			return nil, fmt.Errorf("failed to associate device: %w", err)
+			return reconcile.Result{}, fmt.Errorf("failed to associate device: %w", err)
 		}
 
 		record.Eventf(
@@ -126,7 +126,7 @@ func (s *Service) Reconcile(ctx context.Context) (_ *ctrl.Result, err error) {
 
 	err = s.updateDevice(ctx, log, device)
 	if err != nil {
-		return nil, fmt.Errorf("[Service.Reconcile] updateDevice() failed. deviceID %d. %w",
+		return reconcile.Result{}, fmt.Errorf("[Service.Reconcile] updateDevice() failed. deviceID %d. %w",
 			device.DeviceId, err)
 	}
 
@@ -137,7 +137,7 @@ func (s *Service) Reconcile(ctx context.Context) (_ *ctrl.Result, err error) {
 	s.scope.HivelocityMachine.Status.Ready = true
 	conditions.MarkTrue(s.scope.HivelocityMachine, infrav1.DeviceReadyCondition)
 
-	return nil, nil
+	return reconcile.Result{}, nil
 }
 
 func (s *Service) updateDevice(ctx context.Context, log logr.Logger, device *hv.BareMetalDevice) error {
@@ -220,7 +220,6 @@ func (s *Service) updateDevice(ctx context.Context, log logr.Logger, device *hv.
 	}
 	setMachineAddress(s.scope.HivelocityMachine, &provisionedDevice)
 	return nil
-
 }
 
 func (s *Service) getDeviceImage(ctx context.Context) (string, error) {
