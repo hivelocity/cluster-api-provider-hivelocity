@@ -155,7 +155,7 @@ func (sm *SecretManager) ObtainSecret(ctx context.Context, key types.NamespacedN
 // be a controller reference.
 func (sm *SecretManager) AcquireSecret(ctx context.Context, key types.NamespacedName, owner client.Object, ownerIsController, addFinalizer bool) (*corev1.Secret, error) {
 	if owner == nil {
-		panic("AcquireSecret called with no owner")
+		return nil, fmt.Errorf("AcquireSecret called with no owner")
 	}
 
 	secret, err := sm.findSecret(ctx, key)

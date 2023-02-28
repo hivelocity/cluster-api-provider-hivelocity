@@ -62,7 +62,7 @@ type HivelocityClusterReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
 
-	WatchFilterValue string // question: docstring?
+	WatchFilterValue string
 
 	APIReader       client.Reader
 	HVClientFactory hvclient.Factory
@@ -72,9 +72,7 @@ type HivelocityClusterReconciler struct {
 //+kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=hivelocityclusters/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=hivelocityclusters/finalizers,verbs=update
 
-// Reconcile is part of the main kubernetes reconciliation loop which aims to
-// move the current state of the cluster closer to the desired state.
-//
+// Reconcile aims to move the current state of the cluster closer to the desired state.
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.13.1/pkg/reconcile
 func (r *HivelocityClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ ctrl.Result, reterr error) {
@@ -100,9 +98,6 @@ func (r *HivelocityClusterReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		return reconcile.Result{}, fmt.Errorf("failed to get owner cluster: %w", err)
 	}
 
-	log = log.WithValues("Cluster", klog.KObj(cluster))
-	ctx = ctrl.LoggerInto(ctx, log)
-
 	if cluster == nil {
 		log.Info("Cluster Controller has not yet set OwnerRef")
 		return reconcile.Result{
@@ -110,12 +105,13 @@ func (r *HivelocityClusterReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		}, nil
 	}
 
+	log = log.WithValues("Cluster", klog.KObj(cluster))
+	ctx = ctrl.LoggerInto(ctx, log)
+
 	if annotations.IsPaused(cluster, hvCluster) {
 		log.Info("HivelocityCluster or linked Cluster is marked as paused. Won't reconcile")
 		return reconcile.Result{}, nil
 	}
-
-	log = log.WithValues("cluster", cluster.Name)
 
 	log.V(1).Info("Creating cluster scope")
 
@@ -130,7 +126,7 @@ func (r *HivelocityClusterReconciler) Reconcile(ctx context.Context, req ctrl.Re
 
 	clusterScope, err := scope.NewClusterScope(ctx, scope.ClusterScopeParams{
 		Client:            r.Client,
-		Logger:            &log,
+		Logger:            log,
 		Cluster:           cluster,
 		HivelocityCluster: hvCluster,
 		HVClient:          hvClient,
@@ -159,7 +155,7 @@ func (r *HivelocityClusterReconciler) Reconcile(ctx context.Context, req ctrl.Re
 }
 
 func (r *HivelocityClusterReconciler) reconcileNormal(ctx context.Context, clusterScope *scope.ClusterScope) (ctrl.Result, error) {
-	log := ctrl.LoggerFrom(ctx)
+	log := clusterScope.Logger
 	log.V(1).Info("Reconciling HivelocityCluster")
 
 	hvCluster := clusterScope.HivelocityCluster
@@ -188,7 +184,7 @@ func (r *HivelocityClusterReconciler) reconcileNormal(ctx context.Context, clust
 }
 
 func (r *HivelocityClusterReconciler) reconcileDelete(ctx context.Context, clusterScope *scope.ClusterScope, hvSecret *corev1.Secret) (reconcile.Result, error) {
-	log := ctrl.LoggerFrom(ctx)
+	log := clusterScope.Logger
 
 	log.Info("Reconciling HivelocityCluster delete")
 
@@ -335,7 +331,7 @@ func hvAPIKeyErrorResult(
 }
 
 func reconcileTargetSecret(ctx context.Context, clusterScope *scope.ClusterScope, apiReader client.Reader) error {
-	log := ctrl.LoggerFrom(ctx)
+	log := clusterScope.Logger
 
 	// Checking if control plane is ready
 	clientConfig, err := clusterScope.ClientConfig(ctx)
@@ -376,7 +372,7 @@ func reconcileTargetSecret(ctx context.Context, clusterScope *scope.ClusterScope
 			Namespace: clusterScope.HivelocityCluster.Namespace,
 			Name:      clusterScope.HivelocityCluster.Spec.HivelocitySecret.Name,
 		}
-		secretManager := secretutil.NewSecretManager(*clusterScope.Logger, clusterScope.Client, apiReader)
+		secretManager := secretutil.NewSecretManager(clusterScope.Logger, clusterScope.Client, apiReader)
 		apiKeySecret, err := secretManager.AcquireSecret(ctx, apiKeySecretName, clusterScope.HivelocityCluster, false, clusterScope.HivelocityCluster.DeletionTimestamp.IsZero())
 		if err != nil {
 			return fmt.Errorf("failed to acquire secret: %w", err)
@@ -385,7 +381,7 @@ func reconcileTargetSecret(ctx context.Context, clusterScope *scope.ClusterScope
 		hvAPIKey, keyExists := apiKeySecret.Data[clusterScope.HivelocityCluster.Spec.HivelocitySecret.Key]
 		if !keyExists {
 			return errors.Errorf(
-				"error key %s does not exist in secret/%s",
+				"key %s does not exist in secret %s",
 				clusterScope.HivelocityCluster.Spec.HivelocitySecret.Key,
 				apiKeySecretName,
 			)
@@ -554,7 +550,7 @@ func (r *HivelocityClusterReconciler) SetupWithManager(ctx context.Context, mgr 
 				panic(fmt.Sprintf("Expected a Cluster but got a %T", o))
 			}
 
-			log := log.WithValues("objectMapper", "clusterToHivelocityCluster", "namespace", c.Namespace, "cluster", c.Name)
+			log = log.WithValues("objectMapper", "clusterToHivelocityCluster", "namespace", c.Namespace, "cluster", c.Name)
 
 			// Don't handle deleted clusters
 			if !c.ObjectMeta.DeletionTimestamp.IsZero() {
