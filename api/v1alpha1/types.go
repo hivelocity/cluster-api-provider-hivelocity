@@ -26,8 +26,8 @@ type SSHKey struct {
 	Fingerprint string `json:"fingerprint,omitempty"`
 }
 
-// HivelocityMachineType defines the Hivelocity Machine type.
-type HivelocityMachineType string
+// HivelocityDeviceType defines the Hivelocity Machine type.
+type HivelocityDeviceType string // question: rename to HivelocityDeviceType ?
 
 // ResourceLifecycle configures the lifecycle of a resource.
 type ResourceLifecycle string
@@ -54,5 +54,5 @@ type PublicNetworkSpec struct {
 }
 
 // Region is a Hivelocity Location
-// +kubebuilder:validation:Enum=TODO1;TODO2
+// +kubebuilder:validation:Enum=LAX2;TODO2
 type Region string

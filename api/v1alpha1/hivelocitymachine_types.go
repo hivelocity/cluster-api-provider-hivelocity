@@ -18,7 +18,6 @@ package v1alpha1
 
 import (
 	hvclient "github.com/hivelocity/cluster-api-provider-hivelocity/pkg/services/hivelocity/client"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/cluster-api/errors"
@@ -41,7 +40,7 @@ type HivelocityMachineSpec struct {
 
 	// Type is the Hivelocity Machine Type for this machine.
 	// +kubebuilder:validation:Enum=hvCustom;todo-question
-	Type HivelocityMachineType `json:"type"`
+	Type HivelocityDeviceType `json:"type"`
 
 	// ImageName is the reference to the Machine Image from which to create the device.
 	// +kubebuilder:validation:MinLength=1
@@ -57,7 +56,7 @@ type HivelocityMachineStatus struct {
 	Ready bool `json:"ready"`
 
 	// Addresses contains the devices's associated addresses.
-	Addresses []corev1.NodeAddress `json:"addresses,omitempty"`
+	Addresses []clusterv1.MachineAddress `json:"addresses,omitempty"`
 
 	// Region contains the name of the Hivelocity location the device is running.
 	Region Region `json:"region,omitempty"`

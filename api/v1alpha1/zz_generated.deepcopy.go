@@ -23,7 +23,6 @@ package v1alpha1
 
 import (
 	client "github.com/hivelocity/cluster-api-provider-hivelocity/pkg/services/hivelocity/client"
-	"k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/cluster-api/errors"
@@ -309,7 +308,7 @@ func (in *HivelocityMachineStatus) DeepCopyInto(out *HivelocityMachineStatus) {
 	*out = *in
 	if in.Addresses != nil {
 		in, out := &in.Addresses, &out.Addresses
-		*out = make([]v1.NodeAddress, len(*in))
+		*out = make([]v1beta1.MachineAddress, len(*in))
 		copy(*out, *in)
 	}
 	if in.DeviceState != nil {

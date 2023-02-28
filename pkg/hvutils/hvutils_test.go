@@ -86,7 +86,7 @@ func Test_FindDeviceByTags(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := FindDeviceByTags(tt.args.clusterTag, tt.args.machineTag, ToPointers(tt.args.devices))
+			got, err := FindDeviceByTags(tt.args.clusterTag, tt.args.machineTag, toPointers(tt.args.devices))
 			if tt.wantErr != nil {
 				require.ErrorIs(t, err, tt.wantErr)
 			}
@@ -148,10 +148,38 @@ func TestDeviceHasTagKey(t *testing.T) {
 	}
 }
 
-func ToPointers[T any](s []T) []*T {
+func toPointers[T any](s []T) []*T {
 	ret := make([]*T, 0, len(s))
 	for i := range s {
 		ret = append(ret, &s[i])
 	}
 	return ret
+}
+
+func Test_ProviderIDToDeviceID_broken(t *testing.T) {
+	for _, brokenID := range []string{
+		"",
+		"foo",
+		"hivelocity://",
+		"hivelocity://abc",
+		"hivelocity://999999999999999999999999999",
+	} {
+		_, err := ProviderIDToDeviceID(brokenID)
+		require.Errorf(t, err, brokenID)
+	}
+}
+
+func Test_ProviderIDToDeviceID_valid(t *testing.T) {
+	type stringToID struct {
+		s        string
+		expected int32
+	}
+	for _, validID := range []stringToID{
+		{"hivelocity://1", 1},
+		{"hivelocity://12345", 12345},
+	} {
+		id, err := ProviderIDToDeviceID(validID.s)
+		require.NoError(t, err)
+		require.Equal(t, validID.expected, id)
+	}
 }

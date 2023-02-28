@@ -6,7 +6,9 @@ The Hivelocity Provider is a Kubernetes-native tool that allows you to easily cr
 You can find more information about Hivelocity and their infrastructure at https://www.hivelocity.net/.
 
 
-> If you have questions or are interested in running production-ready Kubernetes clusters on Hivelocity, then please contact us [Contact Hivelocity](https://www.hivelocity.net/about/contact-us/)
+> If you have questions or are interested in running production-ready Kubernetes clusters on Hivelocity, then please contact us [Hivelocity](https://www.hivelocity.net/about/contact-us/).
+
+If you have questions regarding running (production-ready) clusters with CAPHV, then ask [Syself](https://syself.com/).
 
 ## :newspaper: What is the Cluster API Provider Hivelocity?
 The Cluster API is an operator that manages infrastructure in a similar way to how Kubernetes manages containers. It uses a declarative API and includes controllers that ensure the desired state of the infrastructure is maintained. This approach, called Infrastructure as Software, allows for more automatic reactions to changes and problems compared to Infrastructure as Code solutions.

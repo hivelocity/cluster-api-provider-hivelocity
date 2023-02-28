@@ -19,9 +19,12 @@ package device
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"strings"
 	"time"
 
+	"github.com/go-logr/logr"
 	infrav1 "github.com/hivelocity/cluster-api-provider-hivelocity/api/v1alpha1"
 	hvutils "github.com/hivelocity/cluster-api-provider-hivelocity/pkg/hvutils"
 	"github.com/hivelocity/cluster-api-provider-hivelocity/pkg/scope"
@@ -29,22 +32,33 @@ import (
 	hv "github.com/hivelocity/hivelocity-client-go/client"
 	corev1 "k8s.io/api/core/v1"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
-	capierrors "sigs.k8s.io/cluster-api/errors"
 	"sigs.k8s.io/cluster-api/util/conditions"
 	"sigs.k8s.io/cluster-api/util/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-const (
-	maxShutDownTime  = 2 * time.Minute
-	deviceOffTimeout = 10 * time.Minute
-)
-
 // Service defines struct with machine scope to reconcile Hivelocity machines.
 type Service struct {
 	scope *scope.MachineScope
 }
+
+const (
+	maxShutDownTime  = 2 * time.Minute
+	deviceOffTimeout = 10 * time.Minute
+	defaultImageName = "Ubuntu 20.x"
+)
+
+var (
+	// errTooManyTagsFound gets returned, if there are multiple tags with the same key,
+	// and the key should be unique.
+	errTooManyTagsFound = fmt.Errorf("too many tags found")
+
+	// errNoMatchingTagFound gets returned, if no matching tag was found.
+	errNoMatchingTagFound = fmt.Errorf("no matching tag found")
+
+	errNoDeviceAvailable = fmt.Errorf("no available device found")
+)
 
 // NewService outs a new service with machine scope.
 func NewService(scope *scope.MachineScope) *Service {
@@ -55,6 +69,7 @@ func NewService(scope *scope.MachineScope) *Service {
 
 // Reconcile implements reconcilement of Hivelocity machines.
 func (s *Service) Reconcile(ctx context.Context) (_ *ctrl.Result, err error) {
+	log := ctrl.LoggerFrom(ctx)
 	if s.scope.HivelocityCluster.Spec.HivelocitySecret.Key == "" {
 		record.Eventf(s.scope.HivelocityMachine, corev1.EventTypeWarning, "NoAPIKey", "No Hivelocity API Key found")
 		return nil, fmt.Errorf("no Hivelocity API Key provided - cannot reconcile Hivelocity device")
@@ -86,57 +101,37 @@ func (s *Service) Reconcile(ctx context.Context) (_ *ctrl.Result, err error) {
 	)
 
 	// Try to find the associate device.
-	device, err := s.findAssociateDevice(ctx)
+	device, err := s.getAssociatedDevice(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get device: %w", err)
 	}
 
-	// If no device is found we have to create one
+	// If no device is found we have to find one
 	if device == nil {
-		device, err = s.createDevice(ctx)
+		device, err = s.chooseDevice(ctx)
 		if err != nil {
-			return nil, fmt.Errorf("failed to create device: %w", err)
+			return nil, fmt.Errorf("failed to choose device: %w", err)
 		}
+		if err := s.associateDevice(ctx, device); err != nil {
+			return nil, fmt.Errorf("failed to associate device: %w", err)
+		}
+
 		record.Eventf(
 			s.scope.HivelocityMachine,
-			"SuccessfulCreate",
-			"Created new device with id %d",
+			"SuccessfulAssociated",
+			"Associated device with id %d",
 			device.DeviceId,
 		)
 	}
 
-	c := s.scope.HivelocityMachine.Status.Conditions.DeepCopy()
-	s.scope.HivelocityMachine.Status = setStatusFromAPI(device)
-	s.scope.HivelocityMachine.Status.Conditions = c
-
-	switch device.PowerStatus {
-	case hvclient.PowerStatusOff:
-		return s.handleDeviceStatusOff(ctx, device)
-	/* todo: up to now we only get ON/OFF
-	case hv.BareMetalDeviceStatusStarting:
-		// Requeue here so that device does not switch back and forth between off and starting.
-		// If we don't return here, the condition DeviceReady would get marked as true in this
-		// case. However, if the device is stuck and does not power on, we should not mark the
-		// condition DeviceReady as true to be able to remediate the device after a timeout.
-		return &reconcile.Result{RequeueAfter: 10 * time.Second}, nil
-	*/
-	case hvclient.PowerStatusOn: // Do nothing
-	default:
-		s.scope.HivelocityMachine.Status.Ready = false
-		s.scope.V(1).Info("device not in running state",
-			"device", device.Hostname,
-			"powerStatus", device.PowerStatus)
-		return &reconcile.Result{RequeueAfter: 2 * time.Second}, nil
+	err = s.updateDevice(ctx, log, device)
+	if err != nil {
+		return nil, fmt.Errorf("[Service.Reconcile] updateDevice() failed. deviceID %d. %w",
+			device.DeviceId, err)
 	}
 
-	providerID := fmt.Sprintf("hivelocity://%d", device.DeviceId)
-
-	if !s.scope.IsControlPlane() {
-		s.scope.HivelocityMachine.Spec.ProviderID = &providerID
-		s.scope.HivelocityMachine.Status.Ready = true
-		conditions.MarkTrue(s.scope.HivelocityMachine, infrav1.DeviceReadyCondition)
-		return nil, nil
-	}
+	// Set ProviderID so the Cluster API Machine Controller can pull it
+	providerID := hvutils.DeviceIDToProviderID(device.DeviceId)
 
 	s.scope.HivelocityMachine.Spec.ProviderID = &providerID
 	s.scope.HivelocityMachine.Status.Ready = true
@@ -145,51 +140,36 @@ func (s *Service) Reconcile(ctx context.Context) (_ *ctrl.Result, err error) {
 	return nil, nil
 }
 
-func (s *Service) handleDeviceStatusOff(ctx context.Context, device *hv.BareMetalDevice) (*reconcile.Result, error) {
-	// Check if device is in DeviceStatusOff and turn it on. This is to avoid a bug of Hivelocity where
-	// sometimes machines are created and not turned on
+func (s *Service) updateDevice(ctx context.Context, log logr.Logger, device *hv.BareMetalDevice) error {
+	log.V(1).Info("Updating machine")
 
-	condition := conditions.Get(s.scope.HivelocityMachine, infrav1.DeviceReadyCondition)
-	if condition != nil &&
-		condition.Status == corev1.ConditionFalse &&
-		condition.Reason == infrav1.DeviceOffReason {
-		if time.Now().Before(condition.LastTransitionTime.Time.Add(deviceOffTimeout)) {
-			// Not yet timed out, try again to power on
-			if err := s.scope.HVClient.PowerOnDevice(ctx, device.DeviceId); err != nil {
-				return nil, fmt.Errorf("failed to power on device: %w", err)
-			}
+	// if the machine is already provisioned, return
+	if s.scope.Machine.Spec.ProviderID != nil {
+		// ensure ready state is set.
+		// This is required after move, because status is not moved to the target cluster.
+		s.scope.HivelocityMachine.Status.Ready = true
+		deviceID, err := hvutils.ProviderIDToDeviceID(*s.scope.Machine.Spec.ProviderID)
+		if err != nil {
+			return fmt.Errorf("[updateDevice] ProviderIDToDeviceID failed: %w", err)
+		}
+		exists, err := s.deviceExists(ctx, deviceID)
+		if err != nil {
+			return fmt.Errorf("[updateDevice] deviceExists failed: %w", err)
+		}
+		if exists {
+			conditions.MarkTrue(s.scope.HivelocityMachine, infrav1.DeviceReadyCondition)
+			setMachineAddress(s.scope.HivelocityMachine, device)
 		} else {
-			// Timed out. Set failure reason
-			s.scope.SetError("reached timeout of waiting for machines that are switched off", capierrors.CreateMachineError)
-			return nil, nil
+			conditions.MarkFalse(s.scope.HivelocityMachine,
+				infrav1.DeviceReadyCondition,
+				infrav1.DeviceDeletedReason,
+				clusterv1.ConditionSeverityError,
+				fmt.Sprintf("device %d does not exists anymore", device.DeviceId))
 		}
-	} else { // todo: too complicated. Is there a way to avoid the "else"?
-		// No condition set yet. Try to power device on.
-		if err := s.scope.HVClient.PowerOnDevice(ctx, device.DeviceId); err != nil {
-			if hvclient.IsRateLimitExceededError(err) {
-				conditions.MarkTrue(s.scope.HivelocityMachine, infrav1.RateLimitExceeded)
-				record.Event(s.scope.HivelocityMachine,
-					"RateLimitExceeded",
-					"exceeded rate limit with calling hivelocity function PowerOnDevice",
-				)
-			}
-			return nil, fmt.Errorf("failed to power on device: %w", err)
-		}
-		conditions.MarkFalse(
-			s.scope.HivelocityMachine,
-			infrav1.DeviceReadyCondition,
-			infrav1.DeviceOffReason,
-			clusterv1.ConditionSeverityInfo,
-			"device is switched off",
-		)
+		return nil
 	}
 
-	// Try again in 30 sec.
-	return &reconcile.Result{RequeueAfter: 30 * time.Second}, nil
-}
-
-func (s *Service) createDevice(ctx context.Context) (*hv.BareMetalDevice, error) {
-	// get userData
+	// Make sure bootstrap data is available and populated.
 	userData, err := s.scope.GetRawBootstrapData(ctx)
 	if err != nil {
 		record.Warnf(
@@ -197,27 +177,12 @@ func (s *Service) createDevice(ctx context.Context) (*hv.BareMetalDevice, error)
 			"FailedGetBootstrapData",
 			err.Error(),
 		)
-		return nil, fmt.Errorf("failed to get raw bootstrap data: %s", err)
+		return fmt.Errorf("failed to get raw bootstrap data: %s", err)
 	}
 
 	image, err := s.getDeviceImage(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get device image: %w", err)
-	}
-
-	devices, err := s.scope.HVClient.ListDevices(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("[Service.createDevice] ListDevices() failed. cluster %q: %w",
-			s.scope.Name(), err)
-	}
-	unusedDevice, err := hvutils.FindUnusedDevice(devices, s.scope.Name(), "question device-type")
-	if err != nil {
-		return nil, fmt.Errorf("[Service.createDevice] FindUnusedDevice() failed. cluster %q: %w",
-			s.scope.Name(), err)
-	}
-	if unusedDevice == nil {
-		return nil, fmt.Errorf("[Service.createDevice] FindUnusedDevice() found no unused device. cluster %q: %w",
-			s.scope.Name(), err)
+		return fmt.Errorf("failed to get device image: %w", err)
 	}
 	opts := hv.BareMetalDeviceUpdate{
 		Hostname: s.scope.Name(),
@@ -229,35 +194,34 @@ func (s *Service) createDevice(ctx context.Context) (*hv.BareMetalDevice, error)
 	if s.scope.HivelocityCluster.Spec.SSHKey != nil {
 		sshKeyID, err := s.getSSHKeyIDFromSSHKeyName(ctx, s.scope.HivelocityCluster.Spec.SSHKey)
 		if err != nil {
-			return nil, fmt.Errorf("error with ssh keys: %w", err)
+			return fmt.Errorf("error with ssh keys: %w", err)
 		}
-
 		opts.PublicSshKeyId = sshKeyID
 	}
 
-	// Create the device
-	device, err := s.scope.HVClient.CreateDevice(ctx, unusedDevice.DeviceId, opts)
+	// Provision the device
+	provisionedDevice, err := s.scope.HVClient.ProvisionDevice(ctx, device.DeviceId, opts)
 	if err != nil {
 		if hvclient.IsRateLimitExceededError(err) {
 			conditions.MarkTrue(s.scope.HivelocityMachine, infrav1.RateLimitExceeded)
 			record.Event(s.scope.HivelocityMachine,
 				"RateLimitExceeded",
-				"exceeded rate limit with calling Hivelocity function CreateDevice",
+				"exceeded rate limit with calling Hivelocity function ProvisionDevice",
 			)
 		}
 		record.Warnf(s.scope.HivelocityMachine,
-			"FailedCreateHivelocityDevice",
-			"Failed to create Hivelocity device %s: %s",
+			"FailedProvisionHivelocityDevice",
+			"Failed to provision Hivelocity device %s: %s",
 			s.scope.Name(),
 			err,
 		)
-		return nil, fmt.Errorf("error while creating Hivelocity device %s: %s", s.scope.HivelocityMachine.Name, err)
+		return fmt.Errorf("error while provisioning Hivelocity device %s. deviceId %d: %s",
+			s.scope.HivelocityMachine.Name, device.DeviceId, err)
 	}
+	setMachineAddress(s.scope.HivelocityMachine, &provisionedDevice)
+	return nil
 
-	return &device, nil
 }
-
-const defaultImageName = "Ubuntu 20.x"
 
 func (s *Service) getDeviceImage(ctx context.Context) (string, error) {
 	return defaultImageName, nil
@@ -283,7 +247,7 @@ func (s *Service) getSSHKeyIDFromSSHKeyName(ctx context.Context, sshKey *infrav1
 // Delete implements delete method of the HV device.
 func (s *Service) Delete(ctx context.Context) (_ *ctrl.Result, err error) {
 	// find current device
-	device, err := s.findAssociateDevice(ctx)
+	device, err := s.getAssociatedDevice(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to find device: %w", err)
 	}
@@ -356,14 +320,8 @@ func (s *Service) handleDeleteDeviceStatusOff(ctx context.Context, device *hv.Ba
 	return nil, fmt.Errorf("todo: handleDeleteDeviceStatusOff()")
 }
 
-func setStatusFromAPI(device *hv.BareMetalDevice) infrav1.HivelocityMachineStatus {
-	var status infrav1.HivelocityMachineStatus
-	// todo: HV does not have a detailed status for their devices. Only ON or OFF.
-	return status
-}
-
 // We write the machine name in the labels, so that all labels are or should be unique.
-func (s *Service) findAssociateDevice(ctx context.Context) (*hv.BareMetalDevice, error) {
+func (s *Service) getAssociatedDevice(ctx context.Context) (*hv.BareMetalDevice, error) {
 	clusterTag := hvclient.GetClusterTag(s.scope.ClusterScope.Name())
 	machineTag := hvclient.GetMachineTag(s.scope.Name())
 	devices, err := s.scope.HVClient.ListDevices(ctx)
@@ -392,4 +350,143 @@ func createTags(clusterName, machineName string, isControlPlane bool) []string {
 		hvclient.GetMachineTag(machineName),
 		"caphv-machinetype=" + machineType,
 	}
+}
+
+// setMachineAddress gets the address from the device and sets it on the Machine object.
+func setMachineAddress(hvMachine *infrav1.HivelocityMachine, hvDevice *hv.BareMetalDevice) {
+	hvMachine.Status.Addresses = []clusterv1.MachineAddress{
+		{
+			Type:    clusterv1.MachineHostName,
+			Address: hvDevice.Hostname,
+		},
+		{
+			Type:    clusterv1.MachineInternalIP,
+			Address: hvDevice.PrimaryIp,
+		},
+		{
+			Type:    clusterv1.MachineExternalIP,
+			Address: hvDevice.PrimaryIp,
+		},
+	}
+}
+
+// associateDevice claims an unused HV device.
+func (s *Service) associateDevice(ctx context.Context, device *hv.BareMetalDevice) error {
+	deviceTags := append(device.Tags, clusterAndMachineTag(s.scope.HivelocityCluster.Name, s.scope.Name())...)
+	if err := s.scope.HVClient.SetTags(ctx, device.DeviceId, deviceTags); err != nil {
+		return fmt.Errorf("failed to set tags on machine %s :%w", s.scope.Name(), err)
+	}
+	// Set update tags of device to have the latest device for the next steps in reconcile
+	device.Tags = deviceTags
+	return nil
+}
+
+func clusterAndMachineTag(clusterName, machineName string) []string {
+	return []string{
+		hvclient.TagKeyClusterName + "=" + clusterName,
+		hvclient.TagKeyMachineName + "=" + machineName,
+	}
+}
+
+// chooseDevice searches for an unused device.
+func (s *Service) chooseDevice(ctx context.Context) (*hv.BareMetalDevice, error) {
+	devices, err := s.scope.HVClient.ListDevices(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("[chooseDevice] ListDevices() failed. machine %q: %w",
+			s.scope.Name(), err)
+	}
+	return chooseAvailableFromList(ctx, devices, s.scope.HivelocityMachine.Spec.Type, s.scope.Cluster.Name)
+}
+
+// deviceExists returns true if the device exists.
+func (s *Service) deviceExists(ctx context.Context, deviceID int32) (bool, error) {
+	// question: should we check if the device is in the current cluster first?
+	device, err := s.scope.HVClient.GetDevice(ctx, deviceID)
+	if err != nil {
+		return false, err
+	}
+	if device.PrimaryIp != "" {
+		return true, nil
+	}
+	return false, nil
+}
+
+func chooseAvailableFromList(ctx context.Context, devices []*hv.BareMetalDevice, deviceType infrav1.HivelocityDeviceType, clusterName string) (*hv.BareMetalDevice, error) {
+	log := ctrl.LoggerFrom(ctx)
+	for _, device := range devices {
+		// Ignore if associated already
+		if isAssociated(device) {
+			continue
+		}
+
+		dt, err := getDeviceType(device)
+		if err != nil {
+			if errors.Is(err, errNoMatchingTagFound) {
+				continue
+			}
+			// don't return on err, otherwise a single broken device would block this method
+			log.Error(err, "[chooseAvailableFromList] getDeviceType() failed")
+			continue
+		}
+
+		// Ignore if has wrong device type
+		if dt != string(deviceType) {
+			continue
+		}
+
+		// Ignore if associated to other cluster
+		cn, found := findAssociatedCluster(device)
+		if found && clusterName != cn {
+			continue
+		}
+		return device, nil
+	}
+	return nil, errNoDeviceAvailable
+}
+
+// getDeviceType returns the device-type of this BareMetalDevice.
+func getDeviceType(device *hv.BareMetalDevice) (string, error) {
+	deviceType, err := findValueForKeyInTags(device.Tags, hvclient.TagKeyDeviceType)
+	if err != nil {
+		return "", fmt.Errorf("[getDeviceType] findValueForKeyInTags() failed: %w", err)
+	}
+	return deviceType, nil
+}
+
+// isAssociated returns true if the device is associated with a HivelocityMachine.
+func isAssociated(device *hv.BareMetalDevice) bool {
+	deviceType, _ := findValueForKeyInTags(device.Tags, hvclient.TagKeyMachineName)
+	return deviceType != ""
+}
+
+// findAssociatedCluster tries to find a cluster name in the tags. If it finds one, it returns the name and true
+// If not, it returns an empty string and false.
+func findAssociatedCluster(device *hv.BareMetalDevice) (string, bool) {
+	cluster, _ := findValueForKeyInTags(device.Tags, hvclient.TagKeyClusterName)
+	return cluster, cluster != ""
+}
+
+// findValueForKeyInTags returns the value of a TagKey of a device.
+// Example: If a device has the tag "foo=bar", then getValueOfTag
+// will return "bar".
+// If there is no such tag, or there are two tags, then an error gets returned.
+func findValueForKeyInTags(tagList []string, key string) (string, error) {
+	prefix := key + "="
+	found := 0
+	var value string
+
+	for _, tag := range tagList {
+		if !strings.HasPrefix(tag, prefix) {
+			continue
+		}
+		if found > 1 {
+			return "", errTooManyTagsFound
+		}
+		found++
+		value = tag[len(prefix):]
+	}
+	if found == 0 {
+		return "", errNoMatchingTagFound
+	}
+	return value, nil
 }

@@ -18,11 +18,10 @@ limitations under the License.
 package hvutils
 
 import (
-	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 
-	hvclient "github.com/hivelocity/cluster-api-provider-hivelocity/pkg/services/hivelocity/client"
 	hv "github.com/hivelocity/hivelocity-client-go/client"
 	"golang.org/x/exp/slices"
 )
@@ -56,41 +55,6 @@ func FindDeviceByTags(
 	return device, nil
 }
 
-// FindUnusedDevice returns an unused device. Returns nil if no device was found.
-func FindUnusedDevice(devices []*hv.BareMetalDevice, clusterName, deviceType string) (*hv.BareMetalDevice, error) {
-	for i := range devices {
-		device := devices[i]
-		it, err := GetDeviceType(device)
-		if err != nil {
-			return nil, fmt.Errorf("[FindUnusedDevice] GetDeviceType() failed: %w", err)
-		}
-		if it != deviceType {
-			continue
-		}
-		if DeviceHasTagKey(device, hvclient.TagKeyMachineName) {
-			continue
-		}
-		cn, err := DeviceGetTagValue(device, hvclient.TagKeyClusterName)
-		if errors.Is(err, ErrTooManyTagsFound) {
-			continue
-		}
-		if errors.Is(err, ErrNoMatchingTagFound) {
-			// this could lead to a race-condition, if two controllers of two clusters
-			// try to fetch an unused device.
-			// TODO: re-check after N seconds if there is a second tag from a second controller.
-			return device, nil
-		}
-		if err != nil {
-			return nil, err
-		}
-		if cn != clusterName {
-			continue
-		}
-		return device, nil
-	}
-	return nil, nil
-}
-
 // DeviceHasTagKey returns true if the device has the tagKey set.
 // Example: Your can check if a machine has already a name by using tagKey="machine-name".
 func DeviceHasTagKey(device *hv.BareMetalDevice, tagKey string) bool {
@@ -103,44 +67,29 @@ func DeviceHasTagKey(device *hv.BareMetalDevice, tagKey string) bool {
 	return false
 }
 
-// ErrTooManyTagsFound gets returned, if there are multiple tags with the same key,
-// and the key should be unique.
-var ErrTooManyTagsFound = fmt.Errorf("too many tags found")
-
-// ErrNoMatchingTagFound gets returned, if no matching tag was found.
-var ErrNoMatchingTagFound = fmt.Errorf("no matching tag found")
-
-// DeviceGetTagValue returns the value of a TagKey of a device.
-// Example: If a device has the tag "foo=bar", then DeviceGetTagValue
-// will return "bar".
-// If there is no such tag, or there are two tags, then an error gets returned.
-func DeviceGetTagValue(device *hv.BareMetalDevice, tagKey string) (string, error) {
-	prefix := tagKey + "="
-	found := 0
-	value := ""
-	for i := range device.Tags {
-		if !strings.HasPrefix(device.Tags[i], prefix) {
-			continue
-		}
-		if found > 0 {
-			return "", fmt.Errorf("[DeviceGetTagValue] device %q, tagKey %q: %w",
-				device.Hostname, tagKey, ErrTooManyTagsFound)
-		}
-		found++
-		value = device.Tags[i][len(prefix):]
+// ProviderIDToDeviceID converts the ProviderID (hivelocity://NNNN) to the DeviceID.
+func ProviderIDToDeviceID(providerID string) (int32, error) {
+	if providerID == "" {
+		return 0, fmt.Errorf("[ProviderIDToDeviceID] providerID is empty")
 	}
-	if found == 0 {
-		return "", fmt.Errorf("[DeviceGetTagValue] device %q, tagKey %q: %w",
-			device.Hostname, tagKey, ErrNoMatchingTagFound)
+	prefix := "hivelocity://"
+	if !strings.HasPrefix(providerID, prefix) {
+		return 0, fmt.Errorf("[ProviderIDToDeviceID] missing prefix %q in providerID %q",
+			prefix, providerID)
 	}
-	return value, nil
+	deviceID, err := strconv.ParseInt(
+		strings.TrimPrefix(providerID, prefix),
+		10,
+		32,
+	)
+	if err != nil {
+		return 0, fmt.Errorf("[ProviderIDToDeviceID] failed to convert providerID %q: %w",
+			providerID, err)
+	}
+	return int32(deviceID), nil
 }
 
-// GetDeviceType returns the device-type of this BareMetalDevice.
-func GetDeviceType(device *hv.BareMetalDevice) (string, error) {
-	deviceType, err := DeviceGetTagValue(device, hvclient.TagKeyDeviceType)
-	if err != nil {
-		return "", fmt.Errorf("[GetDeviceType] DeviceGetTagValue() failed: %w", err)
-	}
-	return deviceType, nil
+// DeviceIDToProviderID converts a deviceID to ProviderID.
+func DeviceIDToProviderID(deviceID int32) string {
+	return fmt.Sprintf("hivelocity://%d", deviceID)
 }
