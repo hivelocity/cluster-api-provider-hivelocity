@@ -193,13 +193,10 @@ func (r *HivelocityMachineReconciler) reconcileNormal(ctx context.Context, machi
 
 	// reconcile device
 	result, err := device.NewService(machineScope).Reconcile(ctx)
-	if result == nil {
-		result = &reconcile.Result{}
-	}
 	if err != nil {
-		return *result, fmt.Errorf("failed to reconcile device for HivelocityMachine %s/%s: %w", hivelocityMachine.Namespace, hivelocityMachine.Name, err)
+		return result, fmt.Errorf("failed to reconcile device for HivelocityMachine %s/%s: %w", hivelocityMachine.Namespace, hivelocityMachine.Name, err)
 	}
-	return *result, nil
+	return result, nil
 }
 
 // SetupWithManager sets up the controller with the Manager.
