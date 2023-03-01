@@ -112,7 +112,6 @@ func (s *Service) Reconcile(ctx context.Context) (_ ctrl.Result, err error) {
 		if err != nil {
 			return reconcile.Result{}, fmt.Errorf("failed to associate device: %w", err)
 		}
-
 		record.Eventf(
 			s.scope.HivelocityMachine,
 			"SuccessfulAssociated",
@@ -198,6 +197,7 @@ func (s *Service) updateDevice(ctx context.Context, log logr.Logger, device *hv.
 
 	// Provision the device
 	provisionedDevice, err := s.scope.HVClient.ProvisionDevice(ctx, device.DeviceId, opts)
+	log.Info("[updateDevice] ProvisionDevice was called", "err", err, "device", device)
 	if err != nil {
 		if hvclient.IsRateLimitExceededError(err) {
 			conditions.MarkTrue(s.scope.HivelocityMachine, infrav1.RateLimitExceeded)

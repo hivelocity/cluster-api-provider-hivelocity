@@ -14,4 +14,20 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package mock_test
+package mock
+
+import (
+	"context"
+	"testing"
+
+	"github.com/stretchr/testify/require"
+)
+
+func Test_SetTags(t *testing.T) {
+	client := NewHVClientFactory().NewClient("dummy-key")
+	ctx := context.Background()
+	client.SetTags(ctx, FreeDeviceID, []string{"tag1", "tag2"})
+	device, err := client.GetDevice(ctx, FreeDeviceID)
+	require.NoError(t, err)
+	require.ElementsMatch(t, device.Tags, []string{"tag1", "tag2"})
+}

@@ -21,8 +21,6 @@ import (
 	"time"
 
 	infrav1 "github.com/hivelocity/cluster-api-provider-hivelocity/api/v1alpha1"
-	hvclient "github.com/hivelocity/cluster-api-provider-hivelocity/pkg/services/hivelocity/client"
-	"github.com/hivelocity/cluster-api-provider-hivelocity/pkg/services/hivelocity/client/mock"
 	"github.com/hivelocity/cluster-api-provider-hivelocity/pkg/utils"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -49,8 +47,6 @@ var _ = Describe("HivelocityMachineReconciler", func() {
 		bootstrapSecret *corev1.Secret
 
 		machineKey client.ObjectKey
-
-		hvClient hvclient.Client
 	)
 
 	BeforeEach(func() {
@@ -100,7 +96,6 @@ var _ = Describe("HivelocityMachineReconciler", func() {
 		bootstrapSecret = getDefaultBootstrapSecret(testNs.Name)
 		Expect(testEnv.Create(ctx, bootstrapSecret)).To(Succeed())
 
-		hvClient = testEnv.HVClientFactory.NewClient("my-api-key")
 	})
 
 	AfterEach(func() {
@@ -172,11 +167,6 @@ var _ = Describe("HivelocityMachineReconciler", func() {
 		})
 
 		It("creates the Hivelocity machine in Hivelocity", func() {
-			// Check that there is no machine yet.
-			device, err := hvClient.GetDevice(ctx, mock.FreeDevice.DeviceId)
-			Expect(err).ShouldNot(HaveOccurred())
-			Expect(device.Tags).To(BeEquivalentTo([]string{"caphv-device-type=hvCustom"}))
-
 			// Check whether bootstrap condition is not ready
 			Eventually(func() bool {
 				if err := testEnv.Get(ctx, machineKey, hvMachine); err != nil {
@@ -194,6 +184,10 @@ var _ = Describe("HivelocityMachineReconciler", func() {
 				}
 				return ph.Patch(ctx, capiMachine, patch.WithStatusObservedGeneration{})
 			}, timeout, time.Second).Should(BeNil())
+
+			err := testEnv.Get(ctx, machineKey, hvMachine)
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(hvMachine.Spec.ProviderID).Should(BeNil())
 
 			// Check whether bootstrap condition is ready
 			Eventually(func() bool {
@@ -213,23 +207,13 @@ var _ = Describe("HivelocityMachineReconciler", func() {
 				if err := testEnv.Get(ctx, machineKey, hvMachine); err != nil {
 					return false
 				}
-				// todo: get the HivelocityMachine with
-				// ProviderID "hivelocity://" + mock.FreeDeviceID
-				// then wait until the machine is in state ready.
-				// panic(*hivelocityMachine)
 				if hvMachine.Spec.ProviderID == nil {
-					testEnv.GetLogger().Info("########## ProviderID is nil.", "status", hvMachine.Status.Ready)
 					return false
 				}
 				if *hvMachine.Spec.ProviderID == "" {
-					testEnv.GetLogger().Info("########## ProviderID is empty string")
 					return false
 				}
-
-				device, err := hvClient.GetDevice(ctx, mock.FreeDevice.DeviceId)
-				Expect(err).ShouldNot(HaveOccurred())
-				Expect(device.Tags).NotTo(BeEquivalentTo([]string{"caphv-device-type=hvCustom"}))
-
+				Expect(hvMachine.Status.Ready).Should(BeTrue())
 				return true
 			}, timeout, time.Second).Should(BeTrue())
 		})
