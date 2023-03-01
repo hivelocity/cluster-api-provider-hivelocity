@@ -373,12 +373,10 @@ func (s *Service) associateDevice(ctx context.Context) (*hv.BareMetalDevice, err
 		return nil, fmt.Errorf("failed to choose device: %w", err)
 	}
 
-	deviceTags := append(device.Tags, clusterAndMachineTag(s.scope.HivelocityCluster.Name, s.scope.Name())...)
-	if err := s.scope.HVClient.SetTags(ctx, device.DeviceId, deviceTags); err != nil {
+	device.Tags = append(device.Tags, clusterAndMachineTag(s.scope.HivelocityCluster.Name, s.scope.Name())...)
+	if err := s.scope.HVClient.SetTags(ctx, device.DeviceId, device.Tags); err != nil {
 		return nil, fmt.Errorf("failed to set tags on machine %s :%w", s.scope.Name(), err)
 	}
-	// Set update tags of device to have the latest device for the next steps in reconcile
-	device.Tags = deviceTags
 	return device, nil
 }
 
