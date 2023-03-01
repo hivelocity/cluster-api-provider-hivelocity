@@ -26,6 +26,7 @@ import (
 	mockclient "github.com/hivelocity/cluster-api-provider-hivelocity/pkg/services/hivelocity/client/mock"
 	hv "github.com/hivelocity/hivelocity-client-go/client"
 	"github.com/stretchr/testify/require"
+	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 )
 
 func newScope() Service {
@@ -33,26 +34,37 @@ func newScope() Service {
 	s := Service{}
 	s.scope = &scope.MachineScope{}
 	s.scope.HVClient = client
+	s.scope.Cluster = &clusterv1.Cluster{}
+	s.scope.Cluster.Name = "capi-cluster"
 	s.scope.HivelocityCluster = &v1alpha1.HivelocityCluster{}
 	s.scope.HivelocityCluster.Name = "my-cluster"
 	s.scope.HivelocityMachine = &v1alpha1.HivelocityMachine{}
 	s.scope.HivelocityMachine.Name = "my-machine"
+	s.scope.HivelocityMachine.Spec = v1alpha1.HivelocityMachineSpec{Type: "hvCustom"}
 	return s
 }
+
 func Test_associateDevice(t *testing.T) {
 	s := newScope()
 	ctx := context.Background()
+	gotDevice, err := s.associateDevice(ctx)
+	require.NoError(t, err)
 	device, err := s.scope.HVClient.GetDevice(ctx, mockclient.FreeDeviceID)
 	require.NoError(t, err)
-	err = s.associateDevice(ctx, &device)
-	require.NoError(t, err)
-	device, err = s.scope.HVClient.GetDevice(ctx, mockclient.FreeDeviceID)
-	require.NoError(t, err)
+
+	// Check that device in API has tags set.
 	require.ElementsMatch(t, []string{
 		"caphv-cluster-name=my-cluster",
 		"caphv-device-type=hvCustom",
 		"caphv-machine-name=my-machine",
 	}, device.Tags)
+
+	// Check that returned device object has tags set.
+	require.ElementsMatch(t, []string{
+		"caphv-cluster-name=my-cluster",
+		"caphv-device-type=hvCustom",
+		"caphv-machine-name=my-machine",
+	}, gotDevice.Tags)
 }
 
 func Test_chooseAvailableFromList(t *testing.T) {
