@@ -108,11 +108,8 @@ func (s *Service) Reconcile(ctx context.Context) (_ ctrl.Result, err error) {
 
 	// If no device is found we have to find one
 	if device == nil {
-		device, err = s.chooseDevice(ctx)
+		device, err = s.associateDevice(ctx)
 		if err != nil {
-			return reconcile.Result{}, fmt.Errorf("failed to choose device: %w", err)
-		}
-		if err := s.associateDevice(ctx, device); err != nil {
 			return reconcile.Result{}, fmt.Errorf("failed to associate device: %w", err)
 		}
 
@@ -369,15 +366,20 @@ func setMachineAddress(hvMachine *infrav1.HivelocityMachine, hvDevice *hv.BareMe
 	}
 }
 
-// associateDevice claims an unused HV device.
-func (s *Service) associateDevice(ctx context.Context, device *hv.BareMetalDevice) error {
+// associateDevice claims an unused HV device by settings tags and returns it.
+func (s *Service) associateDevice(ctx context.Context) (*hv.BareMetalDevice, error) {
+	device, err := s.chooseDevice(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to choose device: %w", err)
+	}
+
 	deviceTags := append(device.Tags, clusterAndMachineTag(s.scope.HivelocityCluster.Name, s.scope.Name())...)
 	if err := s.scope.HVClient.SetTags(ctx, device.DeviceId, deviceTags); err != nil {
-		return fmt.Errorf("failed to set tags on machine %s :%w", s.scope.Name(), err)
+		return nil, fmt.Errorf("failed to set tags on machine %s :%w", s.scope.Name(), err)
 	}
 	// Set update tags of device to have the latest device for the next steps in reconcile
 	device.Tags = deviceTags
-	return nil
+	return device, nil
 }
 
 func clusterAndMachineTag(clusterName, machineName string) []string {
