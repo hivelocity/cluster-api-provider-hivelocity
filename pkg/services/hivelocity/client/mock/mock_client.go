@@ -24,7 +24,6 @@ import (
 	hvclient "github.com/hivelocity/cluster-api-provider-hivelocity/pkg/services/hivelocity/client"
 	hv "github.com/hivelocity/hivelocity-client-go/client"
 	"golang.org/x/exp/maps"
-	"sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 // DefaultCPUCores defines the default cpu cores for Hivelocity machines' capacities.

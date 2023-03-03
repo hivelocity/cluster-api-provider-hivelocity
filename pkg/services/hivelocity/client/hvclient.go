@@ -110,7 +110,6 @@ func (c *realClient) ProvisionDevice(ctx context.Context, deviceID int32, opts h
 			deviceID, err)
 	}
 
-
 	// FIXME: state-machine: After powering off, we need to wait until the device is off.
 	if device.PowerStatus == PowerStatusOn {
 		_, _, err := c.client.DeviceApi.PostPowerResource(ctx, deviceID, "shutdown", nil) //nolint:bodyclose // Close() gets done in client

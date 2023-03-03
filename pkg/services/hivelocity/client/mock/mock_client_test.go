@@ -20,8 +20,6 @@ import (
 	"context"
 	"testing"
 
-	hvclient "github.com/hivelocity/cluster-api-provider-hivelocity/pkg/services/hivelocity/client"
-
 	"github.com/stretchr/testify/require"
 )
 
@@ -42,7 +40,8 @@ func Test_NewMockedHVClientFactory(t *testing.T) {
 	device, err := client.GetDevice(ctx, FreeDeviceID)
 	require.NoError(t, err)
 	require.ElementsMatch(t, device.Tags, []string{"caphv-device-type=hvCustom"})
-	client.SetTags(ctx, FreeDeviceID, []string{"new-tag"})
+	err = client.SetTags(ctx, FreeDeviceID, []string{"new-tag"})
+	require.NoError(t, err)
 
 	device, err = client.GetDevice(ctx, FreeDeviceID)
 	require.NoError(t, err)
