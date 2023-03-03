@@ -20,14 +20,42 @@ import (
 	"context"
 	"testing"
 
+	hvclient "github.com/hivelocity/cluster-api-provider-hivelocity/pkg/services/hivelocity/client"
+
 	"github.com/stretchr/testify/require"
 )
 
 func Test_SetTags(t *testing.T) {
-	client := NewHVClientFactory().NewClient("dummy-key")
+	client := NewMockedHVClientFactory().NewClient("dummy-key")
 	ctx := context.Background()
-	client.SetTags(ctx, FreeDeviceID, []string{"tag1", "tag2"})
+	err := client.SetTags(ctx, FreeDeviceID, []string{"tag1", "tag2"})
+	require.NoError(t, err)
 	device, err := client.GetDevice(ctx, FreeDeviceID)
 	require.NoError(t, err)
 	require.ElementsMatch(t, device.Tags, []string{"tag1", "tag2"})
+}
+
+func Test_NewMockedHVClientFactory(t *testing.T) {
+	factory := NewMockedHVClientFactory()
+	client := factory.NewClient("dummy-key")
+	ctx := context.Background()
+	device, err := client.GetDevice(ctx, FreeDeviceID)
+	require.NoError(t, err)
+	require.ElementsMatch(t, device.Tags, []string{"caphv-device-type=hvCustom"})
+	client.SetTags(ctx, FreeDeviceID, []string{"new-tag"})
+
+	device, err = client.GetDevice(ctx, FreeDeviceID)
+	require.NoError(t, err)
+	require.ElementsMatch(t, device.Tags, []string{"new-tag"})
+
+	client2 := factory.NewClient("dummy-key")
+	device, err = client2.GetDevice(ctx, FreeDeviceID)
+	require.NoError(t, err)
+	require.ElementsMatch(t, device.Tags, []string{"new-tag"})
+
+	factoryNewF := NewMockedHVClientFactory()
+	clientNewF := factoryNewF.NewClient("dummy-key")
+	device, err = clientNewF.GetDevice(ctx, FreeDeviceID)
+	require.NoError(t, err)
+	require.ElementsMatch(t, device.Tags, []string{"caphv-device-type=hvCustom"})
 }

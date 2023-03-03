@@ -135,14 +135,11 @@ func NewTestEnvironment() *TestEnvironment {
 		klog.Fatalf("failed to set up webhook with manager for HivelocityMachine: %s", err)
 	}
 
-	// Create a mock HVClientFactory
-	hvClientFactory := mockclient.NewHVClientFactory()
-
 	return &TestEnvironment{
 		Manager:         mgr,
 		Client:          mgr.GetClient(),
 		Config:          mgr.GetConfig(),
-		HVClientFactory: hvClientFactory,
+		HVClientFactory: mockclient.NewMockedHVClientFactory(),
 	}
 }
 

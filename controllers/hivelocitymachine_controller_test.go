@@ -21,6 +21,7 @@ import (
 	"time"
 
 	infrav1 "github.com/hivelocity/cluster-api-provider-hivelocity/api/v1alpha1"
+	"github.com/hivelocity/cluster-api-provider-hivelocity/pkg/services/hivelocity/client/mock"
 	"github.com/hivelocity/cluster-api-provider-hivelocity/pkg/utils"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -214,8 +215,15 @@ var _ = Describe("HivelocityMachineReconciler", func() {
 					return false
 				}
 				Expect(hvMachine.Status.Ready).Should(BeTrue())
+				Expect(*hvMachine.Spec.ProviderID).Should(Equal(fmt.Sprintf("hivelocity://%d", mock.FreeDeviceID)))
 				return true
 			}, timeout, time.Second).Should(BeTrue())
+			hvClient := testEnv.HVClientFactory.NewClient("dummy-key")
+			device, err := hvClient.GetDevice(ctx, mock.FreeDeviceID)
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(device.Tags).Should(BeEquivalentTo([]string{"caphv-device-type=hvCustom",
+				"caphv-cluster-name=hv-test1",
+				fmt.Sprintf("caphv-machine-name=%s", hvMachine.Name)}))
 		})
 	})
 })

@@ -148,6 +148,8 @@ func (s *Service) updateDevice(ctx context.Context, log logr.Logger, device *hv.
 		if err != nil {
 			return fmt.Errorf("[updateDevice] ProviderIDToDeviceID failed: %w", err)
 		}
+
+		// FIXME: we already get the device
 		exists, err := s.deviceExists(ctx, deviceID)
 		if err != nil {
 			return fmt.Errorf("[updateDevice] deviceExists failed: %w", err)
