@@ -27,7 +27,6 @@ import (
 	goruntime "runtime"
 
 	infrav1 "github.com/hivelocity/cluster-api-provider-hivelocity/api/v1alpha1"
-	secretutil "github.com/hivelocity/cluster-api-provider-hivelocity/pkg/secrets"
 	hvclient "github.com/hivelocity/cluster-api-provider-hivelocity/pkg/services/hivelocity/client"
 	mockclient "github.com/hivelocity/cluster-api-provider-hivelocity/pkg/services/hivelocity/client/mock"
 	g "github.com/onsi/ginkgo/v2"
@@ -46,7 +45,6 @@ import (
 	"sigs.k8s.io/cluster-api/cmd/clusterctl/log"
 	"sigs.k8s.io/cluster-api/util/kubeconfig"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 )
@@ -122,9 +120,6 @@ func NewTestEnvironment() *TestEnvironment {
 		Port:               env.WebhookInstallOptions.LocalServingPort,
 		CertDir:            env.WebhookInstallOptions.LocalServingCertDir,
 		MetricsBindAddress: "0",
-		NewCache: cache.BuilderWithOptions(cache.Options{
-			SelectorsByObject: secretutil.AddSecretSelector(nil),
-		}),
 	})
 	if err != nil {
 		klog.Fatalf("unable to create manager: %s", err)
@@ -140,14 +135,11 @@ func NewTestEnvironment() *TestEnvironment {
 		klog.Fatalf("failed to set up webhook with manager for HivelocityMachine: %s", err)
 	}
 
-	// Create a mock HVClientFactory
-	hvClientFactory := mockclient.NewHVClientFactory()
-
 	return &TestEnvironment{
 		Manager:         mgr,
 		Client:          mgr.GetClient(),
 		Config:          mgr.GetConfig(),
-		HVClientFactory: hvClientFactory,
+		HVClientFactory: mockclient.NewMockedHVClientFactory(),
 	}
 }
 

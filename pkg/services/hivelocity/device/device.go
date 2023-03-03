@@ -112,7 +112,6 @@ func (s *Service) Reconcile(ctx context.Context) (_ ctrl.Result, err error) {
 		if err != nil {
 			return reconcile.Result{}, fmt.Errorf("failed to associate device: %w", err)
 		}
-
 		record.Eventf(
 			s.scope.HivelocityMachine,
 			"SuccessfulAssociated",
@@ -149,6 +148,8 @@ func (s *Service) updateDevice(ctx context.Context, log logr.Logger, device *hv.
 		if err != nil {
 			return fmt.Errorf("[updateDevice] ProviderIDToDeviceID failed: %w", err)
 		}
+
+		// FIXME: we already get the device
 		exists, err := s.deviceExists(ctx, deviceID)
 		if err != nil {
 			return fmt.Errorf("[updateDevice] deviceExists failed: %w", err)
@@ -198,6 +199,7 @@ func (s *Service) updateDevice(ctx context.Context, log logr.Logger, device *hv.
 
 	// Provision the device
 	provisionedDevice, err := s.scope.HVClient.ProvisionDevice(ctx, device.DeviceId, opts)
+	log.Info("[updateDevice] ProvisionDevice was called", "err", err, "device", device)
 	if err != nil {
 		if hvclient.IsRateLimitExceededError(err) {
 			conditions.MarkTrue(s.scope.HivelocityMachine, infrav1.RateLimitExceeded)
@@ -373,12 +375,10 @@ func (s *Service) associateDevice(ctx context.Context) (*hv.BareMetalDevice, err
 		return nil, fmt.Errorf("failed to choose device: %w", err)
 	}
 
-	deviceTags := append(device.Tags, clusterAndMachineTag(s.scope.HivelocityCluster.Name, s.scope.Name())...)
-	if err := s.scope.HVClient.SetTags(ctx, device.DeviceId, deviceTags); err != nil {
+	device.Tags = append(device.Tags, clusterAndMachineTag(s.scope.HivelocityCluster.Name, s.scope.Name())...)
+	if err := s.scope.HVClient.SetTags(ctx, device.DeviceId, device.Tags); err != nil {
 		return nil, fmt.Errorf("failed to set tags on machine %s :%w", s.scope.Name(), err)
 	}
-	// Set update tags of device to have the latest device for the next steps in reconcile
-	device.Tags = deviceTags
 	return device, nil
 }
 

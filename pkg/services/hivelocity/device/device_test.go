@@ -30,7 +30,7 @@ import (
 )
 
 func newScope() Service {
-	client := mockclient.NewHVClientFactory().NewClient("my-api-key")
+	client := mockclient.NewMockedHVClientFactory().NewClient("my-api-key")
 	s := Service{}
 	s.scope = &scope.MachineScope{}
 	s.scope.HVClient = client

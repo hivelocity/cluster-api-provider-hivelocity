@@ -21,7 +21,6 @@ import (
 	"time"
 
 	infrav1 "github.com/hivelocity/cluster-api-provider-hivelocity/api/v1alpha1"
-	hvclient "github.com/hivelocity/cluster-api-provider-hivelocity/pkg/services/hivelocity/client"
 	"github.com/hivelocity/cluster-api-provider-hivelocity/pkg/services/hivelocity/client/mock"
 	"github.com/hivelocity/cluster-api-provider-hivelocity/pkg/utils"
 	. "github.com/onsi/ginkgo/v2"
@@ -49,9 +48,7 @@ var _ = Describe("HivelocityMachineReconciler", func() {
 		hvSecret        *corev1.Secret
 		bootstrapSecret *corev1.Secret
 
-		key client.ObjectKey
-
-		hvClient hvclient.Client
+		machineKey client.ObjectKey
 	)
 
 	BeforeEach(func() {
@@ -101,7 +98,6 @@ var _ = Describe("HivelocityMachineReconciler", func() {
 		bootstrapSecret = getDefaultBootstrapSecret(testNs.Name)
 		Expect(testEnv.Create(ctx, bootstrapSecret)).To(Succeed())
 
-		hvClient = testEnv.HVClientFactory.NewClient("my-api-key")
 	})
 
 	AfterEach(func() {
@@ -160,12 +156,12 @@ var _ = Describe("HivelocityMachineReconciler", func() {
 			Expect(testEnv.Create(ctx, hvMachine)).To(Succeed())
 			Expect(testEnv.Create(ctx, hvCluster)).To(Succeed())
 
-			key = client.ObjectKey{Namespace: testNs.Name, Name: hvMachine.Name}
+			machineKey = client.ObjectKey{Namespace: testNs.Name, Name: hvMachine.Name}
 		})
 
 		It("creates the infra machine", func() {
 			Eventually(func() bool {
-				if err := testEnv.Get(ctx, key, hvMachine); err != nil {
+				if err := testEnv.Get(ctx, machineKey, hvMachine); err != nil {
 					return false
 				}
 				return true
@@ -173,17 +169,12 @@ var _ = Describe("HivelocityMachineReconciler", func() {
 		})
 
 		It("creates the Hivelocity machine in Hivelocity", func() {
-			// Check that there is no machine yet.
-			device, err := hvClient.GetDevice(ctx, mock.FreeDevice.DeviceId)
-			Expect(err).ShouldNot(HaveOccurred())
-			Expect(device.Tags).To(BeEquivalentTo([]string{"caphv-device-type=hvCustom"}))
-
 			// Check whether bootstrap condition is not ready
 			Eventually(func() bool {
-				if err := testEnv.Get(ctx, key, hvMachine); err != nil {
+				if err := testEnv.Get(ctx, machineKey, hvMachine); err != nil {
 					return false
 				}
-				return isPresentAndFalseWithReason(key, hvMachine, infrav1.DeviceBootstrapReadyCondition, infrav1.DeviceBootstrapNotReadyReason)
+				return isPresentAndFalseWithReason(machineKey, hvMachine, infrav1.DeviceBootstrapReadyCondition, infrav1.DeviceBootstrapNotReadyReason)
 			}, timeout, time.Second).Should(BeTrue())
 
 			By("setting the bootstrap data")
@@ -196,43 +187,46 @@ var _ = Describe("HivelocityMachineReconciler", func() {
 				return ph.Patch(ctx, capiMachine, patch.WithStatusObservedGeneration{})
 			}, timeout, time.Second).Should(BeNil())
 
+			err := testEnv.Get(ctx, machineKey, hvMachine)
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(hvMachine.Spec.ProviderID).Should(BeNil())
+
 			// Check whether bootstrap condition is ready
 			Eventually(func() bool {
-				if err := testEnv.Get(ctx, key, hvMachine); err != nil {
+				if err := testEnv.Get(ctx, machineKey, hvMachine); err != nil {
 					return false
 				}
 				objectCondition := conditions.Get(hvMachine, infrav1.DeviceBootstrapReadyCondition)
 				fmt.Println(objectCondition)
-				return isPresentAndTrue(key, hvMachine, infrav1.DeviceBootstrapReadyCondition)
+				return isPresentAndTrue(machineKey, hvMachine, infrav1.DeviceBootstrapReadyCondition)
 			}, timeout, time.Second).Should(BeTrue())
 
 			testEnv.GetLogger().Info("############################################################################")
 			testEnv.GetLogger().Info("############################################################################")
 			testEnv.GetLogger().Info("############################################################################")
-			// E0227 21:43:45.573773  375938 controller.go:326]  "msg"="Reconciler error"
-			// "error"="failed to reconcile target secret: failed to acquire secret:
-			// failed to find secret:
-			// secrets \"test1-5dp9s-kubeconfig\" not found" "HivelocityCluster"={"name":"hv-test1",
-			// "namespace":"hivelocitymachine-reconciler-892ln"}
-			// "controller"="hivelocitycluster" "controllerGroup"="infrastructure.cluster.x-k8s.io"
-			// "controllerKind"="HivelocityCluster" "name"="hv-test1"
-			// "namespace"="hivelocitymachine-reconciler-892ln"
-			// "reconcileID"="423f4888-a685-4c36-be6e-78ccd04e6c5d"
-			/*Eventually(func() bool {
-				var hivelocityMachine *infrav1.HivelocityMachine
-				if err := testEnv.Get(ctx, key, hivelocityMachine); err != nil {
+
+			Eventually(func() bool {
+				if err := testEnv.Get(ctx, machineKey, hvMachine); err != nil {
 					return false
 				}
-				// todo: get the HivelocityMachine with
-				// ProviderID "hivelocity://" + mock.FreeDeviceID
-				// then wait until the machine is in state ready.
-				// panic(*hivelocityMachine)
+				if hvMachine.Spec.ProviderID == nil {
+					return false
+				}
+				if *hvMachine.Spec.ProviderID == "" {
+					return false
+				}
+				Expect(hvMachine.Status.Ready).Should(BeTrue())
+				Expect(*hvMachine.Spec.ProviderID).Should(Equal(fmt.Sprintf("hivelocity://%d", mock.FreeDeviceID)))
 				return true
 			}, timeout, time.Second).Should(BeTrue())
-			*/
+			hvClient := testEnv.HVClientFactory.NewClient("dummy-key")
+			device, err := hvClient.GetDevice(ctx, mock.FreeDeviceID)
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(device.Tags).Should(BeEquivalentTo([]string{"caphv-device-type=hvCustom",
+				"caphv-cluster-name=hv-test1",
+				fmt.Sprintf("caphv-machine-name=%s", hvMachine.Name)}))
 		})
 	})
-
 })
 
 var _ = Describe("Hivelocity secret", func() {

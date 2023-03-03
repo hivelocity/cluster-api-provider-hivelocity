@@ -104,8 +104,23 @@ func (c *realClient) PowerOnDevice(ctx context.Context, deviceID int32) error {
 }
 
 func (c *realClient) ProvisionDevice(ctx context.Context, deviceID int32, opts hv.BareMetalDeviceUpdate) (hv.BareMetalDevice, error) {
+	device, err := c.GetDevice(ctx, deviceID)
+	if err != nil {
+		return hv.BareMetalDevice{}, fmt.Errorf("[ProvisionDevice] GetDevice() failed. deviceID %d: %w",
+			deviceID, err)
+	}
+
+	// FIXME: state-machine: After powering off, we need to wait until the device is off.
+	if device.PowerStatus == PowerStatusOn {
+		_, _, err := c.client.DeviceApi.PostPowerResource(ctx, deviceID, "shutdown", nil) //nolint:bodyclose // Close() gets done in client
+		if err != nil {
+			return hv.BareMetalDevice{}, fmt.Errorf("[ProvisionDevice] PostPowerResource() failed. deviceID %d: %w",
+				deviceID, err)
+		}
+	}
+
 	// https://developers.hivelocity.net/reference/put_bare_metal_device_id_resource
-	device, _, err := c.client.BareMetalDevicesApi.PutBareMetalDeviceIdResource(ctx, deviceID, opts, nil) //nolint:bodyclose // Close() gets done in client
+	device, _, err = c.client.BareMetalDevicesApi.PutBareMetalDeviceIdResource(ctx, deviceID, opts, nil) //nolint:bodyclose // Close() gets done in client
 	return device, err
 }
 

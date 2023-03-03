@@ -84,13 +84,30 @@ var WithPrimaryIPDevice = hv.BareMetalDevice{
 }
 
 type mockedHVClient struct {
-	store deviceStore
+	store *deviceStore
 }
 
 var _ hvclient.Client = &mockedHVClient{}
 
 // NewClient gives reference to the mock client using the in memory store.
 func (f *mockedHVClientFactory) NewClient(hvAPIKey string) hvclient.Client {
+	return &mockedHVClient{
+		store: f.store,
+	}
+}
+
+// Close implements Close method of HV client interface.
+func (c *mockedHVClient) Close() {
+}
+
+type mockedHVClientFactory struct {
+	store *deviceStore
+}
+
+// NewMockedHVClientFactory creates new mock Hivelocity client factories using the in memory store.
+// We re-use the client, so that changes done in Reconcile() are visible in the
+// tests.
+func NewMockedHVClientFactory() hvclient.Factory {
 	var store deviceStore
 	devices := []hv.BareMetalDevice{
 		FreeDevice,
@@ -102,24 +119,7 @@ func (f *mockedHVClientFactory) NewClient(hvAPIKey string) hvclient.Client {
 	for i := range devices {
 		store.idMap[devices[i].DeviceId] = &devices[i]
 	}
-	client := &mockedHVClient{
-		store: store,
-	}
-	return client
-}
-
-// Close implements Close method of HV client interface.
-func (c *mockedHVClient) Close() {
-	c.store = deviceStore{
-		idMap: make(map[int32]*hv.BareMetalDevice),
-	}
-}
-
-type mockedHVClientFactory struct{}
-
-// NewHVClientFactory creates new mock Hivelocity client factories using the in memory store.
-func NewHVClientFactory() hvclient.Factory {
-	return &mockedHVClientFactory{}
+	return &mockedHVClientFactory{store: &store}
 }
 
 var _ = hvclient.Factory(&mockedHVClientFactory{})
@@ -142,29 +142,11 @@ func (c *mockedHVClient) ListImages(ctx context.Context, productID int32) ([]str
 }
 
 func (c *mockedHVClient) ProvisionDevice(ctx context.Context, deviceID int32, opts hv.BareMetalDeviceUpdate) (hv.BareMetalDevice, error) {
-	device := hv.BareMetalDevice{
-		Hostname:                 "",
-		PrimaryIp:                "",
-		Tags:                     []string{},
-		CustomIPXEScriptURL:      "",
-		LocationName:             "",
-		ServiceId:                0,
-		DeviceId:                 deviceID,
-		ProductName:              "",
-		VlanId:                   0,
-		Period:                   "",
-		PublicSshKeyId:           0,
-		Script:                   "",
-		PowerStatus:              "",
-		CustomIPXEScriptContents: "",
-		OrderId:                  0,
-		OsName:                   "",
-		ProductId:                0,
+	device, ok := c.store.idMap[deviceID]
+	if !ok {
+		return hv.BareMetalDevice{}, fmt.Errorf("[ProvisionDevice] deviceID %d unknown", deviceID)
 	}
-
-	// Add device to store
-	c.store.idMap[device.DeviceId] = &device
-	return device, nil
+	return *device, nil
 }
 
 func (c *mockedHVClient) ListDevices(ctx context.Context) ([]*hv.BareMetalDevice, error) {
