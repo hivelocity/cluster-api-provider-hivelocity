@@ -33,6 +33,16 @@ func Test_SetTags(t *testing.T) {
 	require.ElementsMatch(t, device.Tags, []string{"tag1", "tag2"})
 }
 
+func Test_GetDevice(t *testing.T) {
+	client := NewMockedHVClientFactory().NewClient("dummy-key")
+	ctx := context.Background()
+	device, err := client.GetDevice(ctx, FreeDeviceID)
+	require.NoError(t, err)
+	require.Equal(t, int32(FreeDeviceID), device.DeviceId)
+
+	device, err = client.GetDevice(ctx, -1)
+	require.Error(t, err)
+}
 func Test_NewMockedHVClientFactory(t *testing.T) {
 	factory := NewMockedHVClientFactory()
 	client := factory.NewClient("dummy-key")
