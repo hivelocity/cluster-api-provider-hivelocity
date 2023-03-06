@@ -1,0 +1,12 @@
+name: hivelocity
+config:
+  image: ghcr.io/hiveolcity/caphv-staging
+  live_reload_deps:
+    - main.go
+    - go.mod
+    - go.sum
+    - api
+    - pkg
+    - controllers
+  label: CAPHV
+  manager_name: caphv-controller-manager

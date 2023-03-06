@@ -17,6 +17,7 @@
 
 set -o errexit
 set -o pipefail
+set -x
 
 K8S_VERSION=v1.25.2
 

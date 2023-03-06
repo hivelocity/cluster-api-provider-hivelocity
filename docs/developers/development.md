@@ -7,45 +7,33 @@ Developing our provider is quite easy. First, you need to install some base requ
 In order to develop with Tilt, there are a few requirements. You can use the following command to check whether the versions of the tools are up-to-date and to install ones that are missing (for both mac & linux): `make install-dev-prerequisites`
 
 This ensures the following:
-- clusterctl>
+- clusterctl
 - ctlptl (required)
 - go (required)
 - helm (required)
-- helmfile
 - kind (required)
 - kubectl (required)
-- packer
 - tilt (required)
 
-Some of them like helmfile or packer are not needed for developing the controller, but very helpful if you are developing images or stuff for production use.
-
-## Preparing Hivelocity project
-
-For more information, please see [here](/docs/topics/preparation.md).
 
 ## Setting Tilt up
 
-You need to create a ```tilt-settings.json``` file and specify the values you need. Here is an example:
+You need to create a ```tilt-settings.yaml``` file and specify the values you need. Here is an example:
 
-```json
-{
-  "kustomize_substitutions": {
-      "HIVELOCITY_API_KEY": "<api-key>",
-      "HIVELOCITY_SSH_KEY": "test",
-      "HIVELOCITY_REGION": "LAX1",
-      "CONTROL_PLANE_MACHINE_COUNT": "3",
-      "WORKER_MACHINE_COUNT": "3",
-      "KUBERNETES_VERSION": "v1.25.2",
-      "HIVELOCITY_IMAGE_NAME": "1.25.2-ubuntu-20.04-containerd",
-      "HIVELOCITY_CONTROL_PLANE_MACHINE_TYPE": "todo",
-      "HIVELOCITY_WORKER_MACHINE_TYPE": "todo",
-      "CLUSTER_NAME": "testing",
-  },
-  "talos-bootstrap": "false"
-}
+```yaml
+kustomize_substitutions:
+  HIVELOCITY_API_KEY: dummy-key
+  HIVELOCITY_SSH_KEY: test
+  HIVELOCITY_REGION: LAX1
+  CONTROL_PLANE_MACHINE_COUNT: "3"
+  WORKER_MACHINE_COUNT: "3"
+  KUBERNETES_VERSION: v1.25.2
+  HIVELOCITY_IMAGE_NAME: 1.25.2-ubuntu-20.04-containerd
+  HIVELOCITY_CONTROL_PLANE_MACHINE_TYPE: todo
+  HIVELOCITY_WORKER_MACHINE_TYPE: todo
+  CLUSTER_NAME: testing
 ```
 
-The whole reference can be found [here](/docs/developers/tilt.md).
 ## Developing with Tilt
 
 <p align="center">
@@ -60,7 +48,7 @@ make tilt-up
 > To access the Tilt UI please go to: `http://localhost:10350`
 
 
-Once your kind management cluster is up and running, you can deploy a workload cluster. This could be done through the Tilt UI, by pressing one of the buttons in the top right corner, e.g. "Create Workload Cluster - without Packer". This triggers the `make create-workload-cluster`, which uses the environment variables (we defined in the tilt-settings.json) and the cluster-template. Additionally, it installs cilium as CNI.
+Once your kind management cluster is up and running, you can deploy a workload cluster. This could be done through the Tilt UI, by pressing one of the buttons in the top right corner, e.g. "Create Hivelocity Cluster". This triggers the `make create-workload-cluster`, which uses the environment variables (we defined in the tilt-settings.yaml) and the cluster-template. Additionally, it installs cilium as CNI.
 
 If you update the API in some way, you need to run `make generate` in order to generate everything related to kubebuilder and the CRDs.
 

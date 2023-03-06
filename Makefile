@@ -107,6 +107,22 @@ install-dev-prerequisites: ## Installs all necessary dependencies
 	$(MAKE) install-clusterctl
 	@echo "Finished: All dependencies up to date"
 
+KUSTOMIZE := $(abspath $(TOOLS_BIN_DIR)/kustomize)
+kustomize: $(KUSTOMIZE) ## Build a local copy of kustomize
+$(KUSTOMIZE): # Build kustomize from tools folder.
+	cd $(TOOLS_DIR) && go build -tags=tools -o $(KUSTOMIZE) sigs.k8s.io/kustomize/kustomize/v4
+
+TILT := $(abspath $(TOOLS_BIN_DIR)/tilt)
+tilt: $(TILT) ## Build a local copy of tilt
+$(TILT):
+	@mkdir -p $(TOOLS_BIN_DIR)
+	MINIMUM_TILT_VERSION=0.31.2 hack/ensure-tilt.sh
+
+ENVSUBST := $(abspath $(TOOLS_BIN_DIR)/envsubst)
+envsubst: $(ENVSUBST) ## Build a local copy of envsubst
+$(ENVSUBST): $(TOOLS_DIR)/go.mod # Build envsubst from tools folder.
+	cd $(TOOLS_DIR) && go build -tags=tools -o $(ENVSUBST) github.com/drone/envsubst/v2/cmd/envsubst
+
 ##@ Development
 
 .PHONY: generate
@@ -191,15 +207,15 @@ ifndef ignore-not-found
 endif
 
 .PHONY: install
-install: generate-manifests kustomize ## Install CRDs into the K8s cluster specified in ~/.kube/config.
+install: generate-manifests $(KUSTOMIZE) ## Install CRDs into the K8s cluster specified in ~/.kube/config.
 	$(KUSTOMIZE) build config/crd | kubectl apply -f -
 
 .PHONY: uninstall
-uninstall: generate-manifests kustomize ## Uninstall CRDs from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
+uninstall: generate-manifests $(KUSTOMIZE) ## Uninstall CRDs from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
 	$(KUSTOMIZE) build config/crd | kubectl delete --ignore-not-found=$(ignore-not-found) -f -
 
 .PHONY: deploy
-deploy: generate-manifests kustomize ## Deploy controller to the K8s cluster specified in ~/.kube/config.
+deploy: generate-manifests $(KUSTOMIZE) ## Deploy controller to the K8s cluster specified in ~/.kube/config.
 	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
 	$(KUSTOMIZE) build config/default | kubectl apply -f -
 
@@ -215,23 +231,11 @@ $(LOCALBIN):
 	mkdir -p $(LOCALBIN)
 
 ## Tool Binaries
-KUSTOMIZE ?= $(LOCALBIN)/kustomize
 CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
 ENVTEST ?= $(LOCALBIN)/setup-envtest
 
 ## Tool Versions
-KUSTOMIZE_VERSION ?= v4.5.7
 CONTROLLER_TOOLS_VERSION ?= v0.10.0
-
-KUSTOMIZE_INSTALL_SCRIPT ?= "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh"
-.PHONY: kustomize
-kustomize: $(KUSTOMIZE) ## Download kustomize locally if necessary. If wrong version is installed, it will be removed before downloading.
-$(KUSTOMIZE): $(LOCALBIN)
-	@if test -x $(LOCALBIN)/kustomize && ! $(LOCALBIN)/kustomize version | grep -q $(KUSTOMIZE_VERSION); then \
-		echo "$(LOCALBIN)/kustomize version is not expected $(KUSTOMIZE_VERSION). Removing it before installing."; \
-		rm -rf $(LOCALBIN)/kustomize; \
-	fi
-	test -s $(LOCALBIN)/kustomize || { curl -Ss $(KUSTOMIZE_INSTALL_SCRIPT) | bash -s -- $(subst v,,$(KUSTOMIZE_VERSION)) $(LOCALBIN); }
 
 .PHONY: controller-gen
 controller-gen: $(CONTROLLER_GEN) ## Download controller-gen locally if necessary. If wrong version is installed, it will be overwritten.
@@ -309,6 +313,61 @@ verify-shellcheck: ## Verify shell files
 verify-tiltfile: ## Verify Tiltfile format
 	./hack/verify-starlark.sh
 
+
+wait-and-get-secret:
+	# Wait for the kubeconfig to become available.
+	${TIMEOUT} 5m bash -c "while ! kubectl get secrets | grep $(CLUSTER_NAME)-kubeconfig; do sleep 1; done"
+	# Get kubeconfig and store it locally.
+	kubectl get secrets $(CLUSTER_NAME)-kubeconfig -o json | jq -r .data.value | base64 --decode > $(CAPHV_WORKER_CLUSTER_KUBECONFIG)
+	${TIMEOUT} 15m bash -c "while ! kubectl --kubeconfig=$(CAPHV_WORKER_CLUSTER_KUBECONFIG) get nodes | grep control-plane; do sleep 1; done"
+
+
+install-manifests-cilium:
+	# Deploy cilium
+	helm repo add cilium https://helm.cilium.io/
+	helm repo update cilium
+	KUBECONFIG=$(CAPHV_WORKER_CLUSTER_KUBECONFIG) helm upgrade --install cilium cilium/cilium --version 1.12.2 \
+  	--namespace kube-system \
+	-f templates/cilium/cilium.yaml
+
+
+install-manifests-ccm:
+	# Deploy Hivelocity Cloud Controller Manager
+	helm repo add hivelocity https://charts.hivelocity.com
+	helm repo update hivelocity
+	KUBECONFIG=$(CAPHV_WORKER_CLUSTER_KUBECONFIG) helm upgrade --install ccm hivelocity/ccm-hivelocity --version 1.0.11 \
+	--namespace kube-system \
+	--set secret.name=hivelocity \
+	--set secret.key=hivelocity
+	@echo 'run "kubectl --kubeconfig=$(CAPHV_WORKER_CLUSTER_KUBECONFIG) ..." to work with the new target cluster'
+
+
+create-workload-cluster: $(KUSTOMIZE) $(ENVSUBST) ## Creates a workload-cluster. ENV Variables need to be exported or defined in the tilt-settings.yaml
+	# Create workload Cluster.
+	kubectl create secret generic hivelocity --from-literal=hivelocity=$(HIVELOCITY_API_KEY) --save-config --dry-run=client -o yaml | kubectl apply -f -
+	$(KUSTOMIZE) build templates/cluster-templates/hivelocity --load-restrictor LoadRestrictionsNone  > templates/cluster-templates/cluster-template-hivelocity.yaml
+	cat templates/cluster-templates/cluster-template-hivelocity.yaml | $(ENVSUBST) - | kubectl apply -f -
+	$(MAKE) wait-and-get-secret
+	$(MAKE) install-manifests-cilium
+	$(MAKE) install-manifests-ccm
+
+.PHONY: cluster
+cluster: $(CTLPTL) ## Creates kind-dev Cluster
+	./hack/kind-dev.sh
+
+.PHONY: delete-cluster
+delete-cluster: $(CTLPTL) ## Deletes Kind-dev Cluster (default)
+	$(CTLPTL) delete cluster kind-caphv
+
+.PHONY: delete-registry
+delete-registry: $(CTLPTL) ## Deletes Kind-dev Cluster and the local registry
+	$(CTLPTL) delete registry caphv-registry
+
+.PHONY: delete-cluster-registry
+delete-cluster-registry: $(CTLPTL) ## Deletes Kind-dev Cluster and the local registry
+	$(CTLPTL) delete cluster kind-caphv
+	$(CTLPTL) delete registry caphv-registry
+
 ##@ Clean
 
 .PHONY: clean
@@ -380,3 +439,8 @@ set-manifest-image:
 set-manifest-pull-policy:
 	$(info Updating kustomize pull policy file for default resource)
 	sed -i'' -e 's@imagePullPolicy: .*@imagePullPolicy: '"$(PULL_POLICY)"'@' ./config/default/manager_pull_policy.yaml
+
+
+.PHONY: tilt-up
+tilt-up: $(ENVSUBST) $(KUSTOMIZE) $(TILT) cluster  ## Start a mgt-cluster & Tilt. Installs the CRDs and deploys the controllers
+	EXP_CLUSTER_RESOURCE_SET=true $(TILT) up

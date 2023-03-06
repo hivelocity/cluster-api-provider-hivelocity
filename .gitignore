@@ -35,6 +35,7 @@ docs/book/book
 .tiltbuild
 /tilt.d
 tilt-settings.json
+tilt-settings.yaml
 tilt_config.json
 
 # kubeconfigs
