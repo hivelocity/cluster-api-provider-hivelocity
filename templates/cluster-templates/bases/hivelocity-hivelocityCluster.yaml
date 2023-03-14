@@ -1,0 +1,12 @@
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+kind: HivelocityCluster
+metadata:
+  name: "${CLUSTER_NAME}"
+spec:
+  controlPlaneEndpoint:
+    host: ""
+    port: 443
+  hvSecretRef:
+    name: hivelocity
+    key:
+      hvAPIKey: hivelocity

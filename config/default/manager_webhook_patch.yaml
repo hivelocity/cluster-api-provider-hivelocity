@@ -3,7 +3,7 @@ kind: Deployment
 metadata:
   name: controller-manager
   namespace: system
-spec:
+Spec:
   template:
     spec:
       containers:
@@ -20,4 +20,4 @@ spec:
       - name: cert
         secret:
           defaultMode: 420
-          secretName: webhook-server-cert
+          secretName: caphv-webhook-server-cert

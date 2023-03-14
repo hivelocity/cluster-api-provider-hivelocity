@@ -7,4 +7,5 @@ spec:
   template:
     spec:
       containers:
-      - name: manager
+        - image: ghcr.io/hivelocity/caphv-staging:latest
+          name: manager
