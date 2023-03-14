@@ -3,7 +3,7 @@ kind: Deployment
 metadata:
   name: controller-manager
   namespace: system
-Spec:
+spec:
   template:
     spec:
       containers:
