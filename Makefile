@@ -123,6 +123,11 @@ envsubst: $(ENVSUBST) ## Build a local copy of envsubst
 $(ENVSUBST): $(TOOLS_DIR)/go.mod # Build envsubst from tools folder.
 	cd $(TOOLS_DIR) && go build -tags=tools -o $(ENVSUBST) github.com/drone/envsubst/v2/cmd/envsubst
 
+CTLPTL := $(abspath $(TOOLS_BIN_DIR)/ctlptl)
+ctlptl: $(CTLPTL) ## Build a local copy of ctlptl
+$(CTLPTL):
+	cd $(TOOLS_DIR) && go build -tags=tools -o $(CTLPTL) github.com/tilt-dev/ctlptl/cmd/ctlptl
+
 ##@ Development
 
 .PHONY: generate
