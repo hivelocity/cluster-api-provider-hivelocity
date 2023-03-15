@@ -13,7 +13,7 @@ require (
 	gotest.tools/gotestsum v1.8.2
 	k8s.io/apimachinery v0.26.1
 	k8s.io/code-generator v0.26.1
-	sigs.k8s.io/cluster-api/hack/tools v0.0.0-20230314083514-821b957fc46e
+	sigs.k8s.io/cluster-api/hack/tools v0.0.0-20230315091215-a32f66e74575
 	sigs.k8s.io/controller-runtime/tools/setup-envtest v0.0.0-20230110013913-9fd57745d6e9
 	sigs.k8s.io/controller-tools v0.11.3
 	sigs.k8s.io/kind v0.17.0
@@ -232,7 +232,7 @@ require (
 	k8s.io/api v0.26.1 // indirect
 	k8s.io/apiextensions-apiserver v0.26.1 // indirect
 	k8s.io/gengo v0.0.0-20220902162205-c0856e24416d // indirect
-	k8s.io/klog v0.2.0 // indirect
+	k8s.io/klog v1.0.0 // indirect
 	k8s.io/klog/v2 v2.80.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20221012153701-172d655c2280 // indirect
 	k8s.io/utils v0.0.0-20221128185143-99ec85e7a448 // indirect
