@@ -104,7 +104,7 @@ func cliTestListSSHKeys(ctx context.Context, client hvclient.Client) {
 
 func cliTestProvisionDevice(ctx context.Context, client hvclient.Client) {
 	opts := hv.BareMetalDeviceUpdate{
-		Hostname: "my-host-name",
+		Hostname: "my-host-name.example.com",
 		//Tags:     createTags("my-cluster-name", "my-host-name", false),
 		OsName:         "Ubuntu 20.x",
 		PublicSshKeyId: 861,

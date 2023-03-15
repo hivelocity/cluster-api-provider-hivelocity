@@ -216,8 +216,8 @@ github.com/googleapis/gax-go/v2 v2.0.5/go.mod h1:DWXyrwAJ9X0FpwwEdw+IPEYBICEFu5m
 github.com/grpc-ecosystem/grpc-gateway v1.16.0/go.mod h1:BDjrQk3hbvj6Nolgz8mAMFbcEtjT1g+wF4CSlocrBnw=
 github.com/hashicorp/golang-lru v0.5.0/go.mod h1:/m3WP610KZHVQ1SGc6re/UDhFvYD7pJ4Ao+sR/qLZy8=
 github.com/hashicorp/golang-lru v0.5.1/go.mod h1:/m3WP610KZHVQ1SGc6re/UDhFvYD7pJ4Ao+sR/qLZy8=
-github.com/hivelocity/hivelocity-client-go v0.0.0-20230106093321-16f5bd3d1549 h1:1MwGMLXML20I4+vCfQ/G6PJrfSF2UembK2Yq4W7gxiE=
-github.com/hivelocity/hivelocity-client-go v0.0.0-20230106093321-16f5bd3d1549/go.mod h1:gKeqEaDIfjKH8pJwWk5Cj4ElSm0V6NcuOwap/X1xY4E=
+github.com/hivelocity/hivelocity-client-go v0.0.0-20230315095904-d7d852547cc7 h1:hfqakLLDjAYLwZUzGij172kY6ys7EUEIHb/e2MxbHmk=
+github.com/hivelocity/hivelocity-client-go v0.0.0-20230315095904-d7d852547cc7/go.mod h1:gKeqEaDIfjKH8pJwWk5Cj4ElSm0V6NcuOwap/X1xY4E=
 github.com/huandu/xstrings v1.3.3 h1:/Gcsuc1x8JVbJ9/rlye4xZnVAbEkGauT8lbebqcQws4=
 github.com/ianlancetaylor/demangle v0.0.0-20181102032728-5e5cf60278f6/go.mod h1:aSSvb/t6k1mPoxDqO4vJh6VOCGPwU4O0C2/Eqndh1Sc=
 github.com/imdario/mergo v0.3.13 h1:lFzP57bqS/wsqKssCGmtLAb8A0wKjLGrve2q3PPVcBk=
