@@ -128,6 +128,12 @@ ctlptl: $(CTLPTL) ## Build a local copy of ctlptl
 $(CTLPTL):
 	cd $(TOOLS_DIR) && go build -tags=tools -o $(CTLPTL) github.com/tilt-dev/ctlptl/cmd/ctlptl
 
+install-crds: generate-manifests $(KUSTOMIZE) ## Install CRDs into the K8s cluster specified in ~/.kube/config.
+	$(KUSTOMIZE) build config/crd | kubectl apply -f -
+
+uninstall-crds: generate-manifests $(KUSTOMIZE) ## Uninstall CRDs from the K8s cluster specified in ~/.kube/config.
+	$(KUSTOMIZE) build config/crd | kubectl delete -f -
+
 ##@ Development
 
 .PHONY: generate
@@ -321,6 +327,7 @@ verify-tiltfile: ## Verify Tiltfile format
 
 wait-and-get-secret:
 	# Wait for the kubeconfig to become available.
+	@test $${CLUSTER_NAME?Environment variable is required}
 	${TIMEOUT} 5m bash -c "while ! kubectl get secrets | grep $(CLUSTER_NAME)-kubeconfig; do sleep 1; done"
 	# Get kubeconfig and store it locally.
 	kubectl get secrets $(CLUSTER_NAME)-kubeconfig -o json | jq -r .data.value | base64 --decode > $(CAPHV_WORKER_CLUSTER_KUBECONFIG)
@@ -348,7 +355,9 @@ install-manifests-ccm:
 
 
 create-workload-cluster: $(KUSTOMIZE) $(ENVSUBST) ## Creates a workload-cluster. ENV Variables need to be exported or defined in the tilt-settings.yaml
-	# Create workload Cluster.
+	# Create workload Cluster. This is usually called via Tilt.
+	@test $${CLUSTER_NAME?Environment variable is required}
+	@test $${HIVELOCITY_API_KEY?Environment variable is required}
 	kubectl create secret generic hivelocity --from-literal=hivelocity=$(HIVELOCITY_API_KEY) --save-config --dry-run=client -o yaml | kubectl apply -f -
 	$(KUSTOMIZE) build templates/cluster-templates/hivelocity --load-restrictor LoadRestrictionsNone  > templates/cluster-templates/cluster-template-hivelocity.yaml
 	cat templates/cluster-templates/cluster-template-hivelocity.yaml | $(ENVSUBST) - | kubectl apply -f -

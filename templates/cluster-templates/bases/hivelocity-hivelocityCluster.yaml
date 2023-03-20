@@ -1,4 +1,4 @@
-apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
 kind: HivelocityCluster
 metadata:
   name: "${CLUSTER_NAME}"
@@ -6,7 +6,8 @@ spec:
   controlPlaneEndpoint:
     host: ""
     port: 443
-  hvSecretRef:
+  hivelocitySecretRef:
     name: hivelocity
-    key:
-      hvAPIKey: hivelocity
+    key: hivelocity
+  sshKey:
+    name: example-name

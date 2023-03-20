@@ -18,33 +18,25 @@ package v1alpha1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 )
 
 // HivelocityClusterTemplateSpec defines the desired state of HivelocityClusterTemplate.
 type HivelocityClusterTemplateSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
-
-	// Foo is an example field of HivelocityClusterTemplate. Edit hivelocityclustertemplate_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
+	Template HivelocityClusterTemplateResource `json:"template"`
 }
 
-// HivelocityClusterTemplateStatus defines the observed state of HivelocityClusterTemplate.
-type HivelocityClusterTemplateStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
-}
-
-//+kubebuilder:object:root=true
-//+kubebuilder:subresource:status
+// +kubebuilder:object:root=true
+// +kubebuilder:storageversion
+// +kubebuilder:resource:path=hivelocityclustertemplates,scope=Namespaced,categories=cluster-api,shortName=capihvct
+// +k8s:defaulter-gen=true
 
 // HivelocityClusterTemplate is the Schema for the hivelocityclustertemplates API.
 type HivelocityClusterTemplate struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   HivelocityClusterTemplateSpec   `json:"spec,omitempty"`
-	Status HivelocityClusterTemplateStatus `json:"status,omitempty"`
+	Spec HivelocityClusterTemplateSpec `json:"spec,omitempty"`
 }
 
 //+kubebuilder:object:root=true
@@ -58,4 +50,11 @@ type HivelocityClusterTemplateList struct {
 
 func init() {
 	SchemeBuilder.Register(&HivelocityClusterTemplate{}, &HivelocityClusterTemplateList{})
+}
+
+// HivelocityClusterTemplateResource contains spec for HivelocityClusterSpec.
+type HivelocityClusterTemplateResource struct {
+	// +optional
+	ObjectMeta clusterv1.ObjectMeta  `json:"metadata,omitempty"`
+	Spec       HivelocityClusterSpec `json:"spec"`
 }
