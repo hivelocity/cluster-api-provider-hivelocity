@@ -183,10 +183,11 @@ func (s *Service) updateDevice(ctx context.Context, log logr.Logger, device *hv.
 		return fmt.Errorf("failed to get device image: %w", err)
 	}
 	opts := hv.BareMetalDeviceUpdate{
-		Hostname: s.scope.Name(),
-		Tags:     createTags(s.scope.ClusterScope.Name(), s.scope.Name(), s.scope.IsControlPlane()),
-		Script:   string(userData), // cloud-init script
-		OsName:   image,
+		Hostname:    s.scope.Name(),
+		Tags:        createTags(s.scope.ClusterScope.Name(), s.scope.Name(), s.scope.IsControlPlane()),
+		Script:      string(userData), // cloud-init script
+		OsName:      image,
+		ForceReload: true,
 	}
 
 	if s.scope.HivelocityCluster.Spec.SSHKey != nil {

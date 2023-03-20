@@ -7,7 +7,7 @@ replace sigs.k8s.io/cluster-api => sigs.k8s.io/cluster-api v1.3.1
 require (
 	github.com/go-logr/logr v1.2.3
 	github.com/go-logr/zapr v1.2.3
-	github.com/hivelocity/hivelocity-client-go v0.0.0-20230106093321-16f5bd3d1549
+	github.com/hivelocity/hivelocity-client-go v0.0.0-20230315095904-d7d852547cc7
 	github.com/onsi/ginkgo/v2 v2.6.1
 	github.com/onsi/gomega v1.24.2
 	github.com/pkg/errors v0.9.1
