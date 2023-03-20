@@ -8,7 +8,7 @@ spec:
       cidrBlocks:
         - 10.244.0.0/16
   infrastructureRef:
-    apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+    apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
     kind: HivelocityCluster
     name: "${CLUSTER_NAME}"
   controlPlaneRef:

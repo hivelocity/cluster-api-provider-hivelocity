@@ -9,9 +9,13 @@ metadata:
 spec:
   group: infrastructure.cluster.x-k8s.io
   names:
+    categories:
+    - cluster-api
     kind: HivelocityClusterTemplate
     listKind: HivelocityClusterTemplateList
     plural: hivelocityclustertemplates
+    shortNames:
+    - capihvct
     singular: hivelocityclustertemplate
   scope: Namespaced
   versions:
@@ -37,17 +41,106 @@ spec:
             description: HivelocityClusterTemplateSpec defines the desired state of
               HivelocityClusterTemplate.
             properties:
-              foo:
-                description: Foo is an example field of HivelocityClusterTemplate.
-                  Edit hivelocityclustertemplate_types.go to remove/update
-                type: string
-            type: object
-          status:
-            description: HivelocityClusterTemplateStatus defines the observed state
-              of HivelocityClusterTemplate.
+              template:
+                description: HivelocityClusterTemplateResource contains spec for HivelocityClusterSpec.
+                properties:
+                  metadata:
+                    description: "ObjectMeta is metadata that all persisted resources
+                      must have, which includes all objects users must create. This
+                      is a copy of customizable fields from metav1.ObjectMeta. \n
+                      ObjectMeta is embedded in `Machine.Spec`, `MachineDeployment.Template`
+                      and `MachineSet.Template`, which are not top-level Kubernetes
+                      objects. Given that metav1.ObjectMeta has lots of special cases
+                      and read-only fields which end up in the generated CRD validation,
+                      having it as a subset simplifies the API and some issues that
+                      can impact user experience. \n During the [upgrade to controller-tools@v2](https://github.com/kubernetes-sigs/cluster-api/pull/1054)
+                      for v1alpha2, we noticed a failure would occur running Cluster
+                      API test suite against the new CRDs, specifically `spec.metadata.creationTimestamp
+                      in body must be of type string: \"null\"`. The investigation
+                      showed that `controller-tools@v2` behaves differently than its
+                      previous version when handling types from [metav1](k8s.io/apimachinery/pkg/apis/meta/v1)
+                      package. \n In more details, we found that embedded (non-top
+                      level) types that embedded `metav1.ObjectMeta` had validation
+                      properties, including for `creationTimestamp` (metav1.Time).
+                      The `metav1.Time` type specifies a custom json marshaller that,
+                      when IsZero() is true, returns `null` which breaks validation
+                      because the field isn't marked as nullable. \n In future versions,
+                      controller-tools@v2 might allow overriding the type and validation
+                      for embedded types. When that happens, this hack should be revisited."
+                    properties:
+                      annotations:
+                        additionalProperties:
+                          type: string
+                        description: 'Annotations is an unstructured key value map
+                          stored with a resource that may be set by external tools
+                          to store and retrieve arbitrary metadata. They are not queryable
+                          and should be preserved when modifying objects. More info:
+                          http://kubernetes.io/docs/user-guide/annotations'
+                        type: object
+                      labels:
+                        additionalProperties:
+                          type: string
+                        description: 'Map of string keys and values that can be used
+                          to organize and categorize (scope and select) objects. May
+                          match selectors of replication controllers and services.
+                          More info: http://kubernetes.io/docs/user-guide/labels'
+                        type: object
+                    type: object
+                  spec:
+                    description: HivelocityClusterSpec defines the desired state of
+                      HivelocityCluster.
+                    properties:
+                      controlPlaneEndpoint:
+                        description: ControlPlaneEndpoint represents the endpoint
+                          used to communicate with the control plane.
+                        properties:
+                          host:
+                            description: The hostname on which the API server is serving.
+                            type: string
+                          port:
+                            description: The port on which the API server is serving.
+                            format: int32
+                            type: integer
+                        required:
+                        - host
+                        - port
+                        type: object
+                      hivelocitySecretRef:
+                        description: HivelocitySecret is a reference to a Kubernetes
+                          Secret.
+                        properties:
+                          key:
+                            default: HIVELOCITY_API_KEY
+                            type: string
+                          name:
+                            default: hivelocity
+                            type: string
+                        type: object
+                      sshKey:
+                        description: SSHKey is cluster wide. Valid value is a valid
+                          SSH key name.
+                        properties:
+                          fingerprint:
+                            description: 'Fingerprint of SSH key - added by controller
+                              // question: by controller? I thought by command-line-tool'
+                            type: string
+                          name:
+                            description: Name of SSH key
+                            minLength: 1
+                            type: string
+                        required:
+                        - name
+                        type: object
+                    required:
+                    - hivelocitySecretRef
+                    - sshKey
+                    type: object
+                required:
+                - spec
+                type: object
+            required:
+            - template
             type: object
         type: object
     served: true
     storage: true
-    subresources:
-      status: {}

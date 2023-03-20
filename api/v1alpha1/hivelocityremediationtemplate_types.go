@@ -22,28 +22,38 @@ import (
 
 // HivelocityRemediationTemplateSpec defines the desired state of HivelocityRemediationTemplate.
 type HivelocityRemediationTemplateSpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	Template HivelocityRemediationTemplateResource `json:"template"`
+}
 
-	// Foo is an example field of HivelocityRemediationTemplate. Edit hivelocityremediationtemplate_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
+// HivelocityRemediationTemplateResource describes the data needed to create a HivelocityRemediation from a template.
+type HivelocityRemediationTemplateResource struct {
+	// Spec is the specification of the desired behavior of the HivelocityRemediation.
+	Spec HivelocityRemediationSpec `json:"spec"`
 }
 
 // HivelocityRemediationTemplateStatus defines the observed state of HivelocityRemediationTemplate.
 type HivelocityRemediationTemplateStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
+	// HivelocityRemediationStatus defines the observed state of HivelocityRemediation
+	Status HivelocityRemediationStatus `json:"status"`
 }
 
-//+kubebuilder:object:root=true
-//+kubebuilder:subresource:status
+// +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
+// +kubebuilder:resource:path= hivelocityremediationtemplates,scope=Namespaced,categories=cluster-api,shortName=hvrt;hvremediationtemplate;hvremediationtemplates; hivelocityrt; hivelocityremediationtemplate
+// +kubebuilder:subresource:status
+// +kubebuilder:object:root=true
+// +kubebuilder:storageversion
+// +kubebuilder:printcolumn:name="Strategy",type=string,JSONPath=".spec.template.spec.strategy.type",description="Type of the remediation strategy"
+// +kubebuilder:printcolumn:name="Retry limit",type=string,JSONPath=".spec.template.spec.strategy.retryLimit",description="How many times remediation controller should attempt to remediate the host"
+// +kubebuilder:printcolumn:name="Timeout",type=string,JSONPath=".spec.template.spec.strategy.timeout",description="Timeout for the remediation"
 
-// HivelocityRemediationTemplate is the Schema for the hivelocityremediationtemplates API.
+// HivelocityRemediationTemplate is the Schema for the  hivelocityremediationtemplates API.
 type HivelocityRemediationTemplate struct {
-	metav1.TypeMeta   `json:",inline"`
+	metav1.TypeMeta `json:",inline"`
+	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty"`
-
-	Spec   HivelocityRemediationTemplateSpec   `json:"spec,omitempty"`
+	// +optional
+	Spec HivelocityRemediationTemplateSpec `json:"spec,omitempty"`
+	// +optional
 	Status HivelocityRemediationTemplateStatus `json:"status,omitempty"`
 }
 
@@ -52,6 +62,7 @@ type HivelocityRemediationTemplate struct {
 // HivelocityRemediationTemplateList contains a list of HivelocityRemediationTemplate.
 type HivelocityRemediationTemplateList struct {
 	metav1.TypeMeta `json:",inline"`
+	// +optional
 	metav1.ListMeta `json:"metadata,omitempty"`
 	Items           []HivelocityRemediationTemplate `json:"items"`
 }
