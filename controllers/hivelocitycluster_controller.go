@@ -153,7 +153,7 @@ func (r *HivelocityClusterReconciler) Reconcile(ctx context.Context, req ctrl.Re
 
 func (r *HivelocityClusterReconciler) reconcileNormal(ctx context.Context, clusterScope *scope.ClusterScope) (ctrl.Result, error) {
 	log := clusterScope.Logger
-	log.V(1).Info("Reconciling HivelocityCluster")
+	log.V(1).Info("Reconciling HivelocityCluster oooooooooooooooooooooooooooooooooooooooooo")
 
 	hvCluster := clusterScope.HivelocityCluster
 
@@ -167,6 +167,12 @@ func (r *HivelocityClusterReconciler) reconcileNormal(ctx context.Context, clust
 	// set failure domains in status using information in spec
 	clusterScope.SetStatusFailureDomain(clusterScope.GetSpecRegion())
 	*/
+
+	hvCluster.Spec.ControlPlaneEndpoint = &clusterv1.APIEndpoint{
+		Host: "66.165.243.74",
+		Port: 443,
+	}
+	hvCluster.Status.Ready = true
 
 	if err := r.reconcileTargetClusterManager(ctx, clusterScope); err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed to reconcile target cluster manager: %w", err)

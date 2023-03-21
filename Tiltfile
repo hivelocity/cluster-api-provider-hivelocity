@@ -37,7 +37,7 @@ settings = {
     },
 }
 
-keys = ["HIVELOCITY_API_KEY", "HIVELOCITY_SSH_KEY"]
+keys = ["HIVELOCITY_SSH_KEY"]
 
 # global settings
 settings.update(read_yaml(

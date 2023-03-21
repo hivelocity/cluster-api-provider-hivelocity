@@ -128,6 +128,11 @@ spec:
                   - type
                   type: object
                 type: array
+              ready:
+                default: false
+                type: boolean
+            required:
+            - ready
             type: object
         type: object
     served: true

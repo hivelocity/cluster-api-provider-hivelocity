@@ -48,6 +48,9 @@ type HivelocityClusterStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
+	// +kubebuilder:default=false
+	Ready bool `json:"ready"`
+
 	Conditions clusterv1.Conditions `json:"conditions,omitempty"`
 }
 
