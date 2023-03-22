@@ -40,9 +40,9 @@ spec:
       jsonPath: .status.ready
       name: Ready
       type: string
-    - description: Hivelocity device ID
+    - description: ProviderID of machine object
       jsonPath: .spec.providerID
-      name: DeviceID
+      name: ProviderID
       type: string
     - description: Machine object which owns with this HivelocityMachine
       jsonPath: .metadata.ownerReferences[?(@.kind=="Machine")].name
@@ -107,7 +107,7 @@ spec:
             description: HivelocityMachineStatus defines the observed state of HivelocityMachine.
             properties:
               addresses:
-                description: Addresses contains the devices's associated addresses.
+                description: Addresses contains the machine's associated addresses.
                 items:
                   description: MachineAddress contains information for the node's
                     address.

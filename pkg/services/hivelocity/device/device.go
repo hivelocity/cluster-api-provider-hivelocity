@@ -82,8 +82,8 @@ func (s *Service) Reconcile(ctx context.Context) (_ ctrl.Result, err error) {
 		log.Info("Bootstrap not ready - requeuing")
 		conditions.MarkFalse(
 			s.scope.HivelocityMachine,
-			infrav1.DeviceBootstrapReadyCondition,
-			infrav1.DeviceBootstrapNotReadyReason,
+			infrav1.MachineBootstrapReadyCondition,
+			infrav1.MachineBootstrapNotReadyReason,
 			clusterv1.ConditionSeverityInfo,
 			"bootstrap not ready yet",
 		)
@@ -92,7 +92,7 @@ func (s *Service) Reconcile(ctx context.Context) (_ ctrl.Result, err error) {
 
 	conditions.MarkTrue(
 		s.scope.HivelocityMachine,
-		infrav1.DeviceBootstrapReadyCondition,
+		infrav1.MachineBootstrapReadyCondition,
 	)
 
 	initialState := s.scope.HivelocityMachine.Spec.Status.ProvisioningState
@@ -129,9 +129,9 @@ func (s *Service) getSSHKeyIDFromSSHKeyName(ctx context.Context, sshKey *infrav1
 		sshKey.Name)
 }
 
-// Delete implements delete method of the HV device.
+// Delete implements delete method of the HivelocityMachine.
 func (s *Service) Delete(ctx context.Context) (_ *ctrl.Result, err error) {
-	// find current device
+	// find associated device
 	device, err := s.getAssociatedDevice(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to find device: %w", err)
@@ -237,7 +237,7 @@ func createTags(clusterName, machineName string, isControlPlane bool) []string {
 	}
 }
 
-// setMachineAddress gets the address from the device and sets it on the Machine object.
+// setMachineAddress gets the address from the device and sets it on the HivelocityMachine object.
 func setMachineAddress(hvMachine *infrav1.HivelocityMachine, hvDevice *hv.BareMetalDevice) {
 	hvMachine.Status.Addresses = []clusterv1.MachineAddress{
 		{
