@@ -404,6 +404,9 @@ func (s *Service) chooseDevice(ctx context.Context) (*hv.BareMetalDevice, error)
 func (s *Service) deviceExists(ctx context.Context, deviceID int32) (bool, error) {
 	// question: should we check if the device is in the current cluster first?
 	device, err := s.scope.HVClient.GetDevice(ctx, deviceID)
+	if errors.Is(err, hvclient.ErrDeviceNotFound) {
+		return false, nil
+	}
 	if err != nil {
 		return false, err
 	}

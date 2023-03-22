@@ -45,6 +45,8 @@ type Client interface {
 	DeleteDevice(ctx context.Context, deviceID int32) error
 	ListImages(ctx context.Context, productID int32) ([]string, error)
 	ListSSHKeys(context.Context) ([]hv.SshKeyResponse, error)
+
+	// GetDevice return the device. If the device is not found ErrDeviceNotFound is returned.
 	GetDevice(ctx context.Context, deviceID int32) (hv.BareMetalDevice, error)
 
 	// SetTags sets the tags to the given list.
@@ -86,6 +88,15 @@ func (c *realClient) Close() {}
 func (c *realClient) GetDevice(ctx context.Context, deviceID int32) (hv.BareMetalDevice, error) {
 	// https://developers.hivelocity.net/reference/get_bare_metal_device_id_resource
 	device, _, err := c.client.BareMetalDevicesApi.GetBareMetalDeviceIdResource(ctx, deviceID, nil) //nolint:bodyclose // Close() gets done in client
+	if err == nil {
+		return device, nil
+	}
+	var swaggerErr hv.GenericSwaggerError
+	if errors.As(err, &swaggerErr) {
+		if strings.HasPrefix(swaggerErr.Error(), fmt.Sprint(http.StatusNotFound)) {
+			return device, ErrDeviceNotFound
+		}
+	}
 	return device, err
 }
 
