@@ -34,10 +34,10 @@ const (
 )
 
 const (
-	// DeviceBootstrapReadyCondition reports on current status of the device. BootstrapReady indicates the bootstrap is ready.
-	DeviceBootstrapReadyCondition clusterv1.ConditionType = "DeviceBootstrapReady"
-	// DeviceBootstrapNotReadyReason bootstrap not ready yet.
-	DeviceBootstrapNotReadyReason = "DeviceBootstrapNotReady"
+	// MachineBootstrapReadyCondition reports on current status of the machine. BootstrapReady indicates the bootstrap is ready.
+	MachineBootstrapReadyCondition clusterv1.ConditionType = "MachineBootstrapReady"
+	// MachineBootstrapNotReadyReason bootstrap not ready yet.
+	MachineBootstrapNotReadyReason = "MachineBootstrapNotReady"
 )
 
 const (

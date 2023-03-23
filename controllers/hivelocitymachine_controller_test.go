@@ -173,7 +173,7 @@ var _ = Describe("HivelocityMachineReconciler", func() {
 				if err := testEnv.Get(ctx, machineKey, hvMachine); err != nil {
 					return false
 				}
-				return isPresentAndFalseWithReason(machineKey, hvMachine, infrav1.DeviceBootstrapReadyCondition, infrav1.DeviceBootstrapNotReadyReason)
+				return isPresentAndFalseWithReason(machineKey, hvMachine, infrav1.MachineBootstrapReadyCondition, infrav1.MachineBootstrapNotReadyReason)
 			}, timeout, time.Second).Should(BeTrue())
 
 			By("setting the bootstrap data")
@@ -195,9 +195,9 @@ var _ = Describe("HivelocityMachineReconciler", func() {
 				if err := testEnv.Get(ctx, machineKey, hvMachine); err != nil {
 					return false
 				}
-				objectCondition := conditions.Get(hvMachine, infrav1.DeviceBootstrapReadyCondition)
+				objectCondition := conditions.Get(hvMachine, infrav1.MachineBootstrapReadyCondition)
 				fmt.Println(objectCondition)
-				return isPresentAndTrue(machineKey, hvMachine, infrav1.DeviceBootstrapReadyCondition)
+				return isPresentAndTrue(machineKey, hvMachine, infrav1.MachineBootstrapReadyCondition)
 			}, timeout, time.Second).Should(BeTrue())
 
 			testEnv.GetLogger().Info("############################################################################")

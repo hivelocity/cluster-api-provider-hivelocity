@@ -113,7 +113,7 @@ type HivelocityMachineStatus struct {
 	// +optional
 	Ready bool `json:"ready"`
 
-	// Addresses contains the devices's associated addresses.
+	// Addresses contains the machine's associated addresses.
 	Addresses []clusterv1.MachineAddress `json:"addresses,omitempty"`
 
 	// Region contains the name of the Hivelocity location the device is running.
@@ -148,7 +148,7 @@ type HivelocityMachineStatus struct {
 // +kubebuilder:printcolumn:name="Type",type="string",JSONPath=".spec.type",description="Device type"
 // +kubebuilder:printcolumn:name="State",type="string",JSONPath=".status.deviceState",description="Hivelocity device state"
 // +kubebuilder:printcolumn:name="Ready",type="string",JSONPath=".status.ready",description="Machine ready status"
-// +kubebuilder:printcolumn:name="DeviceID",type="string",JSONPath=".spec.providerID",description="Hivelocity device ID"
+// +kubebuilder:printcolumn:name="ProviderID",type="string",JSONPath=".spec.providerID",description="ProviderID of machine object"
 // +kubebuilder:printcolumn:name="Machine",type="string",JSONPath=".metadata.ownerReferences[?(@.kind==\"Machine\")].name",description="Machine object which owns with this HivelocityMachine"
 // +k8s:defaulter-gen=true
 
