@@ -27,6 +27,8 @@ else
 GOBIN=$(shell go env GOBIN)
 endif
 
+TIMEOUT := $(shell command -v timeout || command -v gtimeout)
+
 # Directories.
 ROOT_DIR:=$(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 EXP_DIR := exp
@@ -360,7 +362,8 @@ create-workload-cluster: $(KUSTOMIZE) $(ENVSUBST) ## Creates a workload-cluster.
 	@test $${HIVELOCITY_API_KEY?Environment variable is required}
 	kubectl create secret generic hivelocity --from-literal=hivelocity=$(HIVELOCITY_API_KEY) --save-config --dry-run=client -o yaml | kubectl apply -f -
 	$(KUSTOMIZE) build templates/cluster-templates/hivelocity --load-restrictor LoadRestrictionsNone  > templates/cluster-templates/cluster-template-hivelocity.yaml
-	cat templates/cluster-templates/cluster-template-hivelocity.yaml | $(ENVSUBST) - | kubectl apply -f -
+	cat templates/cluster-templates/cluster-template-hivelocity.yaml | $(ENVSUBST) - > templates/cluster-templates/cluster-template-hivelocity.yaml.apply
+	kubectl apply -f templates/cluster-templates/cluster-template-hivelocity.yaml.apply
 	$(MAKE) wait-and-get-secret
 	$(MAKE) install-manifests-cilium
 	$(MAKE) install-manifests-ccm
