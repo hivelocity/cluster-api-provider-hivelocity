@@ -64,7 +64,7 @@ func (r *HivelocityMachineReconciler) Reconcile(ctx context.Context, req ctrl.Re
 
 	log.Info("Reconcile HivelocityMachine ***************")
 
-	// Fetch the HivelocityMachine device.
+	// Fetch the HivelocityMachine.
 	hivelocityMachine := &infrav1.HivelocityMachine{}
 	err := r.Get(ctx, req.NamespacedName, hivelocityMachine)
 	if err != nil {
@@ -163,10 +163,10 @@ func (r *HivelocityMachineReconciler) reconcileDelete(ctx context.Context, machi
 	machineScope.Info("Reconciling HivelocityMachine delete")
 	hivelocityMachine := machineScope.HivelocityMachine
 
-	// delete devices
+	// delete device
 	result, err := device.NewService(machineScope).Delete(ctx)
 	if err != nil {
-		return reconcile.Result{}, fmt.Errorf("failed to delete devices for HivelocityMachine %s/%s: %w", hivelocityMachine.Namespace, hivelocityMachine.Name, err)
+		return reconcile.Result{}, fmt.Errorf("failed to delete device for HivelocityMachine %s/%s: %w", hivelocityMachine.Namespace, hivelocityMachine.Name, err)
 	}
 
 	if result != nil {

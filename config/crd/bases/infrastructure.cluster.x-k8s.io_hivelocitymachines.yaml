@@ -40,9 +40,9 @@ spec:
       jsonPath: .status.ready
       name: Ready
       type: string
-    - description: Hivelocity device ID
+    - description: ProviderID of machine object
       jsonPath: .spec.providerID
-      name: DeviceID
+      name: ProviderID
       type: string
     - description: Machine object which owns with this HivelocityMachine
       jsonPath: .metadata.ownerReferences[?(@.kind=="Machine")].name
@@ -77,6 +77,22 @@ spec:
                 description: ProviderID is the unique identifier as specified by the
                   cloud provider.
                 type: string
+              status:
+                description: Status contains all status information of the controller.
+                  Do not edit these values!
+                properties:
+                  actionTriggered:
+                    description: the last error message reported by the provisioning
+                      subsystem.
+                    type: string
+                  lastUpdated:
+                    description: Time stamp of last update of status.
+                    format: date-time
+                    type: string
+                  provisioningState:
+                    description: Information tracked by the provisioner.
+                    type: string
+                type: object
               type:
                 description: Type is the Hivelocity Machine Type for this machine.
                 enum:
@@ -91,7 +107,7 @@ spec:
             description: HivelocityMachineStatus defines the observed state of HivelocityMachine.
             properties:
               addresses:
-                description: Addresses contains the devices's associated addresses.
+                description: Addresses contains the machine's associated addresses.
                 items:
                   description: MachineAddress contains information for the node's
                     address.

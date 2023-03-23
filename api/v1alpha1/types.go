@@ -26,8 +26,8 @@ type SSHKey struct {
 	Fingerprint string `json:"fingerprint,omitempty"`
 }
 
-// HivelocityDeviceType defines the Hivelocity Machine type.
-type HivelocityDeviceType string // question: rename to HivelocityDeviceType ?
+// HivelocityDeviceType defines the Hivelocity device type.
+type HivelocityDeviceType string
 
 // ResourceLifecycle configures the lifecycle of a resource.
 type ResourceLifecycle string
