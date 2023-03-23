@@ -28,9 +28,9 @@ const (
 	// DeviceOffReason device is off.
 	DeviceOffReason = "DeviceOff"
 
-	// DeviceDeletedReason (Severity=Error) documents a HivelocityMachine controller detecting
+	// DeviceNotFoundReason (Severity=Error) documents a HivelocityMachine controller detecting
 	// the underlying device has been deleted unexpectedly.
-	DeviceDeletedReason = "DeviceDeleted"
+	DeviceNotFoundReason = "DeviceNotFound"
 )
 
 const (
