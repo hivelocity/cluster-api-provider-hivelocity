@@ -18,6 +18,7 @@ package v1alpha1
 
 import (
 	hvclient "github.com/hivelocity/cluster-api-provider-hivelocity/pkg/services/hivelocity/client"
+	"github.com/hivelocity/cluster-api-provider-hivelocity/pkg/services/hivelocity/hvtag"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/cluster-api/errors"
@@ -174,6 +175,14 @@ func (r *HivelocityMachine) GetConditions() clusterv1.Conditions {
 // SetConditions sets the underlying service state of the HivelocityMachine to the predescribed clusterv1.Conditions.
 func (r *HivelocityMachine) SetConditions(conditions clusterv1.Conditions) {
 	r.Status.Conditions = conditions
+}
+
+// DeviceTag returns a DeviceTag object for the machine tag.
+func (r *HivelocityMachine) DeviceTag() hvtag.DeviceTag {
+	return hvtag.DeviceTag{
+		Key:   hvtag.DeviceTagKeyMachine,
+		Value: r.Name,
+	}
 }
 
 //+kubebuilder:object:root=true

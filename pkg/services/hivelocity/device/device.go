@@ -21,13 +21,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
 	"time"
 
 	infrav1 "github.com/hivelocity/cluster-api-provider-hivelocity/api/v1alpha1"
 	hvutils "github.com/hivelocity/cluster-api-provider-hivelocity/pkg/hvutils"
 	"github.com/hivelocity/cluster-api-provider-hivelocity/pkg/scope"
 	hvclient "github.com/hivelocity/cluster-api-provider-hivelocity/pkg/services/hivelocity/client"
+	"github.com/hivelocity/cluster-api-provider-hivelocity/pkg/services/hivelocity/hvtag"
 	hv "github.com/hivelocity/hivelocity-client-go/client"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
@@ -49,12 +49,8 @@ const (
 )
 
 var (
-	// errTooManyTagsFound gets returned, if there are multiple tags with the same key,
-	// and the key should be unique.
-	errTooManyTagsFound = fmt.Errorf("too many tags found")
-
-	// errNoMatchingTagFound gets returned, if no matching tag was found.
-	errNoMatchingTagFound = fmt.Errorf("no matching tag found")
+	errMachineTagNotFound = fmt.Errorf("machine tag not found")
+	errClusterTagNotFound = fmt.Errorf("cluster tag not found")
 
 	errNoDeviceAvailable = fmt.Errorf("no available device found")
 )
@@ -131,110 +127,30 @@ func (s *Service) getSSHKeyIDFromSSHKeyName(ctx context.Context, sshKey *infrav1
 
 // Delete implements delete method of the HivelocityMachine.
 func (s *Service) Delete(ctx context.Context) (_ *ctrl.Result, err error) {
-	// find associated device
-	device, err := s.getAssociatedDevice(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("failed to find device: %w", err)
-	}
-
-	// If no device has been found then nothing can be deleted
-	if device == nil {
-		s.scope.V(2).Info("Unable to locate Hivelocity device by ID or tags")
-		record.Warnf(s.scope.HivelocityMachine, "NoDeviceFound", "Unable to find matching Hivelocity device for %s", s.scope.Name())
+	// If no providerID is set, there is nothing to do
+	if s.scope.HivelocityMachine.Spec.ProviderID == nil {
 		return nil, nil
 	}
 
-	// First shut the device down, then delete it
-	switch status := device.PowerStatus; status {
-	case hvclient.PowerStatusOn:
-		return s.handleDeleteDeviceStatusRunning(ctx, device)
-	case hvclient.PowerStatusOff:
-		return s.handleDeleteDeviceStatusOff(ctx, device)
-	default:
-		return &ctrl.Result{RequeueAfter: 5 * time.Second}, nil
-	}
-}
-
-func (s *Service) handleDeleteDeviceStatusRunning(ctx context.Context, device *hv.BareMetalDevice) (*ctrl.Result, error) {
-	// Check if the device has been tried to shut down already and if so,
-	// if time of last condition change + maxWaitTime is already in the past.
-	// With one of these two conditions true, delete device immediately. Otherwise, shut it down and requeue.
-	if conditions.IsTrue(s.scope.HivelocityMachine, infrav1.DeviceReadyCondition) ||
-		conditions.IsFalse(s.scope.HivelocityMachine, infrav1.DeviceReadyCondition) &&
-			conditions.GetReason(s.scope.HivelocityMachine, infrav1.DeviceReadyCondition) == infrav1.DeviceTerminatedReason &&
-			time.Now().Before(conditions.GetLastTransitionTime(s.scope.HivelocityMachine, infrav1.DeviceReadyCondition).Time.Add(maxShutDownTime)) {
-		if err := s.scope.HVClient.ShutdownDevice(ctx, device.DeviceId); err != nil {
-			if hvclient.IsRateLimitExceededError(err) {
-				conditions.MarkTrue(s.scope.HivelocityMachine, infrav1.RateLimitExceeded)
-				record.Event(s.scope.HivelocityMachine,
-					"RateLimitExceeded",
-					"exceeded rate limit with calling Hivelocity function ShutdownDevice",
-				)
-			}
-			return &reconcile.Result{}, fmt.Errorf("failed to shutdown device: %w", err)
-		}
-		conditions.MarkFalse(s.scope.HivelocityMachine,
-			infrav1.DeviceReadyCondition,
-			infrav1.DeviceTerminatedReason,
-			clusterv1.ConditionSeverityInfo,
-			"Device has been shut down")
-		return &ctrl.Result{RequeueAfter: 30 * time.Second}, nil
-	}
-	if err := s.scope.HVClient.DeleteDevice(ctx, device.DeviceId); err != nil {
-		if hvclient.IsRateLimitExceededError(err) {
-			conditions.MarkTrue(s.scope.HivelocityMachine, infrav1.RateLimitExceeded)
-			record.Event(s.scope.HivelocityMachine,
-				"RateLimitExceeded",
-				"exceeded rate limit with calling Hivelocity function DeleteDevice",
-			)
-		}
-		record.Warnf(s.scope.HivelocityMachine, "FailedDeleteHivelocityDevice", "Failed to delete Hivelocity device %s", s.scope.Name())
-		return &reconcile.Result{}, fmt.Errorf("failed to delete device: %w", err)
-	}
-
-	record.Eventf(
-		s.scope.HivelocityMachine,
-		"HivelocityDeviceDeleted",
-		"Hivelocity device %s deleted",
-		s.scope.Name(),
-	)
-	return nil, nil
-}
-
-func (s *Service) handleDeleteDeviceStatusOff(ctx context.Context, device *hv.BareMetalDevice) (*ctrl.Result, error) {
-	return nil, fmt.Errorf("todo: handleDeleteDeviceStatusOff()")
-}
-
-// We write the machine name in the labels, so that all labels are or should be unique.
-func (s *Service) getAssociatedDevice(ctx context.Context) (*hv.BareMetalDevice, error) {
-	clusterTag := hvclient.GetClusterTag(s.scope.ClusterScope.Name())
-	machineTag := hvclient.GetMachineTag(s.scope.Name())
-	devices, err := s.scope.HVClient.ListDevices(ctx)
+	// Check whether device still exists
+	deviceID, err := hvutils.ProviderIDToDeviceID(*s.scope.HivelocityMachine.Spec.ProviderID)
 	if err != nil {
-		if hvclient.IsRateLimitExceededError(err) {
-			conditions.MarkTrue(s.scope.HivelocityMachine, infrav1.RateLimitExceeded)
-			record.Event(s.scope.HivelocityMachine,
-				"RateLimitExceeded",
-				"exceeded rate limit with calling ListDevices",
-			)
-		}
-		return nil, err
+		return nil, fmt.Errorf("[Delete] ProviderIDToDeviceID failed: %w", err)
 	}
-	return hvutils.FindDeviceByTags(clusterTag, machineTag, devices)
-}
 
-func createTags(clusterName, machineName string, isControlPlane bool) []string {
-	var machineType string
-	if isControlPlane {
-		machineType = "control_plane"
-	} else {
-		machineType = "worker"
+	_, err = s.scope.HVClient.GetDevice(ctx, deviceID)
+	if err != nil {
+		if errors.Is(err, hvclient.ErrDeviceNotFound) {
+			// Nothing to do if device is not found
+			s.scope.Info("Unable to locate Hivelocity device by ID or tags")
+			record.Warnf(s.scope.HivelocityMachine, "NoDeviceFound", "Unable to find matching Hivelocity device for %s", s.scope.Name())
+			return nil, nil
+		}
+		return nil, fmt.Errorf("failed to get device: %w", err)
 	}
-	return []string{
-		hvclient.GetClusterTag(clusterName),
-		hvclient.GetMachineTag(machineName),
-		"caphv-machinetype=" + machineType,
-	}
+
+	// TODO: Finishing up Delete
+	return nil, nil
 }
 
 // setMachineAddress gets the address from the device and sets it on the HivelocityMachine object.
@@ -255,27 +171,6 @@ func setMachineAddress(hvMachine *infrav1.HivelocityMachine, hvDevice *hv.BareMe
 	}
 }
 
-// associateDevice claims an unused HV device by settings tags and returns it.
-func (s *Service) associateDevice(ctx context.Context) (*hv.BareMetalDevice, error) {
-	device, err := s.chooseDevice(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("failed to choose device: %w", err)
-	}
-
-	device.Tags = append(device.Tags, clusterAndMachineTag(s.scope.HivelocityCluster.Name, s.scope.Name())...)
-	if err := s.scope.HVClient.SetTags(ctx, device.DeviceId, device.Tags); err != nil {
-		return nil, fmt.Errorf("failed to set tags on machine %s :%w", s.scope.Name(), err)
-	}
-	return device, nil
-}
-
-func clusterAndMachineTag(clusterName, machineName string) []string {
-	return []string{
-		hvclient.TagKeyClusterName + "=" + clusterName,
-		hvclient.TagKeyMachineName + "=" + machineName,
-	}
-}
-
 // chooseDevice searches for an unused device.
 func (s *Service) chooseDevice(ctx context.Context) (*hv.BareMetalDevice, error) {
 	devices, err := s.scope.HVClient.ListDevices(ctx)
@@ -283,154 +178,51 @@ func (s *Service) chooseDevice(ctx context.Context) (*hv.BareMetalDevice, error)
 		return nil, fmt.Errorf("[chooseDevice] ListDevices() failed. machine %q: %w",
 			s.scope.Name(), err)
 	}
-	return chooseAvailableFromList(ctx, devices, s.scope.HivelocityMachine.Spec.Type, s.scope.Cluster.Name)
+	return chooseAvailableFromList(devices, s.scope.HivelocityMachine.Spec.Type, s.scope.HivelocityCluster.Name, s.scope.Name())
 }
 
-// deviceExists returns true if the device exists.
-func (s *Service) deviceExists(ctx context.Context, deviceID int32) (bool, error) {
-	// question: should we check if the device is in the current cluster first?
-	device, err := s.scope.HVClient.GetDevice(ctx, deviceID)
-	if errors.Is(err, hvclient.ErrDeviceNotFound) {
-		return false, nil
-	}
-	if err != nil {
-		return false, err
-	}
-	if device.PrimaryIp != "" {
-		return true, nil
-	}
-	return false, nil
-}
-
-func chooseAvailableFromList(ctx context.Context, devices []*hv.BareMetalDevice, deviceType infrav1.HivelocityDeviceType, clusterName string) (*hv.BareMetalDevice, error) {
-	log := ctrl.LoggerFrom(ctx)
+func chooseAvailableFromList(devices []*hv.BareMetalDevice, deviceType infrav1.HivelocityDeviceType, clusterName, machineName string) (*hv.BareMetalDevice, error) {
 	for _, device := range devices {
 		// Ignore if associated already
-		if isAssociated(device) {
+		machineTag, err := hvtag.MachineTagFromList(device.Tags)
+		if err != nil && !errors.Is(err, hvtag.ErrDeviceTagNotFound) {
+			// unexpected error - continue
+			continue
+		}
+		if machineTag.Value == machineName {
+			// associated to this machine - return
+			return device, nil
+		}
+		if machineTag.Value != "" {
+			// associated to other machine - continue
 			continue
 		}
 
-		dt, err := getDeviceType(device)
+		deviceTypeTag, err := hvtag.DeviceTypeTagFromList(device.Tags)
 		if err != nil {
-			if errors.Is(err, errNoMatchingTagFound) {
-				continue
-			}
-			// don't return on err, otherwise a single broken device would block this method
-			log.Error(err, "[chooseAvailableFromList] getDeviceType() failed")
+			// TODO: What if no device type has been set? Is the device available or not?
 			continue
 		}
 
 		// Ignore if has wrong device type
-		if dt != string(deviceType) {
+		if deviceTypeTag.Value != string(deviceType) {
 			continue
 		}
 
 		// Ignore if associated to other cluster
-		cn, found := findAssociatedCluster(device)
-		if found && clusterName != cn {
+		clusterTag, err := hvtag.ClusterTagFromList(device.Tags)
+		if err != nil && !errors.Is(err, hvtag.ErrDeviceTagNotFound) {
+			// unexpected error - continue
 			continue
 		}
+		if clusterTag.Value != "" && clusterTag.Value != clusterName {
+			// associated to another cluster - continue
+			continue
+		}
+
 		return device, nil
 	}
 	return nil, errNoDeviceAvailable
-}
-
-// getDeviceType returns the device-type of this BareMetalDevice.
-func getDeviceType(device *hv.BareMetalDevice) (string, error) {
-	deviceType, err := findValueForKeyInTags(device.Tags, hvclient.TagKeyDeviceType)
-	if err != nil {
-		return "", fmt.Errorf("[getDeviceType] findValueForKeyInTags() failed: %w", err)
-	}
-	return deviceType, nil
-}
-
-// isAssociated returns true if the device is associated with a HivelocityMachine.
-func isAssociated(device *hv.BareMetalDevice) bool {
-	deviceType, _ := findValueForKeyInTags(device.Tags, hvclient.TagKeyMachineName)
-	return deviceType != ""
-}
-
-// getAssociatedMachines returns the associated HivelocityMachine.
-func getAssociatedMachines(device *hv.BareMetalDevice) ([]string, error) {
-	machines, err := findAllValuesForKeyInTags(device.Tags, hvclient.TagKeyMachineName)
-	if err != nil {
-		return nil, fmt.Errorf("[getAssociatedMachine] findAllValuesForKeyInTags() failed: %w", err)
-	}
-
-	return machines, nil
-}
-
-// findAssociatedCluster tries to find a cluster name in the tags. If it finds one, it returns the name and true
-// If not, it returns an empty string and false.
-func findAssociatedCluster(device *hv.BareMetalDevice) (string, bool) {
-	cluster, _ := findValueForKeyInTags(device.Tags, hvclient.TagKeyClusterName)
-	return cluster, cluster != ""
-}
-
-// findValueForKeyInTags returns the value of a TagKey of a device.
-// Example: If a device has the tag "foo=bar", then getValueOfTag
-// will return "bar".
-// If there is no such tag, or there are two tags, then an error gets returned.
-func findValueForKeyInTags(tagList []string, key string) (string, error) {
-	prefix := key + "="
-	found := 0
-	var value string
-
-	for _, tag := range tagList {
-		if !strings.HasPrefix(tag, prefix) {
-			continue
-		}
-		if found > 1 {
-			return "", errTooManyTagsFound
-		}
-		found++
-		value = tag[len(prefix):]
-	}
-	if found == 0 {
-		return "", errNoMatchingTagFound
-	}
-	return value, nil
-}
-
-// findAllValuesForKeyInTags returns all values of a TagKey of a device.
-// Example: If a device has the tag "foo=bar", then getValueOfTag
-// will return "bar".
-// If there is no such tag, then an error gets returned.
-func findAllValuesForKeyInTags(tagList []string, key string) ([]string, error) {
-	prefix := key + "="
-
-	// expect one value only
-	values := make([]string, 0, 1)
-
-	var found int
-	for _, tag := range tagList {
-		if !strings.HasPrefix(tag, prefix) {
-			continue
-		}
-		found++
-		values = append(values, tag[len(prefix):])
-	}
-	if found == 0 {
-		return nil, errNoMatchingTagFound
-	}
-	return values, nil
-}
-
-// findAllValuesForKeyInTags returns all values of a TagKey of a device.
-// Example: If a device has the tag "foo=bar", then getValueOfTag
-// will return "bar".
-// If there is no such tag, then an error gets returned.
-func removeAllValuesForKeyFromTags(tagList []string, key string) (newTagList []string, updatedTags bool) {
-	prefix := key + "="
-	newTagList = make([]string, 0, len(tagList))
-	for _, tag := range tagList {
-		if strings.HasPrefix(tag, prefix) {
-			updatedTags = true
-		} else {
-			newTagList = append(newTagList, tag)
-		}
-	}
-	return newTagList, updatedTags
 }
 
 // actionAssociateDevice claims an unused HV device by settings tags and returns it.
@@ -440,7 +232,7 @@ func (s *Service) actionAssociateDevice(ctx context.Context) actionResult {
 		return actionError{err: fmt.Errorf("failed to choose device: %w", err)}
 	}
 
-	device.Tags = append(device.Tags, clusterAndMachineTag(s.scope.HivelocityCluster.Name, s.scope.Name())...)
+	device.Tags = append(device.Tags, s.scope.HivelocityCluster.DeviceTag().ToString(), s.scope.HivelocityMachine.DeviceTag().ToString())
 	if err := s.scope.HVClient.SetTags(ctx, device.DeviceId, device.Tags); err != nil {
 		return actionError{err: fmt.Errorf("failed to set tags: %w", err)}
 	}
@@ -472,28 +264,23 @@ func (s *Service) actionVerifyAssociate(ctx context.Context) actionResult {
 		return actionError{err: fmt.Errorf("failed to get device: %w", err)}
 	}
 
-	machineNames, err := getAssociatedMachines(&device)
-	if err != nil {
-		// if no associated machine is found, we need to associate new machine
-		if errors.Is(err, errNoMatchingTagFound) {
-			return actionError{err: errGoToPreviousState}
-		}
-		return actionError{err: fmt.Errorf("failed to get associated machine: %w", err)}
-	}
+	// check if cluster and machine tags are properly set
+	_, clusterTagErr := hvtag.ClusterTagFromList(device.Tags)
+	_, machineTagErr := hvtag.MachineTagFromList(device.Tags)
 
-	// if only one machine is associated and it is the correct one, then complete.
-	if len(machineNames) == 1 && machineNames[0] == s.scope.Name() {
+	if clusterTagErr == nil && machineTagErr == nil {
 		return actionComplete{}
 	}
 
-	// Something unexpected happened. Remove label of current machine from device.
-	newTagList, updatedTags := removeAllValuesForKeyFromTags(device.Tags, hvclient.TagKeyMachineName)
-	if updatedTags {
+	// something is wrong - remove cluster and machine tags and associate a new device
+	newTagList, updatedTags1 := s.scope.HivelocityCluster.DeviceTag().RemoveFromList(device.Tags)
+	newTagList, updatedTags2 := s.scope.HivelocityMachine.DeviceTag().RemoveFromList(newTagList)
+	if updatedTags1 || updatedTags2 {
 		if err := s.scope.HVClient.SetTags(ctx, deviceID, newTagList); err != nil {
-			return actionError{err: fmt.Errorf("failed to remove associated machine from labels: %w", err)}
+			return actionError{err: fmt.Errorf("failed to remove associated machine from tags: %w", err)}
 		}
 	}
-
+	s.scope.HivelocityMachine.Spec.ProviderID = nil
 	return actionError{err: errGoToPreviousState}
 }
 
@@ -567,9 +354,16 @@ func (s *Service) actionProvisionDevice(ctx context.Context) actionResult {
 	if err != nil {
 		return actionError{err: fmt.Errorf("failed to get device image: %w", err)}
 	}
+
+	tags := []string{
+		s.scope.HivelocityCluster.DeviceTag().ToString(),
+		s.scope.HivelocityMachine.DeviceTag().ToString(),
+		s.scope.DeviceTagMachineType().ToString(),
+	}
+
 	opts := hv.BareMetalDeviceUpdate{
 		Hostname:    s.scope.Name(),
-		Tags:        createTags(s.scope.ClusterScope.Name(), s.scope.Name(), s.scope.IsControlPlane()),
+		Tags:        tags,
 		Script:      string(userData), // cloud-init script
 		OsName:      image,
 		ForceReload: true,
@@ -585,7 +379,7 @@ func (s *Service) actionProvisionDevice(ctx context.Context) actionResult {
 
 	// Provision the device
 	provisionedDevice, err := s.scope.HVClient.ProvisionDevice(ctx, deviceID, opts)
-	s.scope.Info("[updateDevice] ProvisionDevice was called", "err", err, "deviceID", deviceID)
+	s.scope.Info("[actionProvisionDevice] ProvisionDevice was called", "err", err, "deviceID", deviceID)
 	if err != nil {
 		// TODO: Handle error that machine is not shut down
 		if hvclient.IsRateLimitExceededError(err) {
@@ -615,21 +409,26 @@ func (s *Service) actionDeviceProvisioned(ctx context.Context) actionResult {
 	// Check whether device still exists
 	deviceID, err := hvutils.ProviderIDToDeviceID(*s.scope.HivelocityMachine.Spec.ProviderID)
 	if err != nil {
-		return actionError{err: fmt.Errorf("[updateDevice] ProviderIDToDeviceID failed: %w", err)}
+		return actionError{err: fmt.Errorf("[actionDeviceProvisioned] ProviderIDToDeviceID failed: %w", err)}
 	}
 
 	// FIXME: we already get the device
 	device, err := s.scope.HVClient.GetDevice(ctx, deviceID)
 	if err != nil {
-		// TODO: Filter out device not found error. Replace the below statement.
-		if errors.Is(err, errNoDeviceAvailable) {
+		if errors.Is(err, hvclient.ErrDeviceNotFound) {
 			conditions.MarkFalse(s.scope.HivelocityMachine,
 				infrav1.DeviceReadyCondition,
-				infrav1.DeviceDeletedReason,
+				infrav1.DeviceNotFoundReason,
 				clusterv1.ConditionSeverityError,
-				fmt.Sprintf("device %d does not exists anymore", device.DeviceId))
+				fmt.Sprintf("device %d not found", device.DeviceId))
+			// TODO: Return fatal error
 		}
-		return actionError{err: fmt.Errorf("failed to get device: %w", err)}
+		return actionError{err: fmt.Errorf("failed to get associated device: %w", err)}
+	}
+
+	if err := s.verifyAssociatedDevice(&device); err != nil {
+		// TODO: Fatal error
+		return actionError{err: fmt.Errorf("associated device could not be verified")}
 	}
 
 	conditions.MarkTrue(s.scope.HivelocityMachine, infrav1.DeviceReadyCondition)
@@ -637,4 +436,14 @@ func (s *Service) actionDeviceProvisioned(ctx context.Context) actionResult {
 	s.scope.HivelocityMachine.Status.Ready = true
 
 	return actionComplete{}
+}
+
+func (s *Service) verifyAssociatedDevice(device *hv.BareMetalDevice) error {
+	if !s.scope.HivelocityCluster.DeviceTag().IsInStringList(device.Tags) {
+		return errClusterTagNotFound
+	}
+	if !s.scope.HivelocityMachine.DeviceTag().IsInStringList(device.Tags) {
+		return errMachineTagNotFound
+	}
+	return nil
 }

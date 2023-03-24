@@ -17,6 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"github.com/hivelocity/cluster-api-provider-hivelocity/pkg/services/hivelocity/hvtag"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 )
@@ -83,6 +84,14 @@ func (r *HivelocityCluster) GetConditions() clusterv1.Conditions {
 // SetConditions sets the underlying service state of the HivelocityCluster to the predescribed clusterv1.Conditions.
 func (r *HivelocityCluster) SetConditions(conditions clusterv1.Conditions) {
 	r.Status.Conditions = conditions
+}
+
+// DeviceTag returns a DeviceTag object for the cluster tag.
+func (r *HivelocityCluster) DeviceTag() hvtag.DeviceTag {
+	return hvtag.DeviceTag{
+		Key:   hvtag.DeviceTagKeyCluster,
+		Value: r.Name,
+	}
 }
 
 func init() {

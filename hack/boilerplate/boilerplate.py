@@ -276,7 +276,7 @@ def ensure_boilerplate_file(file_name, refs, regexs, not_generated_files_to_skip
         new_content += year_replacer.sub(current_year, licence_header, 1)
 
         # actual content
-        new_content += os.linesep + content_without_specials
+        new_content += os.linesep + os.linesep + content_without_specials
 
         f.seek(0)
         f.write(new_content)

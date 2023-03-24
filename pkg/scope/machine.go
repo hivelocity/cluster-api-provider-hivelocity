@@ -23,6 +23,7 @@ import (
 	"sort"
 
 	infrav1 "github.com/hivelocity/cluster-api-provider-hivelocity/api/v1alpha1"
+	"github.com/hivelocity/cluster-api-provider-hivelocity/pkg/services/hivelocity/hvtag"
 	"github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -102,6 +103,20 @@ func (m *MachineScope) Namespace() string {
 // PatchObject persists the machine spec and status.
 func (m *MachineScope) PatchObject(ctx context.Context) error {
 	return m.patchHelper.Patch(ctx, m.HivelocityMachine)
+}
+
+// DeviceTagMachineType returns a DeviceTag object for the cluster tag.
+func (m *MachineScope) DeviceTagMachineType() hvtag.DeviceTag {
+	var value string
+	if m.IsControlPlane() {
+		value = "control_plane"
+	} else {
+		value = "worker"
+	}
+	return hvtag.DeviceTag{
+		Key:   hvtag.DeviceTagKeyCluster,
+		Value: value,
+	}
 }
 
 // SetError sets the ErrorMessage and ErrorReason fields on the machine and logs
