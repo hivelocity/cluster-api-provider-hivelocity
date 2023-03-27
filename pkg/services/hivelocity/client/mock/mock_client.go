@@ -157,6 +157,9 @@ func (c *mockedHVClient) ShutdownDevice(ctx context.Context, deviceID int32) err
 	if _, found := c.store.idMap[deviceID]; !found {
 		return fmt.Errorf("[ShutdownDevice] deviceID %d: %w", deviceID, hvclient.ErrDeviceNotFound)
 	}
+	if c.store.idMap[deviceID].PowerStatus == hvclient.PowerStatusOff {
+		return hvclient.ErrDeviceShutDownAlready
+	}
 	c.store.idMap[deviceID].PowerStatus = hvclient.PowerStatusOff
 	return nil
 }

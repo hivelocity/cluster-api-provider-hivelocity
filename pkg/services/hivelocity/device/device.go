@@ -227,6 +227,7 @@ func chooseAvailableFromList(devices []*hv.BareMetalDevice, deviceType infrav1.H
 
 // actionAssociateDevice claims an unused HV device by settings tags and returns it.
 func (s *Service) actionAssociateDevice(ctx context.Context) actionResult {
+	s.scope.Info("Start actionAssociateDevice")
 	device, err := s.chooseDevice(ctx)
 	if err != nil {
 		return actionError{err: fmt.Errorf("failed to choose device: %w", err)}
@@ -244,6 +245,7 @@ func (s *Service) actionAssociateDevice(ctx context.Context) actionResult {
 // actionVerifyAssociate verifies that the HV device has actually been associated to this machine and only this.
 // Checking whether there are other machines also associated avoids situations where machines are selected at the same time.
 func (s *Service) actionVerifyAssociate(ctx context.Context) actionResult {
+	s.scope.Info("Start actionVerifyAssociate")
 	// TODO: We should be able to control this value from outside. Do we do it with flags?
 	// wait for 3 seconds at least before checking again
 	const waitFor = 100 * time.Millisecond
@@ -292,52 +294,37 @@ func hasTimedOut(lastUpdated *metav1.Time, timeout time.Duration) bool {
 	return lastUpdated.Add(timeout).Before(now.Time)
 }
 
-// actionShutDownDevice shuts down the device.
-func (s *Service) actionShutDownDevice(ctx context.Context) actionResult {
-	deviceID, err := hvutils.ProviderIDToDeviceID(*s.scope.HivelocityMachine.Spec.ProviderID)
-	if err != nil {
-		return actionError{err: fmt.Errorf("failed to get deviceID from providerID: %w", err)}
-	}
-
-	if err := s.scope.HVClient.ShutdownDevice(ctx, deviceID); err != nil {
-		return actionError{err: fmt.Errorf("failed to shut device down: %w", err)}
-	}
-	return actionComplete{}
-}
-
 // actionEnsureDeviceShutDown ensures that the device is shut down.
 func (s *Service) actionEnsureDeviceShutDown(ctx context.Context) actionResult {
-	const timeout = 10 * time.Minute
+	s.scope.Info("Start actionEnsureDeviceShutDown")
 
 	deviceID, err := hvutils.ProviderIDToDeviceID(*s.scope.HivelocityMachine.Spec.ProviderID)
 	if err != nil {
 		return actionError{err: fmt.Errorf("failed to get deviceID from providerID: %w", err)}
 	}
 
-	_, err = s.scope.HVClient.GetDevice(ctx, deviceID)
-	if err != nil {
-		return actionError{err: fmt.Errorf("failed to get device: %w", err)}
-	}
-
-	// TODO: Ping server and check whether it can be reached
-	pingSuccessful := true
-	if pingSuccessful {
+	err = s.scope.HVClient.ShutdownDevice(ctx, deviceID)
+	// if device is already shut down, we can go to the next step
+	if errors.Is(err, hvclient.ErrDeviceShutDownAlready) {
 		return actionComplete{}
 	}
-	// Device is not shut down yet, check the timeout. If we wait for too long, trigger the shutdown again.
-	if hasTimedOut(s.scope.HivelocityMachine.Spec.Status.LastUpdated, timeout) {
-		return actionError{err: errGoToPreviousState}
-	}
+	s.scope.Info("Device is not shut down yet", "error from ShutDown endpoint", err)
 
-	// wait for another minute
-	return actionContinue{delay: time.Minute}
+	// wait for another 10 seconds
+	return actionContinue{delay: 10 * time.Second}
 }
 
 // actionProvisionDevice provisions the device.
 func (s *Service) actionProvisionDevice(ctx context.Context) actionResult {
+	s.scope.Info("Start actionProvisionDevice")
 	deviceID, err := hvutils.ProviderIDToDeviceID(*s.scope.HivelocityMachine.Spec.ProviderID)
 	if err != nil {
 		return actionError{err: fmt.Errorf("failed to get deviceID from providerID: %w", err)}
+	}
+
+	device, err := s.scope.HVClient.GetDevice(ctx, deviceID)
+	if err != nil {
+		return actionError{err: fmt.Errorf("failed to get device: %w", err)}
 	}
 
 	userData, err := s.scope.GetRawBootstrapData(ctx)
@@ -361,9 +348,11 @@ func (s *Service) actionProvisionDevice(ctx context.Context) actionResult {
 		s.scope.DeviceTagMachineType().ToString(),
 	}
 
+	device.Tags = append(device.Tags, tags...)
+
 	opts := hv.BareMetalDeviceUpdate{
 		Hostname:    s.scope.Name(),
-		Tags:        tags,
+		Tags:        device.Tags,
 		Script:      string(userData), // cloud-init script
 		OsName:      image,
 		ForceReload: true,

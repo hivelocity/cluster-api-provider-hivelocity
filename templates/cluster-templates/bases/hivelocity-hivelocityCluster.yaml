@@ -6,6 +6,7 @@ spec:
   controlPlaneEndpoint:
     host: ""
     port: 443
+  controlPlaneRegion: "${HIVELOCITY_REGION}"
   hivelocitySecretRef:
     name: hivelocity
     key: hivelocity

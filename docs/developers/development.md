@@ -24,7 +24,7 @@ You need to create a ```tilt-settings.yaml``` file and specify the values you ne
 kustomize_substitutions:
   HIVELOCITY_API_KEY: dummy-key
   HIVELOCITY_SSH_KEY: test
-  HIVELOCITY_REGION: LAX1
+  HIVELOCITY_REGION: LAX2
   CONTROL_PLANE_MACHINE_COUNT: "3"
   WORKER_MACHINE_COUNT: "3"
   KUBERNETES_VERSION: v1.25.2

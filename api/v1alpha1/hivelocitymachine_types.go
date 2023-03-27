@@ -44,9 +44,6 @@ const (
 	// StateVerifyAssociate .
 	StateVerifyAssociate ProvisioningState = "verify-associate"
 
-	// StateShutDownDevice .
-	StateShutDownDevice ProvisioningState = "shut-down-device"
-
 	// StateEnsureDeviceShutDown .
 	StateEnsureDeviceShutDown ProvisioningState = "ensure-device-shut-down"
 
