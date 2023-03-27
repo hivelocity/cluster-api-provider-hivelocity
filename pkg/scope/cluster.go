@@ -102,18 +102,6 @@ func (s *ClusterScope) PatchObject(ctx context.Context) error {
 	return s.patchHelper.Patch(ctx, s.HivelocityCluster)
 }
 
-/*
-// SetStatusFailureDomain sets the region for the status.
-func (s *ClusterScope) SetStatusFailureDomain(regions []infrav1.Region) {
-	s.HivelocityCluster.Status.FailureDomains = make(clusterv1.FailureDomains)
-	for _, region := range regions {
-		s.HivelocityCluster.Status.FailureDomains[string(region)] = clusterv1.FailureDomainSpec{
-			ControlPlane: true,
-		}
-	}
-}.
-*/
-
 // ClientConfig return a kusecretbernetes client config for the cluster context.
 func (s *ClusterScope) ClientConfig(ctx context.Context) (clientcmd.ClientConfig, error) {
 	cluster := client.ObjectKey{

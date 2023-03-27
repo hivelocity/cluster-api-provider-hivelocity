@@ -56,7 +56,6 @@ func (sm *stateMachine) handlers() map[infrav1.ProvisioningState]stateHandler {
 	return map[infrav1.ProvisioningState]stateHandler{
 		infrav1.StateAssociateDevice:      sm.handleAssociateDevice,
 		infrav1.StateVerifyAssociate:      sm.handleVerifyAssociate,
-		infrav1.StateShutDownDevice:       sm.handleShutDownDevice,
 		infrav1.StateEnsureDeviceShutDown: sm.handleEnsureDeviceShutDown,
 		infrav1.StateProvisionDevice:      sm.handleProvisionDevice,
 		infrav1.StateDeviceProvisioned:    sm.handleDeviceProvisioned,
@@ -102,7 +101,7 @@ func (sm *stateMachine) handleAssociateDevice(ctx context.Context) actionResult 
 func (sm *stateMachine) handleVerifyAssociate(ctx context.Context) actionResult {
 	actResult := sm.reconciler.actionVerifyAssociate(ctx)
 	if _, ok := actResult.(actionComplete); ok {
-		sm.nextState = infrav1.StateShutDownDevice
+		sm.nextState = infrav1.StateEnsureDeviceShutDown
 	}
 
 	// check whether we need to associate the machine to another device
@@ -116,26 +115,10 @@ func (sm *stateMachine) handleVerifyAssociate(ctx context.Context) actionResult 
 	return actResult
 }
 
-func (sm *stateMachine) handleShutDownDevice(ctx context.Context) actionResult {
-	actResult := sm.reconciler.actionShutDownDevice(ctx)
-	if _, ok := actResult.(actionComplete); ok {
-		sm.nextState = infrav1.StateEnsureDeviceShutDown
-	}
-	return actResult
-}
-
 func (sm *stateMachine) handleEnsureDeviceShutDown(ctx context.Context) actionResult {
 	actResult := sm.reconciler.actionEnsureDeviceShutDown(ctx)
 	if _, ok := actResult.(actionComplete); ok {
 		sm.nextState = infrav1.StateProvisionDevice
-	}
-	// check whether we need to associate the machine to another device
-	actionErr, ok := actResult.(actionError)
-	if ok {
-		if errors.Is(actionErr.err, errGoToPreviousState) {
-			sm.nextState = infrav1.StateShutDownDevice
-			return actionComplete{}
-		}
 	}
 	return actResult
 }
@@ -149,7 +132,7 @@ func (sm *stateMachine) handleProvisionDevice(ctx context.Context) actionResult 
 	actionErr, ok := actResult.(actionError)
 	if ok {
 		if errors.Is(actionErr.err, errGoToPreviousState) {
-			sm.nextState = infrav1.StateShutDownDevice
+			sm.nextState = infrav1.StateEnsureDeviceShutDown
 			return actionComplete{}
 		}
 	}

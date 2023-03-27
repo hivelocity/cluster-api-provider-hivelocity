@@ -37,6 +37,9 @@ type HivelocityClusterSpec struct {
 	// +optional
 	ControlPlaneEndpoint *clusterv1.APIEndpoint `json:"controlPlaneEndpoint"`
 
+	// ControlPlaneRegion consists of a list of Hivelocity Regions (LAX2, ...).
+	ControlPlaneRegion Region `json:"controlPlaneRegion"`
+
 	// HivelocitySecret is a reference to a Kubernetes Secret.
 	HivelocitySecret HivelocitySecretRef `json:"hivelocitySecretRef"`
 
@@ -51,6 +54,8 @@ type HivelocityClusterStatus struct {
 
 	// +kubebuilder:default=false
 	Ready bool `json:"ready"`
+
+	FailureDomains clusterv1.FailureDomains `json:"failureDomains,omitempty"`
 
 	Conditions clusterv1.Conditions `json:"conditions,omitempty"`
 }
@@ -91,6 +96,17 @@ func (r *HivelocityCluster) DeviceTag() hvtag.DeviceTag {
 	return hvtag.DeviceTag{
 		Key:   hvtag.DeviceTagKeyCluster,
 		Value: r.Name,
+	}
+}
+
+// SetStatusFailureDomain sets the region for the status.
+func (r *HivelocityCluster) SetStatusFailureDomain(region Region) {
+	if r.Status.FailureDomains == nil {
+		r.Status.FailureDomains = make(clusterv1.FailureDomains, 1)
+	}
+
+	r.Status.FailureDomains[string(region)] = clusterv1.FailureDomainSpec{
+		ControlPlane: true,
 	}
 }
 

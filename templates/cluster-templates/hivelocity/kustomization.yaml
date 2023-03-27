@@ -3,8 +3,8 @@ bases:
   - ../bases/hivelocity-hivelocityCluster.yaml
   - ../bases/hivelocity-kcp-ubuntu.yaml
   - ../bases/hivelocity-mt-control-plane-ubuntu.yaml
-  - ../bases/hivelocity-mhc-control-plane.yaml
+  # - ../bases/hivelocity-mhc-control-plane.yaml
   - ../bases/hivelocity-md-0-kubeadm.yaml
   - ../bases/kct-md-0-ubuntu.yaml
   - ../bases/hivelocity-mt-md-0-ubuntu.yaml
-  - ../bases/hivelocity-mhc-md-0.yaml
+  # - ../bases/hivelocity-mhc-md-0.yaml

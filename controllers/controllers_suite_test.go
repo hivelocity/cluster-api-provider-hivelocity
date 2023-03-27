@@ -116,7 +116,8 @@ func getDefaultHivelocityClusterSpec() infrav1.HivelocityClusterSpec {
 			Key:  "HIVELOCITY_API_KEY",
 			Name: "hv-secret",
 		},
-		SSHKey: &infrav1.SSHKey{Name: "testsshkey"},
+		SSHKey:             &infrav1.SSHKey{Name: "testsshkey"},
+		ControlPlaneRegion: "LAX2",
 	}
 }
 

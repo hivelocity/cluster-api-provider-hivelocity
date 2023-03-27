@@ -61,8 +61,12 @@ type Factory interface {
 // HivelocityFactory implements the Factory interface.
 type HivelocityFactory struct{}
 
-// ErrDeviceNotFound gets returned if no matching device was found.
-var ErrDeviceNotFound = fmt.Errorf("device was not found")
+var (
+	// ErrDeviceNotFound gets returned if no matching device was found.
+	ErrDeviceNotFound = fmt.Errorf("device was not found")
+	// ErrDeviceShutDownAlready indicates that the device is shut down already..
+	ErrDeviceShutDownAlready = fmt.Errorf("device is shut down already")
+)
 
 var _ Factory = &HivelocityFactory{}
 
@@ -136,7 +140,9 @@ func (c *realClient) DeleteDevice(ctx context.Context, deviceID int32) error {
 func (c *realClient) ShutdownDevice(ctx context.Context, deviceID int32) error {
 	_, _, err := c.client.DeviceApi.PostPowerResource(ctx, deviceID, "shutdown", nil) //nolint:bodyclose // Close() gets done in client
 	if err != nil {
-		return err
+		if strings.Contains(err.Error(), "Can't do this while server is powered off.") {
+			return ErrDeviceShutDownAlready
+		}
 	}
 	return nil
 }
