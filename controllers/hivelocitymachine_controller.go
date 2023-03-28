@@ -153,33 +153,24 @@ func (r *HivelocityMachineReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	}
 
 	if !hivelocityMachine.ObjectMeta.DeletionTimestamp.IsZero() {
-		return r.reconcileDelete(ctx, machineScope)
+		switch hivelocityMachine.Spec.Status.ProvisioningState {
+		case infrav1.StateDeleteDevice:
+			// Device has been removed from cluster - machine can be deleted.
+			controllerutil.RemoveFinalizer(machineScope.HivelocityMachine, infrav1.MachineFinalizer)
+			return reconcile.Result{}, nil
+		case infrav1.StateNone, infrav1.StateAssociateDevice, infrav1.StateVerifyAssociate, infrav1.StateEnsureDeviceShutDown:
+			// if device is not yet provisioned, we can just dissociate the device from the machine with deleting the tags.
+			hivelocityMachine.Spec.Status.ProvisioningState = infrav1.StateDeleteDeviceDissociate
+			return ctrl.Result{}, nil
+		case infrav1.StateProvisionDevice:
+			// TODO: This depends on the behavior of HV API. We have to deal with the case where a provisioning completes after a deletion timestamp is set.
+		}
 	}
 
-	return r.reconcileNormal(ctx, machineScope)
+	return r.reconcile(ctx, machineScope)
 }
 
-func (r *HivelocityMachineReconciler) reconcileDelete(ctx context.Context, machineScope *scope.MachineScope) (reconcile.Result, error) {
-	machineScope.Info("Reconciling HivelocityMachine delete")
-	hivelocityMachine := machineScope.HivelocityMachine
-
-	// delete device
-	result, err := device.NewService(machineScope).Delete(ctx)
-	if err != nil {
-		return reconcile.Result{}, fmt.Errorf("failed to delete device for HivelocityMachine %s/%s: %w", hivelocityMachine.Namespace, hivelocityMachine.Name, err)
-	}
-
-	if result != nil {
-		return *result, nil
-	}
-
-	// Machine is deleted so remove the finalizer.
-	controllerutil.RemoveFinalizer(machineScope.HivelocityMachine, infrav1.MachineFinalizer)
-
-	return reconcile.Result{}, nil
-}
-
-func (r *HivelocityMachineReconciler) reconcileNormal(ctx context.Context, machineScope *scope.MachineScope) (reconcile.Result, error) {
+func (r *HivelocityMachineReconciler) reconcile(ctx context.Context, machineScope *scope.MachineScope) (reconcile.Result, error) {
 	machineScope.Info("Reconciling HivelocityMachine")
 	hivelocityMachine := machineScope.HivelocityMachine
 

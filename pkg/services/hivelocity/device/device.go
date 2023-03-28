@@ -125,34 +125,6 @@ func (s *Service) getSSHKeyIDFromSSHKeyName(ctx context.Context, sshKey *infrav1
 		sshKey.Name)
 }
 
-// Delete implements delete method of the HivelocityMachine.
-func (s *Service) Delete(ctx context.Context) (_ *ctrl.Result, err error) {
-	// If no providerID is set, there is nothing to do
-	if s.scope.HivelocityMachine.Spec.ProviderID == nil {
-		return nil, nil
-	}
-
-	// Check whether device still exists
-	deviceID, err := s.scope.HivelocityMachine.DeviceIDFromProviderID()
-	if err != nil {
-		return nil, fmt.Errorf("[Delete] ProviderIDToDeviceID failed: %w", err)
-	}
-
-	_, err = s.scope.HVClient.GetDevice(ctx, deviceID)
-	if err != nil {
-		if errors.Is(err, hvclient.ErrDeviceNotFound) {
-			// Nothing to do if device is not found
-			s.scope.Info("Unable to locate Hivelocity device by ID or tags")
-			record.Warnf(s.scope.HivelocityMachine, "NoDeviceFound", "Unable to find matching Hivelocity device for %s", s.scope.Name())
-			return nil, nil
-		}
-		return nil, fmt.Errorf("failed to get device: %w", err)
-	}
-
-	// TODO: Finishing up Delete
-	return nil, nil
-}
-
 // setMachineAddress gets the address from the device and sets it on the HivelocityMachine object.
 func setMachineAddress(hvMachine *infrav1.HivelocityMachine, hvDevice *hv.BareMetalDevice) {
 	hvMachine.Status.Addresses = []clusterv1.MachineAddress{
@@ -439,6 +411,90 @@ func (s *Service) verifyAssociatedDevice(device *hv.BareMetalDevice) error {
 		return errMachineTagNotFound
 	}
 	return nil
+}
+
+// actionDeleteDeviceDeProvision re-provisions a device to remove it from cluster.
+func (s *Service) actionDeleteDeviceDeProvision(ctx context.Context) actionResult {
+	s.scope.Info("Start actionDeleteDeviceDeProvision")
+	deviceID, err := s.scope.HivelocityMachine.DeviceIDFromProviderID()
+	if err != nil {
+		return actionError{err: fmt.Errorf("failed to get deviceID from providerID: %w", err)}
+	}
+
+	device, err := s.scope.HVClient.GetDevice(ctx, deviceID)
+	if err != nil {
+		if errors.Is(err, hvclient.ErrDeviceNotFound) {
+			// Nothing to do if device is not found
+			s.scope.Info("Unable to locate Hivelocity device by ID or tags")
+			record.Warnf(s.scope.HivelocityMachine, "NoDeviceFound", "Unable to find matching Hivelocity device for %s", s.scope.Name())
+			return actionComplete{}
+		}
+		return actionError{err: fmt.Errorf("failed to get device: %w", err)}
+	}
+
+	newTags, _ := s.scope.HivelocityCluster.DeviceTag().RemoveFromList(device.Tags)
+	newTags, _ = s.scope.HivelocityMachine.DeviceTag().RemoveFromList(newTags)
+	newTags, _ = s.scope.DeviceTagMachineType().RemoveFromList(newTags)
+
+	opts := hv.BareMetalDeviceUpdate{
+		Hostname:    s.scope.Name(),
+		Tags:        newTags,
+		OsName:      defaultImageName,
+		ForceReload: true,
+	}
+
+	// Provision the device
+	if _, err := s.scope.HVClient.ProvisionDevice(ctx, deviceID, opts); err != nil {
+		// TODO: Handle error that machine is not shut down
+		if hvclient.IsRateLimitExceededError(err) {
+			conditions.MarkTrue(s.scope.HivelocityMachine, infrav1.RateLimitExceeded)
+			record.Event(s.scope.HivelocityMachine,
+				"RateLimitExceeded",
+				"exceeded rate limit with calling Hivelocity function ProvisionDevice",
+			)
+		}
+		record.Warnf(s.scope.HivelocityMachine,
+			"FailedProvisionHivelocityDevice",
+			"Failed to provision Hivelocity device %s: %s",
+			s.scope.Name(),
+			err,
+		)
+		return actionError{err: fmt.Errorf("failed to provision device %d: %s", deviceID, err)}
+	}
+	return actionComplete{}
+}
+
+// actionDeleteDeviceDissociate ensures that the device has no tags of machine.
+func (s *Service) actionDeleteDeviceDissociate(ctx context.Context) actionResult {
+	s.scope.Info("Start actionDeleteDeviceDissociate")
+
+	deviceID, err := s.scope.HivelocityMachine.DeviceIDFromProviderID()
+	if err != nil {
+		return actionError{err: fmt.Errorf("failed to get deviceID from providerID: %w", err)}
+	}
+
+	device, err := s.scope.HVClient.GetDevice(ctx, deviceID)
+	if err != nil {
+		if errors.Is(err, hvclient.ErrDeviceNotFound) {
+			// Nothing to do if device is not found
+			s.scope.Info("Unable to locate Hivelocity device by ID or tags")
+			record.Warnf(s.scope.HivelocityMachine, "NoDeviceFound", "Unable to find matching Hivelocity device for %s", s.scope.Name())
+			return actionComplete{}
+		}
+		return actionError{err: fmt.Errorf("failed to get device: %w", err)}
+	}
+
+	newTags, updated1 := s.scope.HivelocityCluster.DeviceTag().RemoveFromList(device.Tags)
+	newTags, updated2 := s.scope.HivelocityMachine.DeviceTag().RemoveFromList(newTags)
+	newTags, updated3 := s.scope.DeviceTagMachineType().RemoveFromList(newTags)
+
+	if updated1 || updated2 || updated3 {
+		if err := s.scope.HVClient.SetDeviceTags(ctx, device.DeviceId, newTags); err != nil {
+			return actionError{err: fmt.Errorf("failed to set tags: %w", err)}
+		}
+	}
+
+	return actionComplete{}
 }
 
 // providerIDFromDeviceID converts a deviceID to ProviderID.
