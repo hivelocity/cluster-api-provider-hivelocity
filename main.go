@@ -105,7 +105,7 @@ func cliTestListSSHKeys(ctx context.Context, client hvclient.Client) {
 func cliTestProvisionDevice(ctx context.Context, client hvclient.Client) {
 	opts := hv.BareMetalDeviceUpdate{
 		Hostname: "my-host-name.example.com",
-		//Tags:     createTags("my-cluster-name", "my-host-name", false),
+		// Tags:     createTags("my-cluster-name", "my-host-name", false),
 		OsName:         "Ubuntu 20.x",
 		PublicSshKeyId: 861,
 	}
@@ -236,7 +236,7 @@ func main() {
 		setupLog.Error(err, "unable to create webhook", "webhook", "HivelocityMachine")
 		os.Exit(1)
 	}
-	if err = (&infrastructurev1alpha1.HivelocityMachineTemplate{}).SetupWebhookWithManager(mgr); err != nil {
+	if err = (&infrastructurev1alpha1.HivelocityMachineTemplateWebhook{}).SetupWebhookWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create webhook", "webhook", "HivelocityMachineTemplate")
 		os.Exit(1)
 	}

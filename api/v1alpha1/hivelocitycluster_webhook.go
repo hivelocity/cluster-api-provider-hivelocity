@@ -37,37 +37,26 @@ func (r *HivelocityCluster) SetupWebhookWithManager(mgr ctrl.Manager) error {
 var _ webhook.Defaulter = &HivelocityCluster{}
 
 // Default implements webhook.Defaulter so a webhook will be registered for the type.
-func (r *HivelocityCluster) Default() {
-	hivelocityclusterlog.Info("default", "name", r.Name)
+func (r *HivelocityCluster) Default() {}
 
-	// TODO(user): fill in your defaulting logic.
-}
-
-// TODO(user): change verbs to "verbs=create;update;delete" if you want to enable deletion validation.
 //+kubebuilder:webhook:path=/validate-infrastructure-cluster-x-k8s-io-v1alpha1-hivelocitycluster,mutating=false,failurePolicy=fail,sideEffects=None,groups=infrastructure.cluster.x-k8s.io,resources=hivelocityclusters,verbs=create;update,versions=v1alpha1,name=vhivelocitycluster.kb.io,admissionReviewVersions=v1
 
 var _ webhook.Validator = &HivelocityCluster{}
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type.
 func (r *HivelocityCluster) ValidateCreate() error {
-	hivelocityclusterlog.Info("validate create", "name", r.Name)
-
-	// TODO(user): fill in your validation logic upon object creation.
+	hivelocityclusterlog.V(1).Info("validate create", "name", r.Name)
 	return nil
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type.
 func (r *HivelocityCluster) ValidateUpdate(old runtime.Object) error {
-	hivelocityclusterlog.Info("validate update", "name", r.Name)
-
-	// TODO(user): fill in your validation logic upon object update.
+	hivelocityclusterlog.V(1).Info("validate update", "name", r.Name)
 	return nil
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type.
 func (r *HivelocityCluster) ValidateDelete() error {
-	hivelocityclusterlog.Info("validate delete", "name", r.Name)
-
-	// TODO(user): fill in your validation logic upon object deletion.
+	hivelocityclusterlog.V(1).Info("validate delete", "name", r.Name)
 	return nil
 }

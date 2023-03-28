@@ -109,7 +109,7 @@ var _ = BeforeSuite(func() {
 	err = (&HivelocityMachine{}).SetupWebhookWithManager(mgr)
 	Expect(err).NotTo(HaveOccurred())
 
-	err = (&HivelocityMachineTemplate{}).SetupWebhookWithManager(mgr)
+	err = (&HivelocityMachineTemplateWebhook{}).SetupWebhookWithManager(mgr)
 	Expect(err).NotTo(HaveOccurred())
 
 	err = (&HivelocityRemediation{}).SetupWebhookWithManager(mgr)

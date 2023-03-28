@@ -22,14 +22,8 @@ const (
 	// DeviceReadyCondition reports on current status of the device. Ready indicates the device is in a Running state.
 	DeviceReadyCondition clusterv1.ConditionType = "DeviceReady"
 
-	// DeviceTerminatedReason device is in a terminated state.
-	DeviceTerminatedReason = "DeviceTerminated"
-
-	// DeviceOffReason device is off.
-	DeviceOffReason = "DeviceOff"
-
 	// DeviceNotFoundReason (Severity=Error) documents a HivelocityMachine controller detecting
-	// the underlying device has been deleted unexpectedly.
+	// the underlying device cannot be found anymore.
 	DeviceNotFoundReason = "DeviceNotFound"
 )
 
@@ -38,15 +32,6 @@ const (
 	MachineBootstrapReadyCondition clusterv1.ConditionType = "MachineBootstrapReady"
 	// MachineBootstrapNotReadyReason bootstrap not ready yet.
 	MachineBootstrapNotReadyReason = "MachineBootstrapNotReady"
-)
-
-const (
-	// NetworkAttached reports on whether there is a network attached to the cluster.
-	NetworkAttached clusterv1.ConditionType = "NetworkAttached"
-	// NetworkDisabledReason indicates that network is disabled.
-	NetworkDisabledReason = "NetworkDisabled"
-	// NetworkUnreachableReason indicates that network is unreachable.
-	NetworkUnreachableReason = "NetworkUnreachable"
 )
 
 const (
@@ -63,9 +48,4 @@ const (
 	RateLimitExceeded clusterv1.ConditionType = "RateLimitExceeded"
 	// RateLimitNotReachedReason indicates that the rate limit is not reached yet.
 	RateLimitNotReachedReason = "RateLimitNotReached"
-)
-
-const (
-	// HivelocityBareMetalHostReady reports on whether the Hivelocity cluster is in ready state.
-	HivelocityBareMetalHostReady clusterv1.ConditionType = "HivelocityBareMetalHostReady"
 )

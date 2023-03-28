@@ -17,7 +17,12 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"fmt"
+	"reflect"
+
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/validation/field"
 	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
@@ -37,37 +42,47 @@ func (r *HivelocityMachine) SetupWebhookWithManager(mgr ctrl.Manager) error {
 var _ webhook.Defaulter = &HivelocityMachine{}
 
 // Default implements webhook.Defaulter so a webhook will be registered for the type.
-func (r *HivelocityMachine) Default() {
-	hivelocitymachinelog.Info("default", "name", r.Name)
+func (r *HivelocityMachine) Default() {}
 
-	// TODO(user): fill in your defaulting logic.
-}
-
-// TODO(user): change verbs to "verbs=create;update;delete" if you want to enable deletion validation.
 //+kubebuilder:webhook:path=/validate-infrastructure-cluster-x-k8s-io-v1alpha1-hivelocitymachine,mutating=false,failurePolicy=fail,sideEffects=None,groups=infrastructure.cluster.x-k8s.io,resources=hivelocitymachines,verbs=create;update,versions=v1alpha1,name=vhivelocitymachine.kb.io,admissionReviewVersions=v1
 
 var _ webhook.Validator = &HivelocityMachine{}
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type.
 func (r *HivelocityMachine) ValidateCreate() error {
-	hivelocitymachinelog.Info("validate create", "name", r.Name)
-
-	// TODO(user): fill in your validation logic upon object creation.
+	hivelocitymachinelog.V(1).Info("validate create", "name", r.Name)
 	return nil
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type.
-func (r *HivelocityMachine) ValidateUpdate(old runtime.Object) error {
-	hivelocitymachinelog.Info("validate update", "name", r.Name)
+func (r *HivelocityMachine) ValidateUpdate(oldRaw runtime.Object) error {
+	hivelocitymachinelog.V(1).Info("validate update", "name", r.Name)
+	old, ok := oldRaw.(*HivelocityMachine)
+	if !ok {
+		return apierrors.NewBadRequest(fmt.Sprintf("expected an HivelocityMachine but got a %T", oldRaw))
+	}
 
-	// TODO(user): fill in your validation logic upon object update.
-	return nil
+	var allErrs field.ErrorList
+
+	// Type is immutable
+	if !reflect.DeepEqual(old.Spec.Type, r.Spec.Type) {
+		allErrs = append(allErrs,
+			field.Invalid(field.NewPath("spec", "type"), r.Spec.Type, "field is immutable"),
+		)
+	}
+
+	// ImageName is immutable
+	if !reflect.DeepEqual(old.Spec.ImageName, r.Spec.ImageName) {
+		allErrs = append(allErrs,
+			field.Invalid(field.NewPath("spec", "imageName"), r.Spec.ImageName, "field is immutable"),
+		)
+	}
+
+	return aggregateObjErrors(r.GroupVersionKind().GroupKind(), r.Name, allErrs)
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type.
 func (r *HivelocityMachine) ValidateDelete() error {
-	hivelocitymachinelog.Info("validate delete", "name", r.Name)
-
-	// TODO(user): fill in your validation logic upon object deletion.
+	hivelocitymachinelog.V(1).Info("validate delete", "name", r.Name)
 	return nil
 }
