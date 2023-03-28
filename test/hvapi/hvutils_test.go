@@ -14,9 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Package hvutils implements helper functions for the HV API.
-
-package hvutils
+package main
 
 import (
 	"testing"
@@ -25,7 +23,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func Test_FindDeviceByTags(t *testing.T) {
+func Test_findDeviceByTags(t *testing.T) {
 	type args struct {
 		clusterTag string
 		machineTag string
@@ -86,64 +84,11 @@ func Test_FindDeviceByTags(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := FindDeviceByTags(tt.args.clusterTag, tt.args.machineTag, toPointers(tt.args.devices))
+			got, err := findDeviceByTags(tt.args.clusterTag, tt.args.machineTag, toPointers(tt.args.devices))
 			if tt.wantErr != nil {
 				require.ErrorIs(t, err, tt.wantErr)
 			}
 			require.Equal(t, tt.want, got)
-		})
-	}
-}
-
-func TestDeviceHasTagKey(t *testing.T) {
-	type args struct {
-		device *hv.BareMetalDevice
-		tagKey string
-	}
-	tests := []struct {
-		name string
-		args args
-		want bool
-	}{
-		{
-			name: "machine without tags",
-			args: args{
-				device: &hv.BareMetalDevice{},
-				tagKey: "machine-name",
-			},
-			want: false,
-		},
-		{
-			name: "machine with tags",
-			args: args{
-				device: &hv.BareMetalDevice{
-					Tags: []string{
-						"machine-name=foo",
-						"cluster-name=bar",
-					},
-				},
-				tagKey: "machine-name",
-			},
-			want: true,
-		},
-		{
-			name: "machine with tag without equal sign",
-			args: args{
-				device: &hv.BareMetalDevice{
-					Tags: []string{
-						"machine-name",
-					},
-				},
-				tagKey: "machine-name",
-			},
-			want: false,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := DeviceHasTagKey(tt.args.device, tt.args.tagKey); got != tt.want {
-				t.Errorf("DeviceHasTagKey() = %v, want %v", got, tt.want)
-			}
 		})
 	}
 }
@@ -154,32 +99,4 @@ func toPointers[T any](s []T) []*T {
 		ret = append(ret, &s[i])
 	}
 	return ret
-}
-
-func Test_ProviderIDToDeviceID_broken(t *testing.T) {
-	for _, brokenID := range []string{
-		"",
-		"foo",
-		"hivelocity://",
-		"hivelocity://abc",
-		"hivelocity://999999999999999999999999999",
-	} {
-		_, err := ProviderIDToDeviceID(brokenID)
-		require.Errorf(t, err, brokenID)
-	}
-}
-
-func Test_ProviderIDToDeviceID_valid(t *testing.T) {
-	type stringToID struct {
-		s        string
-		expected int32
-	}
-	for _, validID := range []stringToID{
-		{"hivelocity://1", 1},
-		{"hivelocity://12345", 12345},
-	} {
-		id, err := ProviderIDToDeviceID(validID.s)
-		require.NoError(t, err)
-		require.Equal(t, validID.expected, id)
-	}
 }

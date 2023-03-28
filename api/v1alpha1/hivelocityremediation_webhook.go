@@ -38,36 +38,27 @@ var _ webhook.Defaulter = &HivelocityRemediation{}
 
 // Default implements webhook.Defaulter so a webhook will be registered for the type.
 func (r *HivelocityRemediation) Default() {
-	hivelocityremediationlog.Info("default", "name", r.Name)
-
-	// TODO(user): fill in your defaulting logic.
+	hivelocityremediationlog.V(1).Info("default", "name", r.Name)
 }
 
-// TODO(user): change verbs to "verbs=create;update;delete" if you want to enable deletion validation.
 //+kubebuilder:webhook:path=/validate-infrastructure-cluster-x-k8s-io-v1alpha1-hivelocityremediation,mutating=false,failurePolicy=fail,sideEffects=None,groups=infrastructure.cluster.x-k8s.io,resources=hivelocityremediations,verbs=create;update,versions=v1alpha1,name=vhivelocityremediation.kb.io,admissionReviewVersions=v1
 
 var _ webhook.Validator = &HivelocityRemediation{}
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type.
 func (r *HivelocityRemediation) ValidateCreate() error {
-	hivelocityremediationlog.Info("validate create", "name", r.Name)
-
-	// TODO(user): fill in your validation logic upon object creation.
+	hivelocityremediationlog.V(1).Info("validate create", "name", r.Name)
 	return nil
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type.
 func (r *HivelocityRemediation) ValidateUpdate(old runtime.Object) error {
-	hivelocityremediationlog.Info("validate update", "name", r.Name)
-
-	// TODO(user): fill in your validation logic upon object update.
+	hivelocityremediationlog.V(1).Info("validate update", "name", r.Name)
 	return nil
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type.
 func (r *HivelocityRemediation) ValidateDelete() error {
-	hivelocityremediationlog.Info("validate delete", "name", r.Name)
-
-	// TODO(user): fill in your validation logic upon object deletion.
+	hivelocityremediationlog.V(1).Info("validate delete", "name", r.Name)
 	return nil
 }
