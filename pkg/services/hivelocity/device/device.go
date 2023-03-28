@@ -24,7 +24,6 @@ import (
 	"time"
 
 	infrav1 "github.com/hivelocity/cluster-api-provider-hivelocity/api/v1alpha1"
-	hvutils "github.com/hivelocity/cluster-api-provider-hivelocity/pkg/hvutils"
 	"github.com/hivelocity/cluster-api-provider-hivelocity/pkg/scope"
 	hvclient "github.com/hivelocity/cluster-api-provider-hivelocity/pkg/services/hivelocity/client"
 	"github.com/hivelocity/cluster-api-provider-hivelocity/pkg/services/hivelocity/hvtag"
@@ -134,7 +133,7 @@ func (s *Service) Delete(ctx context.Context) (_ *ctrl.Result, err error) {
 	}
 
 	// Check whether device still exists
-	deviceID, err := hvutils.ProviderIDToDeviceID(*s.scope.HivelocityMachine.Spec.ProviderID)
+	deviceID, err := s.scope.HivelocityMachine.DeviceIDFromProviderID()
 	if err != nil {
 		return nil, fmt.Errorf("[Delete] ProviderIDToDeviceID failed: %w", err)
 	}
@@ -242,7 +241,7 @@ func (s *Service) actionAssociateDevice(ctx context.Context) actionResult {
 	if err := s.scope.HVClient.SetTags(ctx, device.DeviceId, device.Tags); err != nil {
 		return actionError{err: fmt.Errorf("failed to set tags: %w", err)}
 	}
-	providerID := hvutils.DeviceIDToProviderID(device.DeviceId)
+	providerID := providerIDFromDeviceID(device.DeviceId)
 	s.scope.HivelocityMachine.Spec.ProviderID = &providerID
 	return actionComplete{}
 }
@@ -261,7 +260,7 @@ func (s *Service) actionVerifyAssociate(ctx context.Context) actionResult {
 	}
 
 	// if waiting time is over, we check the server for tags
-	deviceID, err := hvutils.ProviderIDToDeviceID(*s.scope.HivelocityMachine.Spec.ProviderID)
+	deviceID, err := s.scope.HivelocityMachine.DeviceIDFromProviderID()
 	if err != nil {
 		return actionError{err: fmt.Errorf("failed to get deviceID from providerID: %w", err)}
 	}
@@ -303,7 +302,7 @@ func hasTimedOut(lastUpdated *metav1.Time, timeout time.Duration) bool {
 func (s *Service) actionEnsureDeviceShutDown(ctx context.Context) actionResult {
 	s.scope.Info("Start actionEnsureDeviceShutDown")
 
-	deviceID, err := hvutils.ProviderIDToDeviceID(*s.scope.HivelocityMachine.Spec.ProviderID)
+	deviceID, err := s.scope.HivelocityMachine.DeviceIDFromProviderID()
 	if err != nil {
 		return actionError{err: fmt.Errorf("failed to get deviceID from providerID: %w", err)}
 	}
@@ -322,7 +321,7 @@ func (s *Service) actionEnsureDeviceShutDown(ctx context.Context) actionResult {
 // actionProvisionDevice provisions the device.
 func (s *Service) actionProvisionDevice(ctx context.Context) actionResult {
 	s.scope.Info("Start actionProvisionDevice")
-	deviceID, err := hvutils.ProviderIDToDeviceID(*s.scope.HivelocityMachine.Spec.ProviderID)
+	deviceID, err := s.scope.HivelocityMachine.DeviceIDFromProviderID()
 	if err != nil {
 		return actionError{err: fmt.Errorf("failed to get deviceID from providerID: %w", err)}
 	}
@@ -401,7 +400,7 @@ func (s *Service) actionProvisionDevice(ctx context.Context) actionResult {
 // actionDeviceProvisioned reconciles a provisioned device.
 func (s *Service) actionDeviceProvisioned(ctx context.Context) actionResult {
 	// Check whether device still exists
-	deviceID, err := hvutils.ProviderIDToDeviceID(*s.scope.HivelocityMachine.Spec.ProviderID)
+	deviceID, err := s.scope.HivelocityMachine.DeviceIDFromProviderID()
 	if err != nil {
 		return actionError{err: fmt.Errorf("[actionDeviceProvisioned] ProviderIDToDeviceID failed: %w", err)}
 	}
@@ -440,4 +439,9 @@ func (s *Service) verifyAssociatedDevice(device *hv.BareMetalDevice) error {
 		return errMachineTagNotFound
 	}
 	return nil
+}
+
+// providerIDFromDeviceID converts a deviceID to ProviderID.
+func providerIDFromDeviceID(deviceID int32) string {
+	return fmt.Sprintf("hivelocity://%d", deviceID)
 }

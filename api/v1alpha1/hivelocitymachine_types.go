@@ -17,6 +17,10 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"fmt"
+	"strconv"
+	"strings"
+
 	hvclient "github.com/hivelocity/cluster-api-provider-hivelocity/pkg/services/hivelocity/client"
 	"github.com/hivelocity/cluster-api-provider-hivelocity/pkg/services/hivelocity/hvtag"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -29,6 +33,15 @@ const (
 	// resources associated with HivelocityMachine before removing it from the
 	// apiserver.
 	MachineFinalizer = "hivelocitymachine.infrastructure.cluster.x-k8s.io"
+)
+
+var (
+	// ErrEmptyProviderID indicates an empty providerID.
+	ErrEmptyProviderID = fmt.Errorf("providerID is empty")
+	// ErrInvalidProviderID indicates an invalid providerID.
+	ErrInvalidProviderID = fmt.Errorf("providerID is invalid")
+	// ErrInvalidDeviceID indicates an invalid deviceID.
+	ErrInvalidDeviceID = fmt.Errorf("deviceID is invalid")
 )
 
 // ProvisioningState defines the states the provisioner will report the host has having.
@@ -183,6 +196,23 @@ func (r *HivelocityMachine) DeviceTag() hvtag.DeviceTag {
 		Key:   hvtag.DeviceTagKeyMachine,
 		Value: r.Name,
 	}
+}
+
+// DeviceIDFromProviderID converts the ProviderID (hivelocity://NNNN) to the DeviceID.
+func (r *HivelocityMachine) DeviceIDFromProviderID() (int32, error) {
+	if r.Spec.ProviderID == nil || r.Spec.ProviderID != nil && *r.Spec.ProviderID == "" {
+		return 0, ErrEmptyProviderID
+	}
+	prefix := "hivelocity://"
+	if !strings.HasPrefix(*r.Spec.ProviderID, prefix) {
+		return 0, ErrInvalidProviderID
+	}
+
+	deviceID, err := strconv.ParseInt(strings.TrimPrefix(*r.Spec.ProviderID, prefix), 10, 32)
+	if err != nil {
+		return 0, ErrInvalidDeviceID
+	}
+	return int32(deviceID), nil
 }
 
 //+kubebuilder:object:root=true
