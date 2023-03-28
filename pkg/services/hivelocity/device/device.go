@@ -104,6 +104,7 @@ func (s *Service) Reconcile(ctx context.Context) (_ ctrl.Result, err error) {
 	return result, nil
 }
 
+// TODO: Implement logic to add multiple images.
 func (s *Service) getDeviceImage(ctx context.Context) (string, error) {
 	return defaultImageName, nil
 }
@@ -233,7 +234,11 @@ func (s *Service) actionAssociateDevice(ctx context.Context) actionResult {
 		return actionError{err: fmt.Errorf("failed to choose device: %w", err)}
 	}
 
-	device.Tags = append(device.Tags, s.scope.HivelocityCluster.DeviceTag().ToString(), s.scope.HivelocityMachine.DeviceTag().ToString())
+	device.Tags = append(device.Tags,
+		s.scope.HivelocityCluster.DeviceTag().ToString(),
+		s.scope.HivelocityCluster.DeviceTagOwned().ToString(),
+		s.scope.HivelocityMachine.DeviceTag().ToString(),
+	)
 	if err := s.scope.HVClient.SetTags(ctx, device.DeviceId, device.Tags); err != nil {
 		return actionError{err: fmt.Errorf("failed to set tags: %w", err)}
 	}

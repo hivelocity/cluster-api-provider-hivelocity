@@ -17,6 +17,10 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"fmt"
+	"reflect"
+
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -37,37 +41,34 @@ func (r *HivelocityClusterTemplate) SetupWebhookWithManager(mgr ctrl.Manager) er
 var _ webhook.Defaulter = &HivelocityClusterTemplate{}
 
 // Default implements webhook.Defaulter so a webhook will be registered for the type.
-func (r *HivelocityClusterTemplate) Default() {
-	hivelocityclustertemplatelog.Info("default", "name", r.Name)
+func (r *HivelocityClusterTemplate) Default() {}
 
-	// TODO(user): fill in your defaulting logic.
-}
-
-// TODO(user): change verbs to "verbs=create;update;delete" if you want to enable deletion validation.
 //+kubebuilder:webhook:path=/validate-infrastructure-cluster-x-k8s-io-v1alpha1-hivelocityclustertemplate,mutating=false,failurePolicy=fail,sideEffects=None,groups=infrastructure.cluster.x-k8s.io,resources=hivelocityclustertemplates,verbs=create;update,versions=v1alpha1,name=vhivelocityclustertemplate.kb.io,admissionReviewVersions=v1
 
 var _ webhook.Validator = &HivelocityClusterTemplate{}
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type.
 func (r *HivelocityClusterTemplate) ValidateCreate() error {
-	hivelocityclustertemplatelog.Info("validate create", "name", r.Name)
-
-	// TODO(user): fill in your validation logic upon object creation.
+	hivelocityclustertemplatelog.V(1).Info("validate create", "name", r.Name)
 	return nil
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type.
-func (r *HivelocityClusterTemplate) ValidateUpdate(old runtime.Object) error {
-	hivelocityclustertemplatelog.Info("validate update", "name", r.Name)
+func (r *HivelocityClusterTemplate) ValidateUpdate(oldRaw runtime.Object) error {
+	hivelocityclustertemplatelog.V(1).Info("validate update", "name", r.Name)
+	old, ok := oldRaw.(*HivelocityClusterTemplate)
+	if !ok {
+		return apierrors.NewBadRequest(fmt.Sprintf("expected an HivelocityClusterTemplate but got a %T", oldRaw))
+	}
 
-	// TODO(user): fill in your validation logic upon object update.
+	if !reflect.DeepEqual(r.Spec, old.Spec) {
+		return apierrors.NewBadRequest("HivelocityClusterTemplate.Spec is immutable")
+	}
 	return nil
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type.
 func (r *HivelocityClusterTemplate) ValidateDelete() error {
-	hivelocityclustertemplatelog.Info("validate delete", "name", r.Name)
-
-	// TODO(user): fill in your validation logic upon object deletion.
+	hivelocityclustertemplatelog.V(1).Info("validate delete", "name", r.Name)
 	return nil
 }

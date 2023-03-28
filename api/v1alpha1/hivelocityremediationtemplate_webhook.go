@@ -38,36 +38,27 @@ var _ webhook.Defaulter = &HivelocityRemediationTemplate{}
 
 // Default implements webhook.Defaulter so a webhook will be registered for the type.
 func (r *HivelocityRemediationTemplate) Default() {
-	hivelocityremediationtemplatelog.Info("default", "name", r.Name)
-
-	// TODO(user): fill in your defaulting logic.
+	hivelocityremediationtemplatelog.V(1).Info("default", "name", r.Name)
 }
 
-// TODO(user): change verbs to "verbs=create;update;delete" if you want to enable deletion validation.
 //+kubebuilder:webhook:path=/validate-infrastructure-cluster-x-k8s-io-v1alpha1-hivelocityremediationtemplate,mutating=false,failurePolicy=fail,sideEffects=None,groups=infrastructure.cluster.x-k8s.io,resources=hivelocityremediationtemplates,verbs=create;update,versions=v1alpha1,name=vhivelocityremediationtemplate.kb.io,admissionReviewVersions=v1
 
 var _ webhook.Validator = &HivelocityRemediationTemplate{}
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type.
 func (r *HivelocityRemediationTemplate) ValidateCreate() error {
-	hivelocityremediationtemplatelog.Info("validate create", "name", r.Name)
-
-	// TODO(user): fill in your validation logic upon object creation.
+	hivelocityremediationtemplatelog.V(1).Info("validate create", "name", r.Name)
 	return nil
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type.
 func (r *HivelocityRemediationTemplate) ValidateUpdate(old runtime.Object) error {
-	hivelocityremediationtemplatelog.Info("validate update", "name", r.Name)
-
-	// TODO(user): fill in your validation logic upon object update.
+	hivelocityremediationtemplatelog.V(1).Info("validate update", "name", r.Name)
 	return nil
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type.
 func (r *HivelocityRemediationTemplate) ValidateDelete() error {
-	hivelocityremediationtemplatelog.Info("validate delete", "name", r.Name)
-
-	// TODO(user): fill in your validation logic upon object deletion.
+	hivelocityremediationtemplatelog.V(1).Info("validate delete", "name", r.Name)
 	return nil
 }

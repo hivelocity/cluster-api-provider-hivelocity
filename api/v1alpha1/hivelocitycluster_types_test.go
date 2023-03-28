@@ -31,3 +31,13 @@ func TestClusterDeviceTag(t *testing.T) {
 		t.Fatalf("wrong device tag. Expect %+v, got %+v", expectDeviceTag, deviceTag)
 	}
 }
+
+func TestClusterDeviceTagOwned(t *testing.T) {
+	hvCluster := HivelocityCluster{}
+	hvCluster.Name = "hvclustername"
+	deviceTag := hvCluster.DeviceTagOwned()
+	expectDeviceTag := hvtag.DeviceTag{Key: hvtag.DeviceTagKey(ClusterTagKey("hvclustername")), Value: "owned"}
+	if deviceTag != expectDeviceTag {
+		t.Fatalf("wrong device tag. Expect %+v, got %+v", expectDeviceTag, deviceTag)
+	}
+}

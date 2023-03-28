@@ -31,27 +31,44 @@ const (
 
 // HivelocityClusterSpec defines the desired state of HivelocityCluster.
 type HivelocityClusterSpec struct {
-	// Important: Run "make generate" to regenerate code after modifying this file
-
 	// ControlPlaneEndpoint represents the endpoint used to communicate with the control plane.
 	// +optional
 	ControlPlaneEndpoint *clusterv1.APIEndpoint `json:"controlPlaneEndpoint"`
 
-	// ControlPlaneRegion consists of a list of Hivelocity Regions (LAX2, ...).
+	// ControlPlaneRegion is a Hivelocity Region (LAX2, ...).
 	ControlPlaneRegion Region `json:"controlPlaneRegion"`
 
 	// HivelocitySecret is a reference to a Kubernetes Secret.
 	HivelocitySecret HivelocitySecretRef `json:"hivelocitySecretRef"`
 
 	// SSHKey is cluster wide. Valid value is a valid SSH key name.
-	SSHKey *SSHKey `json:"sshKey"`
+	// +optional
+	SSHKey *SSHKey `json:"sshKey,omitempty"`
+}
+
+// HivelocitySecretRef defines the name of the Secret and the relevant key in the secret to access the Hivelocity API.
+type HivelocitySecretRef struct {
+	// +optional
+	// +kubebuilder:default=hivelocity
+	Name string `json:"name,omitempty"`
+
+	// +optional
+	// +kubebuilder:default=HIVELOCITY_API_KEY
+	Key string `json:"key,omitempty"`
+}
+
+// SSHKey defines the SSHKey for Hivelocity.
+type SSHKey struct {
+	// Name of SSH key.
+	// +kubebuilder:validation:MinLength=1
+	Name string `json:"name"`
+	// ID of SSH key - added by controller if not specified by user.
+	// +optional
+	ID int64 `json:"id,omitempty"`
 }
 
 // HivelocityClusterStatus defines the observed state of HivelocityCluster.
 type HivelocityClusterStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
-
 	// +kubebuilder:default=false
 	Ready bool `json:"ready"`
 
@@ -96,6 +113,14 @@ func (r *HivelocityCluster) DeviceTag() hvtag.DeviceTag {
 	return hvtag.DeviceTag{
 		Key:   hvtag.DeviceTagKeyCluster,
 		Value: r.Name,
+	}
+}
+
+// DeviceTagOwned returns a DeviceTag object for the ResourceLifeCycle tag.
+func (r *HivelocityCluster) DeviceTagOwned() hvtag.DeviceTag {
+	return hvtag.DeviceTag{
+		Key:   hvtag.DeviceTagKey(ClusterTagKey(r.Name)),
+		Value: string(ResourceLifecycleOwned),
 	}
 }
 

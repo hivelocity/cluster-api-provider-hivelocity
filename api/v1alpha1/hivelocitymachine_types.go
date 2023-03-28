@@ -76,7 +76,6 @@ type HivelocityMachineSpec struct {
 	ProviderID *string `json:"providerID,omitempty"`
 
 	// Type is the Hivelocity Machine Type for this machine.
-	// +kubebuilder:validation:Enum=hvCustom;todo-question
 	Type HivelocityDeviceType `json:"type"`
 
 	// ImageName is the reference to the Machine Image from which to create the device.
@@ -102,6 +101,10 @@ type ControllerGeneratedStatus struct {
 	// +optional
 	LastUpdated *metav1.Time `json:"lastUpdated,omitempty"`
 }
+
+// HivelocityDeviceType defines the Hivelocity device type.
+// +kubebuilder:validation:Enum=hvCustom;todo-question
+type HivelocityDeviceType string
 
 // HivelocityMachineStatus defines the observed state of HivelocityMachine.
 type HivelocityMachineStatus struct {

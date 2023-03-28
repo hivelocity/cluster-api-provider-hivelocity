@@ -106,8 +106,8 @@ spec:
                         - port
                         type: object
                       controlPlaneRegion:
-                        description: ControlPlaneRegion consists of a list of Hivelocity
-                          Regions (LAX2, ...).
+                        description: ControlPlaneRegion is a Hivelocity Region (LAX2,
+                          ...).
                         enum:
                         - AMS1
                         - ATL2
@@ -167,12 +167,13 @@ spec:
                         description: SSHKey is cluster wide. Valid value is a valid
                           SSH key name.
                         properties:
-                          fingerprint:
-                            description: 'Fingerprint of SSH key - added by controller
-                              // question: by controller? I thought by command-line-tool'
-                            type: string
+                          id:
+                            description: ID of SSH key - added by controller if not
+                              specified by user.
+                            format: int64
+                            type: integer
                           name:
-                            description: Name of SSH key
+                            description: Name of SSH key.
                             minLength: 1
                             type: string
                         required:
@@ -181,7 +182,6 @@ spec:
                     required:
                     - controlPlaneRegion
                     - hivelocitySecretRef
-                    - sshKey
                     type: object
                 required:
                 - spec

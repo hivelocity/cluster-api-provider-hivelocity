@@ -232,6 +232,7 @@ var _ = Describe("HivelocityMachineReconciler", func() {
 			Expect(device.Tags).Should(BeEquivalentTo([]string{
 				"caphv-device-type=hvCustom",
 				"caphv-cluster-name=hv-test1",
+				"caphv-cluster-hv-test1=owned",
 				fmt.Sprintf("caphv-machine-name=%s", hvMachine.Name),
 			}))
 		})

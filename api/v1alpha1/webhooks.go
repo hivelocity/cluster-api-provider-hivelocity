@@ -16,9 +16,20 @@ limitations under the License.
 
 package v1alpha1
 
-// ResourceLifecycle configures the lifecycle of a resource.
-type ResourceLifecycle string
+import (
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/util/validation/field"
+)
 
-// Region is a Hivelocity Location
-// +kubebuilder:validation:Enum=AMS1;ATL2;BOM1;DAL1;DEL1;EDGE-ARN1;EDGE-CDG1;EDGE-FLL1;EDGE-FRA1;EDGE-HKG1;EDGE-IAD1;EDGE-ICN1;EDGE-JFK1;EDGE-LAX1;EDGE-LCY1;EDGE-LIN1;EDGE-NRT1;EDGE-SIN1;EDGE-SNV1;EDGE-SYD1;EDGE-TOJ1;EDGE-YXX1;EDGE-YYZ1;FRA1;IAD3;IND1;LAX2;LHR2;MIA1;NRT2;NYC1;ORD1;PNQ1;POZ1;RIX1;SEA1;SIN1;SLC1;TPA1;TPA2;VNO1;YYZ2
-type Region string
+func aggregateObjErrors(gk schema.GroupKind, name string, allErrs field.ErrorList) error {
+	if len(allErrs) == 0 {
+		return nil
+	}
+
+	return apierrors.NewInvalid(
+		gk,
+		name,
+		allErrs,
+	)
+}
