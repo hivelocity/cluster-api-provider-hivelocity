@@ -32,9 +32,9 @@ var errMultipleDevicesFound = fmt.Errorf(
 func findDeviceByTags(
 	clusterTag string,
 	machineTag string,
-	devices []*hv.BareMetalDevice,
-) (*hv.BareMetalDevice, error) {
-	var device *hv.BareMetalDevice
+	devices []hv.BareMetalDevice,
+) (hv.BareMetalDevice, error) {
+	var device hv.BareMetalDevice
 	found := 0
 	for i := range devices {
 		if slices.Contains(devices[i].Tags, clusterTag) &&
@@ -44,10 +44,10 @@ func findDeviceByTags(
 		}
 	}
 	if found > 1 {
-		return nil, fmt.Errorf("found %v devices with tags %s and %s. Expected one: %w",
+		return hv.BareMetalDevice{}, fmt.Errorf("found %v devices with tags %s and %s. Expected one: %w",
 			found, clusterTag, machineTag, errMultipleDevicesFound)
 	} else if found == 0 {
-		return nil, nil
+		return hv.BareMetalDevice{}, nil
 	}
 	return device, nil
 }

@@ -32,7 +32,7 @@ func Test_findDeviceByTags(t *testing.T) {
 	tests := []struct {
 		name    string
 		args    args
-		want    *hv.BareMetalDevice
+		want    hv.BareMetalDevice
 		wantErr error
 	}{
 		{
@@ -42,7 +42,7 @@ func Test_findDeviceByTags(t *testing.T) {
 				machineTag: "mt=bar",
 				devices:    []hv.BareMetalDevice{},
 			},
-			want:    nil,
+			want:    hv.BareMetalDevice{},
 			wantErr: nil,
 		},
 		{
@@ -59,7 +59,7 @@ func Test_findDeviceByTags(t *testing.T) {
 					},
 				},
 			},
-			want: &hv.BareMetalDevice{
+			want: hv.BareMetalDevice{
 				Tags: []string{"ct=foo", "mt=bar"},
 			},
 			wantErr: nil,
@@ -78,25 +78,17 @@ func Test_findDeviceByTags(t *testing.T) {
 					},
 				},
 			},
-			want:    nil,
+			want:    hv.BareMetalDevice{},
 			wantErr: errMultipleDevicesFound,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := findDeviceByTags(tt.args.clusterTag, tt.args.machineTag, toPointers(tt.args.devices))
+			got, err := findDeviceByTags(tt.args.clusterTag, tt.args.machineTag, tt.args.devices)
 			if tt.wantErr != nil {
 				require.ErrorIs(t, err, tt.wantErr)
 			}
 			require.Equal(t, tt.want, got)
 		})
 	}
-}
-
-func toPointers[T any](s []T) []*T {
-	ret := make([]*T, 0, len(s))
-	for i := range s {
-		ret = append(ret, &s[i])
-	}
-	return ret
 }

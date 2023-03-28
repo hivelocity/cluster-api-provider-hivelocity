@@ -45,7 +45,7 @@ func cliTestListDevices(ctx context.Context, client hvclient.Client) {
 }
 
 func cliTestSetTags(ctx context.Context, client hvclient.Client) {
-	err := client.SetTags(ctx, manualDeviceID, []string{"foo"})
+	err := client.SetDeviceTags(ctx, manualDeviceID, []string{"foo"})
 	if err != nil {
 		panic(err)
 	}

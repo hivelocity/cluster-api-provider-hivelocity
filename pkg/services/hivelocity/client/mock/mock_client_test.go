@@ -24,10 +24,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func Test_SetTags(t *testing.T) {
+func Test_SetDeviceTags(t *testing.T) {
 	client := NewMockedHVClientFactory().NewClient("dummy-key")
 	ctx := context.Background()
-	err := client.SetTags(ctx, FreeDeviceID, []string{"tag1", "tag2"})
+	err := client.SetDeviceTags(ctx, FreeDeviceID, []string{"tag1", "tag2"})
 	require.NoError(t, err)
 	device, err := client.GetDevice(ctx, FreeDeviceID)
 	require.NoError(t, err)
@@ -45,6 +45,7 @@ func Test_GetDevice(t *testing.T) {
 	require.Error(t, err)
 	require.ErrorIs(t, err, hvclient.ErrDeviceNotFound)
 }
+
 func Test_NewMockedHVClientFactory(t *testing.T) {
 	factory := NewMockedHVClientFactory()
 	client := factory.NewClient("dummy-key")
@@ -52,7 +53,7 @@ func Test_NewMockedHVClientFactory(t *testing.T) {
 	device, err := client.GetDevice(ctx, FreeDeviceID)
 	require.NoError(t, err)
 	require.ElementsMatch(t, device.Tags, []string{"caphv-device-type=hvCustom"})
-	err = client.SetTags(ctx, FreeDeviceID, []string{"new-tag"})
+	err = client.SetDeviceTags(ctx, FreeDeviceID, []string{"new-tag"})
 	require.NoError(t, err)
 
 	device, err = client.GetDevice(ctx, FreeDeviceID)

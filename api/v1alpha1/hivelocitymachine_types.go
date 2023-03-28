@@ -21,7 +21,6 @@ import (
 	"strconv"
 	"strings"
 
-	hvclient "github.com/hivelocity/cluster-api-provider-hivelocity/pkg/services/hivelocity/client"
 	"github.com/hivelocity/cluster-api-provider-hivelocity/pkg/services/hivelocity/hvtag"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
@@ -135,7 +134,7 @@ type HivelocityMachineStatus struct {
 
 	// DeviceState is the state of the device for this machine.
 	// +optional
-	DeviceState *hvclient.DeviceStatus `json:"deviceState,omitempty"`
+	DeviceState string `json:"deviceState,omitempty"`
 
 	// FailureReason will be set in the event that there is a terminal problem
 	// reconciling the Machine and will contain a succinct value suitable

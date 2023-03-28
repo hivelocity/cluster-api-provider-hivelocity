@@ -22,7 +22,6 @@ limitations under the License.
 package v1alpha1
 
 import (
-	client "github.com/hivelocity/cluster-api-provider-hivelocity/pkg/services/hivelocity/client"
 	"k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -341,11 +340,6 @@ func (in *HivelocityMachineStatus) DeepCopyInto(out *HivelocityMachineStatus) {
 		in, out := &in.Addresses, &out.Addresses
 		*out = make([]v1beta1.MachineAddress, len(*in))
 		copy(*out, *in)
-	}
-	if in.DeviceState != nil {
-		in, out := &in.DeviceState, &out.DeviceState
-		*out = new(client.DeviceStatus)
-		**out = **in
 	}
 	if in.FailureReason != nil {
 		in, out := &in.FailureReason, &out.FailureReason

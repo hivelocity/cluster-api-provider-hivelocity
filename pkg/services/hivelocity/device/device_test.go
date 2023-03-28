@@ -26,9 +26,9 @@ import (
 )
 
 func Test_chooseAvailableFromList(t *testing.T) {
-	devices := []*hv.BareMetalDevice{
-		&mockclient.NoTagsDevice,
-		&mockclient.FreeDevice,
+	devices := []hv.BareMetalDevice{
+		mockclient.NoTagsDevice,
+		mockclient.FreeDevice,
 	}
 	_, err := chooseAvailableFromList(devices, "fooDeviceType", "my-cluster", "my-machine")
 	require.ErrorIs(t, err, errNoDeviceAvailable)
