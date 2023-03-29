@@ -172,16 +172,16 @@ func setMachineAddress(hvMachine *infrav1.HivelocityMachine, hvDevice *hv.BareMe
 }
 
 // chooseDevice searches for an unused device.
-func (s *Service) chooseDevice(ctx context.Context) (*hv.BareMetalDevice, error) {
+func (s *Service) chooseDevice(ctx context.Context) (hv.BareMetalDevice, error) {
 	devices, err := s.scope.HVClient.ListDevices(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("[chooseDevice] ListDevices() failed. machine %q: %w",
+		return hv.BareMetalDevice{}, fmt.Errorf("[chooseDevice] ListDevices() failed. machine %q: %w",
 			s.scope.Name(), err)
 	}
 	return chooseAvailableFromList(devices, s.scope.HivelocityMachine.Spec.Type, s.scope.HivelocityCluster.Name, s.scope.Name())
 }
 
-func chooseAvailableFromList(devices []*hv.BareMetalDevice, deviceType infrav1.HivelocityDeviceType, clusterName, machineName string) (*hv.BareMetalDevice, error) {
+func chooseAvailableFromList(devices []hv.BareMetalDevice, deviceType infrav1.HivelocityDeviceType, clusterName, machineName string) (hv.BareMetalDevice, error) {
 	for _, device := range devices {
 		// Ignore if associated already
 		machineTag, err := hvtag.MachineTagFromList(device.Tags)
@@ -222,7 +222,7 @@ func chooseAvailableFromList(devices []*hv.BareMetalDevice, deviceType infrav1.H
 
 		return device, nil
 	}
-	return nil, errNoDeviceAvailable
+	return hv.BareMetalDevice{}, errNoDeviceAvailable
 }
 
 // actionAssociateDevice claims an unused HV device by settings tags and returns it.
@@ -238,7 +238,7 @@ func (s *Service) actionAssociateDevice(ctx context.Context) actionResult {
 		s.scope.HivelocityCluster.DeviceTagOwned().ToString(),
 		s.scope.HivelocityMachine.DeviceTag().ToString(),
 	)
-	if err := s.scope.HVClient.SetTags(ctx, device.DeviceId, device.Tags); err != nil {
+	if err := s.scope.HVClient.SetDeviceTags(ctx, device.DeviceId, device.Tags); err != nil {
 		return actionError{err: fmt.Errorf("failed to set tags: %w", err)}
 	}
 	providerID := providerIDFromDeviceID(device.DeviceId)
@@ -282,7 +282,7 @@ func (s *Service) actionVerifyAssociate(ctx context.Context) actionResult {
 	newTagList, updatedTags1 := s.scope.HivelocityCluster.DeviceTag().RemoveFromList(device.Tags)
 	newTagList, updatedTags2 := s.scope.HivelocityMachine.DeviceTag().RemoveFromList(newTagList)
 	if updatedTags1 || updatedTags2 {
-		if err := s.scope.HVClient.SetTags(ctx, deviceID, newTagList); err != nil {
+		if err := s.scope.HVClient.SetDeviceTags(ctx, deviceID, newTagList); err != nil {
 			return actionError{err: fmt.Errorf("failed to remove associated machine from tags: %w", err)}
 		}
 	}
