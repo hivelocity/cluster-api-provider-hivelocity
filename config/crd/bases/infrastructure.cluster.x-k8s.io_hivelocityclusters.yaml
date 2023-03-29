@@ -9,13 +9,35 @@ metadata:
 spec:
   group: infrastructure.cluster.x-k8s.io
   names:
+    categories:
+    - cluster-api
     kind: HivelocityCluster
     listKind: HivelocityClusterList
     plural: hivelocityclusters
+    shortNames:
+    - capihvc
     singular: hivelocitycluster
   scope: Namespaced
   versions:
-  - name: v1alpha1
+  - additionalPrinterColumns:
+    - description: Cluster to which this HetznerCluster belongs
+      jsonPath: .metadata.labels.cluster\.x-k8s\.io/cluster-name
+      name: Cluster
+      type: string
+    - description: Cluster infrastructure is ready for Nodes
+      jsonPath: .status.ready
+      name: Ready
+      type: string
+    - description: API Endpoint
+      jsonPath: .spec.controlPlaneEndpoint
+      name: Endpoint
+      priority: 1
+      type: string
+    - description: Control plane region
+      jsonPath: .spec.controlPlaneRegion
+      name: Region
+      type: string
+    name: v1alpha1
     schema:
       openAPIV3Schema:
         description: HivelocityCluster is the Schema for the hivelocityclusters API.

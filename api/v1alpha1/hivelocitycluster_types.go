@@ -77,8 +77,15 @@ type HivelocityClusterStatus struct {
 	Conditions clusterv1.Conditions `json:"conditions,omitempty"`
 }
 
-//+kubebuilder:object:root=true
-//+kubebuilder:subresource:status
+// +kubebuilder:object:root=true
+// +kubebuilder:storageversion
+// +kubebuilder:subresource:status
+// +kubebuilder:resource:path=hivelocityclusters,scope=Namespaced,categories=cluster-api,shortName=capihvc
+// +kubebuilder:printcolumn:name="Cluster",type="string",JSONPath=".metadata.labels.cluster\\.x-k8s\\.io/cluster-name",description="Cluster to which this HetznerCluster belongs"
+// +kubebuilder:printcolumn:name="Ready",type="string",JSONPath=".status.ready",description="Cluster infrastructure is ready for Nodes"
+// +kubebuilder:printcolumn:name="Endpoint",type="string",JSONPath=".spec.controlPlaneEndpoint",description="API Endpoint",priority=1
+// +kubebuilder:printcolumn:name="Region",type="string",JSONPath=".spec.controlPlaneRegion",description="Control plane region"
+// +k8s:defaulter-gen=true
 
 // HivelocityCluster is the Schema for the hivelocityclusters API.
 type HivelocityCluster struct {
@@ -87,15 +94,6 @@ type HivelocityCluster struct {
 
 	Spec   HivelocityClusterSpec   `json:"spec,omitempty"`
 	Status HivelocityClusterStatus `json:"status,omitempty"`
-}
-
-//+kubebuilder:object:root=true
-
-// HivelocityClusterList contains a list of HivelocityCluster.
-type HivelocityClusterList struct {
-	metav1.TypeMeta `json:",inline"`
-	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []HivelocityCluster `json:"items"`
 }
 
 // GetConditions returns the observations of the operational state of the HivelocityCluster resource.
@@ -133,6 +131,16 @@ func (r *HivelocityCluster) SetStatusFailureDomain(region Region) {
 	r.Status.FailureDomains[string(region)] = clusterv1.FailureDomainSpec{
 		ControlPlane: true,
 	}
+}
+
+// +kubebuilder:object:root=true
+// +k8s:defaulter-gen=true
+
+// HivelocityClusterList contains a list of HivelocityCluster.
+type HivelocityClusterList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata,omitempty"`
+	Items           []HivelocityCluster `json:"items"`
 }
 
 func init() {

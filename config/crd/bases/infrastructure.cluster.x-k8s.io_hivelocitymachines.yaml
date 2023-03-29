@@ -15,7 +15,7 @@ spec:
     listKind: HivelocityMachineList
     plural: hivelocitymachines
     shortNames:
-    - capihcm
+    - capihvm
     singular: hivelocitymachine
   scope: Namespaced
   versions:
