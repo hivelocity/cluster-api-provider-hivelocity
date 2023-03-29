@@ -64,6 +64,18 @@ const (
 
 	// StateDeviceProvisioned .
 	StateDeviceProvisioned ProvisioningState = "provisioned"
+
+	// StateDeleteDeviceShutdown .
+	StateDeleteDeviceShutdown ProvisioningState = "delete-shutdown"
+
+	// StateDeleteDeviceDeProvision .
+	StateDeleteDeviceDeProvision ProvisioningState = "delete-deprovision"
+
+	// StateDeleteDeviceDissociate .
+	StateDeleteDeviceDissociate ProvisioningState = "delete-dissociate"
+
+	// StateDeleteDevice .
+	StateDeleteDevice ProvisioningState = "delete"
 )
 
 // ErrorType indicates the class of problem that has caused the Host resource
