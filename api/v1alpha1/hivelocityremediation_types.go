@@ -28,11 +28,8 @@ const (
 	// removing it from the apiserver.
 	RemediationFinalizer = " hivelocityremediation.infrastructure.cluster.x-k8s.io"
 
-	// RebootAnnotation indicates that a bare metal host object should be rebooted.
-	RebootAnnotation = "reboot. hivelocityhost.infrastructure.cluster.x-k8s.io"
-
-	// RebootRemediationStrategy sets RemediationType to Reboot.
-	RebootRemediationStrategy RemediationType = "Reboot"
+	// RemediationTypeReboot sets RemediationType to Reboot.
+	RemediationTypeReboot RemediationType = "Reboot"
 )
 
 const (
@@ -42,7 +39,7 @@ const (
 	// PhaseWaiting represents the state during remediation when the controller has done its job but still waiting for the result of the last remediation step.
 	PhaseWaiting = "Waiting"
 
-	// PhaseDeleting represents the state where host remediation has failed and the controller is deleting the unhealthy Machine object from the cluster.
+	// PhaseDeleting represents the state where remediation has failed and the controller is deleting the unhealthy Machine object from the cluster.
 	PhaseDeleting = "Deleting machine"
 )
 
@@ -69,7 +66,6 @@ type RemediationStrategy struct {
 
 // HivelocityRemediationStatus defines the observed state of HivelocityRemediation.
 type HivelocityRemediationStatus struct {
-
 	// Phase represents the current phase of machine remediation.
 	// E.g. Pending, Running, Done etc.
 	// +optional
@@ -90,12 +86,11 @@ type HivelocityRemediationStatus struct {
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 // +kubebuilder:resource:path= hivelocityremediations,scope=Namespaced,categories=cluster-api,shortName=hvr;hvremediation
 // +kubebuilder:storageversion
-// +kubebuilder:printcolumn:name="Strategy",type=string,JSONPath=".spec.strategy.type",description="Type of the remediation strategy"
-// +kubebuilder:printcolumn:name="Retry limit",type=string,JSONPath=".spec.strategy.retryLimit",description="How many times remediation controller should attempt to remediate the host"
 // +kubebuilder:printcolumn:name="Timeout",type=string,JSONPath=".spec.strategy.timeout",description="Timeout for the remediation"
 // +kubebuilder:printcolumn:name="Phase",type=string,JSONPath=".status.phase",description="Phase of the remediation"
 // +kubebuilder:printcolumn:name="Last Remediated",type=string,JSONPath=".status.lastRemediated",description="Timestamp of the last remediation attempt"
 // +kubebuilder:printcolumn:name="Retry count",type=string,JSONPath=".status.retryCount",description="How many times remediation controller has tried to remediate the node"
+// +kubebuilder:printcolumn:name="Retry limit",type=string,JSONPath=".spec.strategy.retryLimit",description="How many times remediation controller should attempt to remediate the host"
 
 // HivelocityRemediation is the Schema for the  hivelocityremediations API.
 type HivelocityRemediation struct {

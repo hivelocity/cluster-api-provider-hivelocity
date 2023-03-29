@@ -81,8 +81,6 @@ const (
 
 // HivelocityMachineSpec defines the desired state of HivelocityMachine.
 type HivelocityMachineSpec struct {
-	// Important: Run "make" to regenerate code after modifying this file
-
 	// ProviderID is the unique identifier as specified by the cloud provider.
 	// +optional
 	ProviderID *string `json:"providerID,omitempty"`
@@ -120,8 +118,6 @@ type HivelocityDeviceType string
 
 // HivelocityMachineStatus defines the observed state of HivelocityMachine.
 type HivelocityMachineStatus struct {
-	// Important: Run "make" to regenerate code after modifying this file
-
 	// Ready is true when the provider resource is ready.
 	// +optional
 	Ready bool `json:"ready"`
@@ -147,13 +143,14 @@ type HivelocityMachineStatus struct {
 	// for logging and human consumption.
 	// +optional
 	FailureMessage *string `json:"failureMessage,omitempty"`
+
 	// Conditions defines current service state of the HivelocityMachine.
 	// +optional
 	Conditions clusterv1.Conditions `json:"conditions,omitempty"`
 }
 
 // +kubebuilder:object:root=true
-// +kubebuilder:resource:path=hivelocitymachines,scope=Namespaced,categories=cluster-api,shortName=capihcm
+// +kubebuilder:resource:path=hivelocitymachines,scope=Namespaced,categories=cluster-api,shortName=capihvm
 // +kubebuilder:storageversion
 // +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="Cluster",type="string",JSONPath=".metadata.labels.cluster\\.x-k8s\\.io/cluster-name",description="Cluster to which this HivelocityMachine belongs"
