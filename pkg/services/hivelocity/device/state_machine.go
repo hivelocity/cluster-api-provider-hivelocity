@@ -38,9 +38,6 @@ type stateMachine struct {
 	log        logr.Logger
 }
 
-// errGoToPreviousState defines an error that tells the state machine to go back one state.
-var errGoToPreviousState = fmt.Errorf("state too advanced - go back")
-
 func newStateMachine(hvMachine *infrav1.HivelocityMachine, reconciler *Service) *stateMachine {
 	currentState := hvMachine.Spec.Status.ProvisioningState
 	r := stateMachine{
@@ -110,12 +107,9 @@ func (sm *stateMachine) handleVerifyAssociate(ctx context.Context) actionResult 
 	}
 
 	// check whether we need to associate the machine to another device
-	actionErr, ok := actResult.(actionError)
+	actionGoBack, ok := actResult.(actionGoBack)
 	if ok {
-		if errors.Is(actionErr.err, errGoToPreviousState) {
-			sm.nextState = infrav1.StateAssociateDevice
-			return actionComplete{}
-		}
+		sm.nextState = actionGoBack.nextState
 	}
 	return actResult
 }
@@ -133,13 +127,10 @@ func (sm *stateMachine) handleProvisionDevice(ctx context.Context) actionResult 
 	if _, ok := actResult.(actionComplete); ok {
 		sm.nextState = infrav1.StateDeviceProvisioned
 	}
-	// check whether we need to associate the machine to another device
-	actionErr, ok := actResult.(actionError)
+	// check whether we need to go back to previous state
+	actionGoBack, ok := actResult.(actionGoBack)
 	if ok {
-		if errors.Is(actionErr.err, errGoToPreviousState) {
-			sm.nextState = infrav1.StateEnsureDeviceShutDown
-			return actionComplete{}
-		}
+		sm.nextState = actionGoBack.nextState
 	}
 	return actResult
 }

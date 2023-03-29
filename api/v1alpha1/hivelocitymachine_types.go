@@ -24,7 +24,7 @@ import (
 	"github.com/hivelocity/cluster-api-provider-hivelocity/pkg/services/hivelocity/hvtag"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
-	"sigs.k8s.io/cluster-api/errors"
+	capierrors "sigs.k8s.io/cluster-api/errors"
 )
 
 const (
@@ -32,6 +32,14 @@ const (
 	// resources associated with HivelocityMachine before removing it from the
 	// apiserver.
 	MachineFinalizer = "hivelocitymachine.infrastructure.cluster.x-k8s.io"
+)
+
+const (
+	// FailureMessageDeviceNotFound indicates that the associated device could not be found.
+	FailureMessageDeviceNotFound = "device not found"
+	// FailureMessageDeviceTagsInvalid indicates that the associated device has invalid tags.
+	// This is probably due to a user changing device tags on his own.
+	FailureMessageDeviceTagsInvalid = "device tags invalid"
 )
 
 var (
@@ -148,7 +156,7 @@ type HivelocityMachineStatus struct {
 	// reconciling the Machine and will contain a succinct value suitable
 	// for machine interpretation.
 	// +optional
-	FailureReason *errors.MachineStatusError `json:"failureReason,omitempty"`
+	FailureReason *capierrors.MachineStatusError `json:"failureReason,omitempty"`
 
 	// FailureMessage will be set in the event that there is a terminal problem
 	// reconciling the Machine and will contain a more verbose string suitable
@@ -196,6 +204,12 @@ func (r *HivelocityMachine) GetConditions() clusterv1.Conditions {
 // SetConditions sets the underlying service state of the HivelocityMachine to the predescribed clusterv1.Conditions.
 func (r *HivelocityMachine) SetConditions(conditions clusterv1.Conditions) {
 	r.Status.Conditions = conditions
+}
+
+// SetFailure sets a failure reason and message.
+func (r *HivelocityMachine) SetFailure(reason capierrors.MachineStatusError, message string) {
+	r.Status.FailureReason = &reason
+	r.Status.FailureMessage = &message
 }
 
 // DeviceTag returns a DeviceTag object for the machine tag.
