@@ -19,6 +19,7 @@ package device
 import (
 	"time"
 
+	infrav1 "github.com/hivelocity/cluster-api-provider-hivelocity/api/v1alpha1"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
@@ -59,5 +60,25 @@ type actionError struct {
 
 func (r actionError) Result() (result reconcile.Result, err error) {
 	err = r.err
+	return
+}
+
+// actionGoBack is a result indicating that the current action cannot be carried out
+// and that the resource should transition to a previous state.
+type actionGoBack struct {
+	nextState infrav1.ProvisioningState
+}
+
+func (r actionGoBack) Result() (result reconcile.Result, err error) {
+	result.Requeue = true
+	return
+}
+
+// actionFailed is a result indicating that the current action has failed,
+// and that the resource should be marked as in error.
+type actionFailed struct{}
+
+func (r actionFailed) Result() (result reconcile.Result, err error) {
+	result.RequeueAfter = 1 * time.Minute
 	return
 }

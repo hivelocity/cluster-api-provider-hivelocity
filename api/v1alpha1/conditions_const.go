@@ -21,10 +21,11 @@ import clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 const (
 	// DeviceReadyCondition reports on current status of the device. Ready indicates the device is in a Running state.
 	DeviceReadyCondition clusterv1.ConditionType = "DeviceReady"
-
 	// DeviceNotFoundReason (Severity=Error) documents a HivelocityMachine controller detecting
 	// the underlying device cannot be found anymore.
 	DeviceNotFoundReason = "DeviceNotFound"
+	// DeviceTagsInvalidReason documents a HivelocityMachine controller detecting invalid device tags.
+	DeviceTagsInvalidReason = "DeviceTagsInvalid"
 )
 
 const (

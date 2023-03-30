@@ -22,6 +22,7 @@ import (
 	"github.com/hivelocity/cluster-api-provider-hivelocity/pkg/services/hivelocity/hvtag"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	capierrors "sigs.k8s.io/cluster-api/errors"
 )
 
 func TestMachineDeviceTag(t *testing.T) {
@@ -96,4 +97,33 @@ var _ = Describe("Test DeviceIDFromProviderID", func() {
 			expectError:    nil,
 		}),
 	)
+})
+
+var _ = Describe("Test SetFailure", func() {
+	hvMachine := HivelocityMachine{}
+	newFailureMessage := "bad error"
+	newFailureReason := capierrors.CreateMachineError
+
+	It("sets new failure on the machine with existing failure", func() {
+		failureMessage := "first message"
+		failureReason := capierrors.MachineStatusError("first error")
+		hvMachine.Status.FailureMessage = &failureMessage
+		hvMachine.Status.FailureReason = &failureReason
+
+		hvMachine.SetFailure(newFailureReason, newFailureMessage)
+
+		Expect(hvMachine.Status.FailureMessage).ToNot(BeNil())
+		Expect(hvMachine.Status.FailureReason).ToNot(BeNil())
+		Expect(*hvMachine.Status.FailureMessage).To(Equal(newFailureMessage))
+		Expect(*hvMachine.Status.FailureReason).To(Equal(newFailureReason))
+	})
+
+	It("sets new failure on the machine without existing failure", func() {
+		hvMachine.SetFailure(newFailureReason, newFailureMessage)
+
+		Expect(hvMachine.Status.FailureMessage).ToNot(BeNil())
+		Expect(hvMachine.Status.FailureReason).ToNot(BeNil())
+		Expect(*hvMachine.Status.FailureMessage).To(Equal(newFailureMessage))
+		Expect(*hvMachine.Status.FailureReason).To(Equal(newFailureReason))
+	})
 })

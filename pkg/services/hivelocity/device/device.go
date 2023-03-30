@@ -30,6 +30,7 @@ import (
 	hv "github.com/hivelocity/hivelocity-client-go/client"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
+	capierrors "sigs.k8s.io/cluster-api/errors"
 	"sigs.k8s.io/cluster-api/util/conditions"
 	"sigs.k8s.io/cluster-api/util/record"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -50,6 +51,7 @@ const (
 var (
 	errMachineTagNotFound = fmt.Errorf("machine tag not found")
 	errClusterTagNotFound = fmt.Errorf("cluster tag not found")
+	errSSHKeyNotFound     = fmt.Errorf("ssh key not found")
 
 	errNoDeviceAvailable = fmt.Errorf("no available device found")
 )
@@ -121,8 +123,8 @@ func (s *Service) getSSHKeyIDFromSSHKeyName(ctx context.Context, sshKey *infrav1
 			return key.SshKeyId, nil
 		}
 	}
-	return 0, fmt.Errorf("[getSSHKeyIDFromSSHKeyName] no corresponding ssh-key found in HV API. Name %q",
-		sshKey.Name)
+	record.Warnf(s.scope.HivelocityCluster, "SSHKeyNotFound", "ssh key %s could not be found", sshKey.Name)
+	return 0, errSSHKeyNotFound
 }
 
 // setMachineAddress gets the address from the device and sets it on the HivelocityMachine object.
@@ -239,6 +241,12 @@ func (s *Service) actionVerifyAssociate(ctx context.Context) actionResult {
 
 	device, err := s.scope.HVClient.GetDevice(ctx, deviceID)
 	if err != nil {
+		if errors.Is(err, hvclient.ErrDeviceNotFound) {
+			// if device cannot be found, we associate a new one
+			s.scope.Info("Device not found. Go back to StateAssociateDevice")
+			record.Warnf(s.scope.HivelocityMachine, "DeviceNotFound", "Hivelocity device not found. Associate new one")
+			return actionGoBack{nextState: infrav1.StateAssociateDevice}
+		}
 		return actionError{err: fmt.Errorf("failed to get device: %w", err)}
 	}
 
@@ -259,7 +267,7 @@ func (s *Service) actionVerifyAssociate(ctx context.Context) actionResult {
 		}
 	}
 	s.scope.HivelocityMachine.Spec.ProviderID = nil
-	return actionError{err: errGoToPreviousState}
+	return actionGoBack{nextState: infrav1.StateAssociateDevice}
 }
 
 func hasTimedOut(lastUpdated *metav1.Time, timeout time.Duration) bool {
@@ -300,6 +308,12 @@ func (s *Service) actionProvisionDevice(ctx context.Context) actionResult {
 
 	device, err := s.scope.HVClient.GetDevice(ctx, deviceID)
 	if err != nil {
+		if errors.Is(err, hvclient.ErrDeviceNotFound) {
+			// if device cannot be found, we associate a new one
+			s.scope.Info("Device to provision not found. Go back to StateAssociateDevice")
+			record.Warnf(s.scope.HivelocityMachine, "DeviceNotFound", "Hivelocity device not found. Associate new one")
+			return actionGoBack{nextState: infrav1.StateAssociateDevice}
+		}
 		return actionError{err: fmt.Errorf("failed to get device: %w", err)}
 	}
 
@@ -337,6 +351,12 @@ func (s *Service) actionProvisionDevice(ctx context.Context) actionResult {
 	if s.scope.HivelocityCluster.Spec.SSHKey != nil {
 		sshKeyID, err := s.getSSHKeyIDFromSSHKeyName(ctx, s.scope.HivelocityCluster.Spec.SSHKey)
 		if err != nil {
+			if errors.Is(err, errSSHKeyNotFound) {
+				// do not return an error in the reconcile loop as we cannot do anything about this without the intervention
+				// of the user. Only after the SSH key has been uploaded correctly, the provisioning can continue.
+				// This is why we wait for 5m and then reconcile again to see whether the SSH key exists then.
+				return actionFailed{}
+			}
 			return actionError{err: fmt.Errorf("error with ssh keys: %w", err)}
 		}
 		opts.PublicSshKeyId = sshKeyID
@@ -381,19 +401,29 @@ func (s *Service) actionDeviceProvisioned(ctx context.Context) actionResult {
 	device, err := s.scope.HVClient.GetDevice(ctx, deviceID)
 	if err != nil {
 		if errors.Is(err, hvclient.ErrDeviceNotFound) {
+			// fatal error when device could not be found
 			conditions.MarkFalse(s.scope.HivelocityMachine,
 				infrav1.DeviceReadyCondition,
 				infrav1.DeviceNotFoundReason,
 				clusterv1.ConditionSeverityError,
 				fmt.Sprintf("device %d not found", device.DeviceId))
-			// TODO: Return fatal error
+			record.Warnf(s.scope.HivelocityMachine, "DeviceNotFound", "Hivelocity device not found.")
+			s.scope.HivelocityMachine.SetFailure(capierrors.UpdateMachineError, infrav1.FailureMessageDeviceNotFound)
+			return actionComplete{}
 		}
 		return actionError{err: fmt.Errorf("failed to get associated device: %w", err)}
 	}
 
 	if err := s.verifyAssociatedDevice(&device); err != nil {
-		// TODO: Fatal error
-		return actionError{err: fmt.Errorf("associated device could not be verified")}
+		// fatal error when device could not be verified
+		conditions.MarkFalse(s.scope.HivelocityMachine,
+			infrav1.DeviceReadyCondition,
+			infrav1.DeviceTagsInvalidReason,
+			clusterv1.ConditionSeverityError,
+			fmt.Sprintf("device %d has invalid tags", device.DeviceId))
+		record.Warnf(s.scope.HivelocityMachine, "DeviceTagsInvalid", "Hivelocity device not found.")
+		s.scope.HivelocityMachine.SetFailure(capierrors.UpdateMachineError, infrav1.FailureMessageDeviceTagsInvalid)
+		return actionComplete{}
 	}
 
 	conditions.MarkTrue(s.scope.HivelocityMachine, infrav1.DeviceReadyCondition)
