@@ -265,7 +265,9 @@ func (s *Service) actionEnsureDeviceShutDown(ctx context.Context) actionResult {
 	log.Info("Device is not shut down yet", "error from ShutDown endpoint", err)
 
 	// wait for another 10 seconds
-	return actionContinue{delay: 10 * time.Second}
+	// TODO: Make this flexible for unit tests that don't want to wait here and real-world cases where we
+	// have to wait longer for a device to be shut down
+	return actionContinue{delay: 1 * time.Second}
 }
 
 // actionProvisionDevice provisions the device.

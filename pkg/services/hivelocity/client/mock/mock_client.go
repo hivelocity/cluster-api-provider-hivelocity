@@ -33,14 +33,43 @@ const DefaultCPUCores = 1
 // DefaultMemoryInGB defines the default memory in GB for Hivelocity machines' capacities.
 const DefaultMemoryInGB = float32(4)
 
-// FreeDeviceID is a deviceID which references a device which is not associated with a node.
-const FreeDeviceID = 1
+const (
+	// FreeDeviceID is a deviceID which references a device which is not associated with a node.
+	FreeDeviceID = 1
+)
 
 // FreeDevice is  a device which is not associated with a node.
 var FreeDevice = hv.BareMetalDevice{
 	Hostname:    "host-FreeDevice",
 	Tags:        []string{hvtag.DeviceTag{Key: hvtag.DeviceTagKeyDeviceType, Value: "hvCustom"}.ToString()},
 	DeviceId:    FreeDeviceID,
+	PowerStatus: "ON",
+	OsName:      defaultImage,
+}
+
+// FreeDevicePool1 is  a device which is not associated with a node.
+var FreeDevicePool1 = hv.BareMetalDevice{
+	Hostname:    "host-FreeDevice",
+	Tags:        []string{hvtag.DeviceTag{Key: hvtag.DeviceTagKeyDeviceType, Value: "pool"}.ToString()},
+	DeviceId:    51,
+	PowerStatus: "ON",
+	OsName:      defaultImage,
+}
+
+// FreeDevicePool2 is  a device which is not associated with a node.
+var FreeDevicePool2 = hv.BareMetalDevice{
+	Hostname:    "host-FreeDevice",
+	Tags:        []string{hvtag.DeviceTag{Key: hvtag.DeviceTagKeyDeviceType, Value: "pool"}.ToString()},
+	DeviceId:    52,
+	PowerStatus: "ON",
+	OsName:      defaultImage,
+}
+
+// FreeDevicePool3 is  a device which is not associated with a node.
+var FreeDevicePool3 = hv.BareMetalDevice{
+	Hostname:    "host-FreeDevice",
+	Tags:        []string{hvtag.DeviceTag{Key: hvtag.DeviceTagKeyDeviceType, Value: "pool"}.ToString()},
+	DeviceId:    53,
 	PowerStatus: "ON",
 	OsName:      defaultImage,
 }
@@ -108,6 +137,9 @@ func NewMockedHVClientFactory() hvclient.Factory {
 	var store deviceStore
 	devices := []hv.BareMetalDevice{
 		FreeDevice,
+		FreeDevicePool1,
+		FreeDevicePool2,
+		FreeDevicePool3,
 		OtherClusterDevice,
 		NoTagsDevice,
 		WithPrimaryIPDevice,
