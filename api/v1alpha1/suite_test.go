@@ -14,22 +14,17 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Package device implements functions to manage the lifecycle of Hivelocity devices.
-package device
+package v1alpha1
 
 import (
 	"testing"
 
-	mockclient "github.com/hivelocity/cluster-api-provider-hivelocity/pkg/services/hivelocity/client/mock"
-	hv "github.com/hivelocity/hivelocity-client-go/client"
-	"github.com/stretchr/testify/require"
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
 )
 
-func Test_findAvailableDeviceFromList(t *testing.T) {
-	devices := []hv.BareMetalDevice{
-		mockclient.NoTagsDevice,
-		mockclient.FreeDevice,
-	}
-	_, err := findAvailableDeviceFromList(devices, "fooDeviceType", "my-cluster", "my-machine")
-	require.ErrorIs(t, err, errNoDeviceAvailable)
+func TestAPIs(t *testing.T) {
+	RegisterFailHandler(Fail)
+
+	RunSpecs(t, "API Suite")
 }

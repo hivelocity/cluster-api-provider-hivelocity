@@ -62,9 +62,6 @@ type SSHKey struct {
 	// Name of SSH key.
 	// +kubebuilder:validation:MinLength=1
 	Name string `json:"name"`
-	// ID of SSH key - added by controller if not specified by user.
-	// +optional
-	ID int64 `json:"id,omitempty"`
 }
 
 // HivelocityClusterStatus defines the observed state of HivelocityCluster.

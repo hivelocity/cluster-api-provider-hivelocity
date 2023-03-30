@@ -132,11 +132,6 @@ spec:
                 description: SSHKey is cluster wide. Valid value is a valid SSH key
                   name.
                 properties:
-                  id:
-                    description: ID of SSH key - added by controller if not specified
-                      by user.
-                    format: int64
-                    type: integer
                   name:
                     description: Name of SSH key.
                     minLength: 1

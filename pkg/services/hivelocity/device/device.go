@@ -37,21 +37,20 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-// Service defines struct with machine scope to reconcile Hivelocity machines.
+// Service defines struct with machine scope to reconcile Hivelocity devices.
 type Service struct {
 	scope *scope.MachineScope
 }
 
 const (
-	maxShutDownTime  = 2 * time.Minute
-	deviceOffTimeout = 10 * time.Minute
 	defaultImageName = "Ubuntu 20.x"
 )
 
 var (
 	errMachineTagNotFound = fmt.Errorf("machine tag not found")
 	errClusterTagNotFound = fmt.Errorf("cluster tag not found")
-	errSSHKeyNotFound     = fmt.Errorf("ssh key not found")
+
+	errSSHKeyNotFound = fmt.Errorf("ssh key not found")
 
 	errNoDeviceAvailable = fmt.Errorf("no available device found")
 )
@@ -65,8 +64,6 @@ func NewService(scope *scope.MachineScope) *Service {
 
 // Reconcile implements reconcilement of Hivelocity machines.
 func (s *Service) Reconcile(ctx context.Context) (_ ctrl.Result, err error) {
-	log := s.scope.Logger
-
 	// detect failure domain
 	failureDomain, err := s.scope.GetFailureDomain()
 	if err != nil {
@@ -76,7 +73,7 @@ func (s *Service) Reconcile(ctx context.Context) (_ ctrl.Result, err error) {
 
 	// Waiting for bootstrap data to be ready
 	if !s.scope.IsBootstrapDataReady(ctx) {
-		log.Info("Bootstrap not ready - requeuing")
+		s.scope.Info("Bootstrap not ready - requeuing")
 		conditions.MarkFalse(
 			s.scope.HivelocityMachine,
 			infrav1.MachineBootstrapReadyCondition,
@@ -87,10 +84,7 @@ func (s *Service) Reconcile(ctx context.Context) (_ ctrl.Result, err error) {
 		return ctrl.Result{RequeueAfter: 10 * time.Second}, nil
 	}
 
-	conditions.MarkTrue(
-		s.scope.HivelocityMachine,
-		infrav1.MachineBootstrapReadyCondition,
-	)
+	conditions.MarkTrue(s.scope.HivelocityMachine, infrav1.MachineBootstrapReadyCondition)
 
 	initialState := s.scope.HivelocityMachine.Spec.Status.ProvisioningState
 
@@ -98,64 +92,49 @@ func (s *Service) Reconcile(ctx context.Context) (_ ctrl.Result, err error) {
 	actResult := hostStateMachine.ReconcileState(ctx)
 	result, err := actResult.Result()
 	if err != nil {
-		err = fmt.Errorf("action %q failed: %w", initialState, err)
-		return ctrl.Result{Requeue: true}, err
+		return ctrl.Result{Requeue: true}, fmt.Errorf("action %q failed: %w", initialState, err)
 	}
 
+	// TODO: Verify that patching the object is fine. Alternative would be to update it if that is better since we update the Spec as well
 	return result, nil
 }
 
-// TODO: Implement logic to add multiple images.
-func (s *Service) getDeviceImage(ctx context.Context) (string, error) {
-	return defaultImageName, nil
-}
+// actionAssociateDevice claims an unused HV device by settings tags and returns it.
+func (s *Service) actionAssociateDevice(ctx context.Context) actionResult {
+	log := s.scope.Logger.WithValues("function", "actionAssociateDevice")
+	log.V(1).Info("Started function")
 
-func (s *Service) getSSHKeyIDFromSSHKeyName(ctx context.Context, sshKey *infrav1.SSHKey) (int32, error) {
-	if sshKey == nil {
-		return 0, fmt.Errorf("SSHKey is nil")
-	}
-	keys, err := s.scope.HVClient.ListSSHKeys(ctx)
-	if err != nil {
-		return 0, fmt.Errorf("[getSSHKeyIDFromSSHKeyName] ListSSHKeys() failed. Name %q: %w", sshKey.Name, err)
-	}
-	for _, key := range keys {
-		if key.Name == sshKey.Name {
-			return key.SshKeyId, nil
-		}
-	}
-	record.Warnf(s.scope.HivelocityCluster, "SSHKeyNotFound", "ssh key %s could not be found", sshKey.Name)
-	return 0, errSSHKeyNotFound
-}
-
-// setMachineAddress gets the address from the device and sets it on the HivelocityMachine object.
-func setMachineAddress(hvMachine *infrav1.HivelocityMachine, hvDevice *hv.BareMetalDevice) {
-	hvMachine.Status.Addresses = []clusterv1.MachineAddress{
-		{
-			Type:    clusterv1.MachineHostName,
-			Address: hvDevice.Hostname,
-		},
-		{
-			Type:    clusterv1.MachineInternalIP,
-			Address: hvDevice.PrimaryIp,
-		},
-		{
-			Type:    clusterv1.MachineExternalIP,
-			Address: hvDevice.PrimaryIp,
-		},
-	}
-}
-
-// chooseDevice searches for an unused device.
-func (s *Service) chooseDevice(ctx context.Context) (hv.BareMetalDevice, error) {
+	// list all devices
 	devices, err := s.scope.HVClient.ListDevices(ctx)
 	if err != nil {
-		return hv.BareMetalDevice{}, fmt.Errorf("[chooseDevice] ListDevices() failed. machine %q: %w",
-			s.scope.Name(), err)
+		return actionError{err: fmt.Errorf("failed to list devices: %w", err)}
 	}
-	return chooseAvailableFromList(devices, s.scope.HivelocityMachine.Spec.Type, s.scope.HivelocityCluster.Name, s.scope.Name())
+
+	// find available device
+	device, err := findAvailableDeviceFromList(devices, s.scope.HivelocityMachine.Spec.Type, s.scope.HivelocityCluster.Name, s.scope.Name())
+	if err != nil {
+		return actionError{err: fmt.Errorf("failed to find available device: %w", err)}
+	}
+
+	// associate this device with the machine object by setting tags
+	device.Tags = append(device.Tags,
+		s.scope.HivelocityCluster.DeviceTag().ToString(),
+		s.scope.HivelocityCluster.DeviceTagOwned().ToString(),
+		s.scope.HivelocityMachine.DeviceTag().ToString(),
+	)
+
+	if err := s.scope.HVClient.SetDeviceTags(ctx, device.DeviceId, device.Tags); err != nil {
+		return actionError{err: fmt.Errorf("failed to set tags on device %v: %w", device.DeviceId, err)}
+	}
+
+	// set providerID on machine object which is based on deviceID
+	s.scope.HivelocityMachine.SetProviderID(device.DeviceId)
+
+	log.V(1).Info("Completed function")
+	return actionComplete{}
 }
 
-func chooseAvailableFromList(devices []hv.BareMetalDevice, deviceType infrav1.HivelocityDeviceType, clusterName, machineName string) (hv.BareMetalDevice, error) {
+func findAvailableDeviceFromList(devices []hv.BareMetalDevice, deviceType infrav1.HivelocityDeviceType, clusterName, machineName string) (hv.BareMetalDevice, error) {
 	for _, device := range devices {
 		// Ignore if associated already
 		machineTag, err := hvtag.MachineTagFromList(device.Tags)
@@ -199,31 +178,12 @@ func chooseAvailableFromList(devices []hv.BareMetalDevice, deviceType infrav1.Hi
 	return hv.BareMetalDevice{}, errNoDeviceAvailable
 }
 
-// actionAssociateDevice claims an unused HV device by settings tags and returns it.
-func (s *Service) actionAssociateDevice(ctx context.Context) actionResult {
-	s.scope.Info("Start actionAssociateDevice")
-	device, err := s.chooseDevice(ctx)
-	if err != nil {
-		return actionError{err: fmt.Errorf("failed to choose device: %w", err)}
-	}
-
-	device.Tags = append(device.Tags,
-		s.scope.HivelocityCluster.DeviceTag().ToString(),
-		s.scope.HivelocityCluster.DeviceTagOwned().ToString(),
-		s.scope.HivelocityMachine.DeviceTag().ToString(),
-	)
-	if err := s.scope.HVClient.SetDeviceTags(ctx, device.DeviceId, device.Tags); err != nil {
-		return actionError{err: fmt.Errorf("failed to set tags: %w", err)}
-	}
-	providerID := providerIDFromDeviceID(device.DeviceId)
-	s.scope.HivelocityMachine.Spec.ProviderID = &providerID
-	return actionComplete{}
-}
-
 // actionVerifyAssociate verifies that the HV device has actually been associated to this machine and only this.
 // Checking whether there are other machines also associated avoids situations where machines are selected at the same time.
 func (s *Service) actionVerifyAssociate(ctx context.Context) actionResult {
-	s.scope.Info("Start actionVerifyAssociate")
+	log := s.scope.Logger.WithValues("function", "actionVerifyAssociate")
+	log.V(1).Info("Started function")
+
 	// TODO: We should be able to control this value from outside. Do we do it with flags?
 	// wait for 3 seconds at least before checking again
 	const waitFor = 100 * time.Millisecond
@@ -233,7 +193,7 @@ func (s *Service) actionVerifyAssociate(ctx context.Context) actionResult {
 		return actionContinue{delay: 100 * time.Millisecond}
 	}
 
-	// if waiting time is over, we check the server for tags
+	// if waiting time is over, we get the device and check its tags
 	deviceID, err := s.scope.HivelocityMachine.DeviceIDFromProviderID()
 	if err != nil {
 		return actionError{err: fmt.Errorf("failed to get deviceID from providerID: %w", err)}
@@ -243,7 +203,7 @@ func (s *Service) actionVerifyAssociate(ctx context.Context) actionResult {
 	if err != nil {
 		if errors.Is(err, hvclient.ErrDeviceNotFound) {
 			// if device cannot be found, we associate a new one
-			s.scope.Info("Device not found. Go back to StateAssociateDevice")
+			log.Info("Device not found. Go back to StateAssociateDevice")
 			record.Warnf(s.scope.HivelocityMachine, "DeviceNotFound", "Hivelocity device not found. Associate new one")
 			return actionGoBack{nextState: infrav1.StateAssociateDevice}
 		}
@@ -255,10 +215,12 @@ func (s *Service) actionVerifyAssociate(ctx context.Context) actionResult {
 	_, machineTagErr := hvtag.MachineTagFromList(device.Tags)
 
 	if clusterTagErr == nil && machineTagErr == nil {
+		log.V(1).Info("Completed function")
 		return actionComplete{}
 	}
 
-	// something is wrong - remove cluster and machine tags and associate a new device
+	// Tags are not properly set or another machine also set its tags.
+	// Remove cluster and machine tags and associate a new device.
 	newTagList, updatedTags1 := s.scope.HivelocityCluster.DeviceTag().RemoveFromList(device.Tags)
 	newTagList, updatedTags2 := s.scope.HivelocityMachine.DeviceTag().RemoveFromList(newTagList)
 	if updatedTags1 || updatedTags2 {
@@ -267,6 +229,8 @@ func (s *Service) actionVerifyAssociate(ctx context.Context) actionResult {
 		}
 	}
 	s.scope.HivelocityMachine.Spec.ProviderID = nil
+
+	log.Info("Device has been dissociated. Go back to StateAssociateDevice")
 	return actionGoBack{nextState: infrav1.StateAssociateDevice}
 }
 
@@ -279,8 +243,11 @@ func hasTimedOut(lastUpdated *metav1.Time, timeout time.Duration) bool {
 }
 
 // actionEnsureDeviceShutDown ensures that the device is shut down.
+// This happens through repeatedly calling ShutdownDevice, as the potential error messages of that endpoint
+// (e.g. 'device shut down already') are the most reliable source.
 func (s *Service) actionEnsureDeviceShutDown(ctx context.Context) actionResult {
-	s.scope.Info("Start actionEnsureDeviceShutDown")
+	log := s.scope.Logger.WithValues("function", "actionEnsureDeviceShutDown")
+	log.V(1).Info("Started function")
 
 	deviceID, err := s.scope.HivelocityMachine.DeviceIDFromProviderID()
 	if err != nil {
@@ -290,9 +257,12 @@ func (s *Service) actionEnsureDeviceShutDown(ctx context.Context) actionResult {
 	err = s.scope.HVClient.ShutdownDevice(ctx, deviceID)
 	// if device is already shut down, we can go to the next step
 	if errors.Is(err, hvclient.ErrDeviceShutDownAlready) {
+		log.V(1).Info("Completed function")
 		return actionComplete{}
 	}
-	s.scope.Info("Device is not shut down yet", "error from ShutDown endpoint", err)
+
+	// device is not shut down yet - wait and call the function again
+	log.Info("Device is not shut down yet", "error from ShutDown endpoint", err)
 
 	// wait for another 10 seconds
 	return actionContinue{delay: 10 * time.Second}
@@ -300,7 +270,9 @@ func (s *Service) actionEnsureDeviceShutDown(ctx context.Context) actionResult {
 
 // actionProvisionDevice provisions the device.
 func (s *Service) actionProvisionDevice(ctx context.Context) actionResult {
-	s.scope.Info("Start actionProvisionDevice")
+	log := s.scope.Logger.WithValues("function", "actionProvisionDevice")
+	log.V(1).Info("Started function")
+
 	deviceID, err := s.scope.HivelocityMachine.DeviceIDFromProviderID()
 	if err != nil {
 		return actionError{err: fmt.Errorf("failed to get deviceID from providerID: %w", err)}
@@ -310,7 +282,7 @@ func (s *Service) actionProvisionDevice(ctx context.Context) actionResult {
 	if err != nil {
 		if errors.Is(err, hvclient.ErrDeviceNotFound) {
 			// if device cannot be found, we associate a new one
-			s.scope.Info("Device to provision not found. Go back to StateAssociateDevice")
+			log.Info("Device to provision not found. Go back to StateAssociateDevice")
 			record.Warnf(s.scope.HivelocityMachine, "DeviceNotFound", "Hivelocity device not found. Associate new one")
 			return actionGoBack{nextState: infrav1.StateAssociateDevice}
 		}
@@ -319,11 +291,7 @@ func (s *Service) actionProvisionDevice(ctx context.Context) actionResult {
 
 	userData, err := s.scope.GetRawBootstrapData(ctx)
 	if err != nil {
-		record.Warnf(
-			s.scope.HivelocityMachine,
-			"FailedGetBootstrapData",
-			err.Error(),
-		)
+		record.Warnf(s.scope.HivelocityMachine, "FailedGetBootstrapData", err.Error())
 		return actionError{err: fmt.Errorf("failed to get raw bootstrap data: %s", err)}
 	}
 
@@ -349,12 +317,19 @@ func (s *Service) actionProvisionDevice(ctx context.Context) actionResult {
 	}
 
 	if s.scope.HivelocityCluster.Spec.SSHKey != nil {
-		sshKeyID, err := s.getSSHKeyIDFromSSHKeyName(ctx, s.scope.HivelocityCluster.Spec.SSHKey)
+		// find ssh key in Hivelocity API based on the name specified in the HVCluster spec
+		sshKeyName := s.scope.HivelocityCluster.Spec.SSHKey.Name
+		keys, err := s.scope.HVClient.ListSSHKeys(ctx)
+		if err != nil {
+			return actionError{err: fmt.Errorf("failed to list ssh keys: %w", err)}
+		}
+		sshKeyID, err := findSSHKey(keys, sshKeyName)
 		if err != nil {
 			if errors.Is(err, errSSHKeyNotFound) {
 				// do not return an error in the reconcile loop as we cannot do anything about this without the intervention
 				// of the user. Only after the SSH key has been uploaded correctly, the provisioning can continue.
 				// This is why we wait for 5m and then reconcile again to see whether the SSH key exists then.
+				record.Warnf(s.scope.HivelocityCluster, "SSHKeyNotFound", "ssh key %s could not be found", sshKeyName)
 				return actionFailed{}
 			}
 			return actionError{err: fmt.Errorf("error with ssh keys: %w", err)}
@@ -363,73 +338,84 @@ func (s *Service) actionProvisionDevice(ctx context.Context) actionResult {
 	}
 
 	// Provision the device
-	provisionedDevice, err := s.scope.HVClient.ProvisionDevice(ctx, deviceID, opts)
-	s.scope.Info("[actionProvisionDevice] ProvisionDevice was called", "err", err, "deviceID", deviceID)
-	if err != nil {
+	if _, err := s.scope.HVClient.ProvisionDevice(ctx, deviceID, opts); err != nil {
 		// TODO: Handle error that machine is not shut down
 		if hvclient.IsRateLimitExceededError(err) {
 			conditions.MarkTrue(s.scope.HivelocityMachine, infrav1.RateLimitExceeded)
-			record.Event(s.scope.HivelocityMachine,
-				"RateLimitExceeded",
-				"exceeded rate limit with calling Hivelocity function ProvisionDevice",
-			)
+			record.Event(s.scope.HivelocityMachine, "RateLimitExceeded", "exceeded rate limit with calling Hivelocity function ProvisionDevice")
 		}
-		record.Warnf(s.scope.HivelocityMachine,
-			"FailedProvisionHivelocityDevice",
-			"Failed to provision Hivelocity device %s: %s",
-			s.scope.Name(),
-			err,
-		)
+		record.Warnf(s.scope.HivelocityMachine, "FailedProvisionDevice", "Failed to provision device %v: %s", deviceID, err)
 		return actionError{err: fmt.Errorf("failed to provision device %d: %s", deviceID, err)}
 	}
-	setMachineAddress(s.scope.HivelocityMachine, &provisionedDevice)
 
-	s.scope.HivelocityMachine.Status.Ready = true
-	conditions.MarkTrue(s.scope.HivelocityMachine, infrav1.DeviceReadyCondition)
+	log.V(1).Info("Completed function")
 	return actionComplete{}
+}
+
+func findSSHKey(sshKeysInAPI []hv.SshKeyResponse, sshKeyName string) (int32, error) {
+	for _, key := range sshKeysInAPI {
+		if key.Name == sshKeyName {
+			return key.SshKeyId, nil
+		}
+	}
+	return 0, errSSHKeyNotFound
+}
+
+// TODO: Implement logic to add multiple images.
+func (s *Service) getDeviceImage(ctx context.Context) (string, error) {
+	return defaultImageName, nil
 }
 
 // actionDeviceProvisioned reconciles a provisioned device.
 func (s *Service) actionDeviceProvisioned(ctx context.Context) actionResult {
-	// Check whether device still exists
+	log := s.scope.Logger.WithValues("function", "actionDeviceProvisioned")
+	log.V(1).Info("Started function")
+
+	// get device
 	deviceID, err := s.scope.HivelocityMachine.DeviceIDFromProviderID()
 	if err != nil {
 		return actionError{err: fmt.Errorf("[actionDeviceProvisioned] ProviderIDToDeviceID failed: %w", err)}
 	}
 
-	// FIXME: we already get the device
 	device, err := s.scope.HVClient.GetDevice(ctx, deviceID)
 	if err != nil {
 		if errors.Is(err, hvclient.ErrDeviceNotFound) {
-			// fatal error when device could not be found
-			conditions.MarkFalse(s.scope.HivelocityMachine,
+			// fatal error when device was not found
+			conditions.MarkFalse(
+				s.scope.HivelocityMachine,
 				infrav1.DeviceReadyCondition,
 				infrav1.DeviceNotFoundReason,
 				clusterv1.ConditionSeverityError,
-				fmt.Sprintf("device %d not found", device.DeviceId))
-			record.Warnf(s.scope.HivelocityMachine, "DeviceNotFound", "Hivelocity device not found.")
+				fmt.Sprintf("device %d not found", device.DeviceId),
+			)
+			record.Warnf(s.scope.HivelocityMachine, "DeviceNotFound", "Hivelocity device not found")
 			s.scope.HivelocityMachine.SetFailure(capierrors.UpdateMachineError, infrav1.FailureMessageDeviceNotFound)
 			return actionComplete{}
 		}
 		return actionError{err: fmt.Errorf("failed to get associated device: %w", err)}
 	}
 
+	// verify device
 	if err := s.verifyAssociatedDevice(&device); err != nil {
 		// fatal error when device could not be verified
-		conditions.MarkFalse(s.scope.HivelocityMachine,
+		conditions.MarkFalse(
+			s.scope.HivelocityMachine,
 			infrav1.DeviceReadyCondition,
 			infrav1.DeviceTagsInvalidReason,
 			clusterv1.ConditionSeverityError,
-			fmt.Sprintf("device %d has invalid tags", device.DeviceId))
+			fmt.Sprintf("device %d has invalid tags", device.DeviceId),
+		)
 		record.Warnf(s.scope.HivelocityMachine, "DeviceTagsInvalid", "Hivelocity device not found.")
 		s.scope.HivelocityMachine.SetFailure(capierrors.UpdateMachineError, infrav1.FailureMessageDeviceTagsInvalid)
 		return actionComplete{}
 	}
 
+	// update machine object with infos from device
 	conditions.MarkTrue(s.scope.HivelocityMachine, infrav1.DeviceReadyCondition)
-	setMachineAddress(s.scope.HivelocityMachine, &device)
+	s.scope.HivelocityMachine.SetMachineStatus(device)
 	s.scope.HivelocityMachine.Status.Ready = true
 
+	log.V(1).Info("Completed function")
 	return actionComplete{}
 }
 
@@ -445,7 +431,9 @@ func (s *Service) verifyAssociatedDevice(device *hv.BareMetalDevice) error {
 
 // actionDeleteDeviceDeProvision re-provisions a device to remove it from cluster.
 func (s *Service) actionDeleteDeviceDeProvision(ctx context.Context) actionResult {
-	s.scope.Info("Start actionDeleteDeviceDeProvision")
+	log := s.scope.Logger.WithValues("function", "actionDeleteDeviceDeProvision")
+	log.V(1).Info("Started function")
+
 	deviceID, err := s.scope.HivelocityMachine.DeviceIDFromProviderID()
 	if err != nil {
 		return actionError{err: fmt.Errorf("failed to get deviceID from providerID: %w", err)}
@@ -483,20 +471,17 @@ func (s *Service) actionDeleteDeviceDeProvision(ctx context.Context) actionResul
 				"exceeded rate limit with calling Hivelocity function ProvisionDevice",
 			)
 		}
-		record.Warnf(s.scope.HivelocityMachine,
-			"FailedProvisionHivelocityDevice",
-			"Failed to provision Hivelocity device %s: %s",
-			s.scope.Name(),
-			err,
-		)
-		return actionError{err: fmt.Errorf("failed to provision device %d: %s", deviceID, err)}
+		record.Warnf(s.scope.HivelocityMachine, "FailedDeProvisionDevice", "Failed to de-provision device %s: %s", deviceID, err)
+		return actionError{err: fmt.Errorf("failed to de-provision device %d: %s", deviceID, err)}
 	}
+	log.V(1).Info("Completed function")
 	return actionComplete{}
 }
 
 // actionDeleteDeviceDissociate ensures that the device has no tags of machine.
 func (s *Service) actionDeleteDeviceDissociate(ctx context.Context) actionResult {
-	s.scope.Info("Start actionDeleteDeviceDissociate")
+	log := s.scope.Logger.WithValues("function", "actionDeleteDeviceDissociate")
+	log.V(1).Info("Started function")
 
 	deviceID, err := s.scope.HivelocityMachine.DeviceIDFromProviderID()
 	if err != nil {
@@ -524,10 +509,6 @@ func (s *Service) actionDeleteDeviceDissociate(ctx context.Context) actionResult
 		}
 	}
 
+	log.V(1).Info("Completed function")
 	return actionComplete{}
-}
-
-// providerIDFromDeviceID converts a deviceID to ProviderID.
-func providerIDFromDeviceID(deviceID int32) string {
-	return fmt.Sprintf("hivelocity://%d", deviceID)
 }

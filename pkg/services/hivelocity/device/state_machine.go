@@ -44,7 +44,7 @@ func newStateMachine(hvMachine *infrav1.HivelocityMachine, reconciler *Service) 
 		hvMachine:  hvMachine,
 		reconciler: reconciler,
 		nextState:  currentState, // Remain in current state by default
-		log:        reconciler.scope.Logger,
+		log:        reconciler.scope.Logger.WithValues("caller", "state-machine"),
 	}
 	return &r
 }
@@ -70,11 +70,10 @@ func (sm *stateMachine) ReconcileState(ctx context.Context) (actionRes actionRes
 		if sm.nextState != initialState.ProvisioningState {
 			sm.log.Info("changing provisioning state", "old", initialState.ProvisioningState, "new", sm.nextState)
 			sm.hvMachine.Spec.Status.ProvisioningState = sm.nextState
-
-			if !reflect.DeepEqual(initialState, sm.hvMachine.Spec.Status) {
-				t := metav1.Now()
-				sm.hvMachine.Spec.Status.LastUpdated = &t
-			}
+		}
+		if !reflect.DeepEqual(initialState, sm.hvMachine.Spec.Status) {
+			t := metav1.Now()
+			sm.hvMachine.Spec.Status.LastUpdated = &t
 		}
 	}()
 
@@ -83,13 +82,15 @@ func (sm *stateMachine) ReconcileState(ctx context.Context) (actionRes actionRes
 		initialState.ProvisioningState = infrav1.StateAssociateDevice
 		sm.hvMachine.Spec.Status.ProvisioningState = infrav1.StateAssociateDevice
 	}
-	sm.log.Info("ReconcileState", "initialState.ProvisioningState", initialState.ProvisioningState)
+
+	sm.log.V(1).Info("ReconcileState", "initialState.ProvisioningState", initialState.ProvisioningState)
+
 	if stateHandler, found := sm.handlers()[initialState.ProvisioningState]; found {
 		return stateHandler(ctx)
 	}
 
-	sm.log.Info("No handler found for state", "state", initialState.ProvisioningState)
-	return actionError{fmt.Errorf("no handler found for state \"%s\"", initialState.ProvisioningState)}
+	record.Warnf(sm.hvMachine, "NoHandlerFoundForState", "no handler found for state %q", initialState.ProvisioningState)
+	return actionError{fmt.Errorf("no handler found for state %q", initialState.ProvisioningState)}
 }
 
 func (sm *stateMachine) handleAssociateDevice(ctx context.Context) actionResult {
@@ -127,6 +128,7 @@ func (sm *stateMachine) handleProvisionDevice(ctx context.Context) actionResult 
 	if _, ok := actResult.(actionComplete); ok {
 		sm.nextState = infrav1.StateDeviceProvisioned
 	}
+
 	// check whether we need to go back to previous state
 	actionGoBack, ok := actResult.(actionGoBack)
 	if ok {
@@ -148,6 +150,7 @@ func (sm *stateMachine) handleDeleteDeviceShutdown(ctx context.Context) actionRe
 	if _, ok := actResult.(actionComplete); ok {
 		sm.nextState = infrav1.StateDeleteDeviceDeProvision
 	}
+
 	actionErr, ok := actResult.(actionError)
 	if ok {
 		// Filter out NotFound error. If device is not there any more, we just need to delete this machine.

@@ -81,10 +81,6 @@ spec:
                 description: Status contains all status information of the controller.
                   Do not edit these values!
                 properties:
-                  actionTriggered:
-                    description: the last error message reported by the provisioning
-                      subsystem.
-                    type: string
                   lastUpdated:
                     description: Time stamp of last update of status.
                     format: date-time
