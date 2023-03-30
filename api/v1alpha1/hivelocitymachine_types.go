@@ -22,6 +22,7 @@ import (
 	"strings"
 
 	"github.com/hivelocity/cluster-api-provider-hivelocity/pkg/services/hivelocity/hvtag"
+	hv "github.com/hivelocity/hivelocity-client-go/client"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	capierrors "sigs.k8s.io/cluster-api/errors"
@@ -86,19 +87,6 @@ const (
 	StateDeleteDevice ProvisioningState = "delete"
 )
 
-// ErrorType indicates the class of problem that has caused the Host resource
-// to enter an error state.
-type ErrorType string
-
-const (
-	// ProvisioningError is an error condition occurring when the controller
-	// fails to provision or deprovision the Host.
-	ProvisioningError ErrorType = "provisioning error"
-
-	// FatalError is a fatal error that triggers a failureMessage in the bm machine.
-	FatalError ErrorType = "fatal error"
-)
-
 // HivelocityMachineSpec defines the desired state of HivelocityMachine.
 type HivelocityMachineSpec struct {
 	// ProviderID is the unique identifier as specified by the cloud provider.
@@ -122,10 +110,6 @@ type ControllerGeneratedStatus struct {
 	// Information tracked by the provisioner.
 	// +optional
 	ProvisioningState ProvisioningState `json:"provisioningState"`
-
-	// the last error message reported by the provisioning subsystem.
-	// +optional
-	ActionTriggered string `json:"actionTriggered"`
 
 	// Time stamp of last update of status.
 	// +optional
@@ -210,6 +194,37 @@ func (r *HivelocityMachine) SetConditions(conditions clusterv1.Conditions) {
 func (r *HivelocityMachine) SetFailure(reason capierrors.MachineStatusError, message string) {
 	r.Status.FailureReason = &reason
 	r.Status.FailureMessage = &message
+}
+
+// SetProviderID sets the providerID based on a deviceID.
+func (r *HivelocityMachine) SetProviderID(deviceID int32) {
+	providerID := providerIDFromDeviceID(deviceID)
+	r.Spec.ProviderID = &providerID
+}
+
+// SetMachineStatus sets the providerID based on a deviceID.
+func (r *HivelocityMachine) SetMachineStatus(device hv.BareMetalDevice) {
+	r.Status.Addresses = []clusterv1.MachineAddress{
+		{
+			Type:    clusterv1.MachineHostName,
+			Address: device.Hostname,
+		},
+		{
+			Type:    clusterv1.MachineInternalIP,
+			Address: device.PrimaryIp,
+		},
+		{
+			Type:    clusterv1.MachineExternalIP,
+			Address: device.PrimaryIp,
+		},
+	}
+	r.Status.DeviceState = device.PowerStatus
+	r.Status.Region = Region(device.LocationName)
+}
+
+// providerIDFromDeviceID converts a deviceID to ProviderID.
+func providerIDFromDeviceID(deviceID int32) string {
+	return fmt.Sprintf("hivelocity://%d", deviceID)
 }
 
 // DeviceTag returns a DeviceTag object for the machine tag.

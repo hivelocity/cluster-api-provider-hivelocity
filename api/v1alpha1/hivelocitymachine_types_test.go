@@ -20,8 +20,11 @@ import (
 	"testing"
 
 	"github.com/hivelocity/cluster-api-provider-hivelocity/pkg/services/hivelocity/hvtag"
+	hv "github.com/hivelocity/hivelocity-client-go/client"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"k8s.io/utils/pointer"
+	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	capierrors "sigs.k8s.io/cluster-api/errors"
 )
 
@@ -126,4 +129,117 @@ var _ = Describe("Test SetFailure", func() {
 		Expect(*hvMachine.Status.FailureMessage).To(Equal(newFailureMessage))
 		Expect(*hvMachine.Status.FailureReason).To(Equal(newFailureReason))
 	})
+})
+
+var _ = Describe("Test SetMachineStatus", func() {
+	type testCaseSetMachineStatus struct {
+		existingStatus HivelocityMachineStatus
+		device         hv.BareMetalDevice
+		expectStatus   HivelocityMachineStatus
+	}
+
+	DescribeTable("Test SetMachineStatus",
+		func(tc testCaseSetMachineStatus) {
+			hvMachine := HivelocityMachine{}
+			hvMachine.Status = tc.existingStatus
+			hvMachine.SetMachineStatus(tc.device)
+
+			Expect(hvMachine.Status).Should(Equal(tc.expectStatus))
+		},
+		Entry("existing status", testCaseSetMachineStatus{
+			existingStatus: HivelocityMachineStatus{
+				Addresses: []clusterv1.MachineAddress{
+					{
+						Type:    clusterv1.MachineHostName,
+						Address: "hostname",
+					},
+				},
+				Region:      Region("testregion"),
+				DeviceState: "on",
+			},
+			device: hv.BareMetalDevice{
+				Hostname:     "device-hostname",
+				PrimaryIp:    "127.0.0.1",
+				LocationName: "LAX2",
+				PowerStatus:  "off",
+			},
+			expectStatus: HivelocityMachineStatus{
+				Addresses: []clusterv1.MachineAddress{
+					{
+						Type:    clusterv1.MachineHostName,
+						Address: "device-hostname",
+					},
+					{
+						Type:    clusterv1.MachineInternalIP,
+						Address: "127.0.0.1",
+					},
+					{
+						Type:    clusterv1.MachineExternalIP,
+						Address: "127.0.0.1",
+					},
+				},
+				Region:      Region("LAX2"),
+				DeviceState: "off",
+			},
+		}),
+		Entry("no existing status", testCaseSetMachineStatus{
+			existingStatus: HivelocityMachineStatus{},
+			device: hv.BareMetalDevice{
+				Hostname:     "device-hostname",
+				PrimaryIp:    "127.0.0.1",
+				LocationName: "LAX2",
+				PowerStatus:  "off",
+			},
+			expectStatus: HivelocityMachineStatus{
+				Addresses: []clusterv1.MachineAddress{
+					{
+						Type:    clusterv1.MachineHostName,
+						Address: "device-hostname",
+					},
+					{
+						Type:    clusterv1.MachineInternalIP,
+						Address: "127.0.0.1",
+					},
+					{
+						Type:    clusterv1.MachineExternalIP,
+						Address: "127.0.0.1",
+					},
+				},
+				Region:      Region("LAX2"),
+				DeviceState: "off",
+			},
+		}),
+	)
+})
+
+var _ = Describe("Test providerIDFromDeviceID", func() {
+	Expect(providerIDFromDeviceID(42)).To(Equal("hivelocity://42"))
+})
+
+var _ = Describe("Test SetProviderID", func() {
+	type testCaseSetProviderID struct {
+		existingProviderID *string
+		deviceID           int32
+		expectProviderID   *string
+	}
+
+	DescribeTable("Test SetProviderID",
+		func(tc testCaseSetProviderID) {
+			hvMachine := HivelocityMachine{}
+			hvMachine.Spec.ProviderID = tc.existingProviderID
+			hvMachine.SetProviderID(tc.deviceID)
+
+			Expect(hvMachine.Spec.ProviderID).Should(Equal(tc.expectProviderID))
+		},
+		Entry("existing providerID", testCaseSetProviderID{
+			existingProviderID: pointer.String("hivelocity://42"),
+			deviceID:           1,
+			expectProviderID:   pointer.String("hivelocity://1"),
+		}),
+		Entry("no existing status", testCaseSetProviderID{
+			existingProviderID: nil,
+			deviceID:           1,
+			expectProviderID:   pointer.String("hivelocity://1"),
+		}),
+	)
 })
