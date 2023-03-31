@@ -66,6 +66,8 @@ var (
 	ErrDeviceShutDownAlready = fmt.Errorf("device is shut down already")
 	// ErrDeviceTurnedOnAlready indicates that the device turned on already.
 	ErrDeviceTurnedOnAlready = fmt.Errorf("device is turned on already")
+	// ErrRateLimitExceeded indicates that the device turned on already.
+	ErrRateLimitExceeded = fmt.Errorf("rate limit exceeded")
 )
 
 var _ Factory = &HivelocityFactory{}
@@ -98,7 +100,7 @@ func (c *realClient) GetDevice(ctx context.Context, deviceID int32) (hv.BareMeta
 			return device, ErrDeviceNotFound
 		}
 	}
-	return device, err
+	return device, checkRateLimit(err)
 }
 
 func (c *realClient) SetDeviceTags(ctx context.Context, deviceID int32, tags []string) error {
@@ -108,7 +110,7 @@ func (c *realClient) SetDeviceTags(ctx context.Context, deviceID int32, tags []s
 		Tags: tags,
 	}
 	_, _, err := c.client.DeviceApi.PutDeviceTagIdResource(ctx, deviceID, deviceTags, nil) //nolint:bodyclose // Close() gets done in client
-	return err
+	return checkRateLimit(err)
 }
 
 func (c *realClient) PowerOnDevice(ctx context.Context, deviceID int32) error {
@@ -118,12 +120,12 @@ func (c *realClient) PowerOnDevice(ctx context.Context, deviceID int32) error {
 func (c *realClient) ProvisionDevice(ctx context.Context, deviceID int32, opts hv.BareMetalDeviceUpdate) (hv.BareMetalDevice, error) {
 	// https://developers.hivelocity.net/reference/put_bare_metal_device_id_resource
 	device, _, err := c.client.BareMetalDevicesApi.PutBareMetalDeviceIdResource(ctx, deviceID, opts, nil) //nolint:bodyclose // Close() gets done in client
-	return device, err
+	return device, checkRateLimit(err)
 }
 
 func (c *realClient) ListDevices(ctx context.Context) ([]hv.BareMetalDevice, error) {
 	devices, _, err := c.client.BareMetalDevicesApi.GetBareMetalDeviceResource(ctx, nil) //nolint:bodyclose // Close() gets done in client
-	return devices, err
+	return devices, checkRateLimit(err)
 }
 
 func (c *realClient) ShutdownDevice(ctx context.Context, deviceID int32) error {
@@ -132,6 +134,7 @@ func (c *realClient) ShutdownDevice(ctx context.Context, deviceID int32) error {
 		if strings.Contains(err.Error(), "Can't do this while server is powered off.") {
 			return ErrDeviceShutDownAlready
 		}
+		return checkRateLimit(err)
 	}
 	return nil
 }
@@ -141,7 +144,7 @@ func (c *realClient) ListImages(ctx context.Context, productID int32) ([]string,
 	opts, _, err := c.client.ProductApi.GetProductOperatingSystemsResource(ctx, productID, nil) //nolint:bodyclose // Close() gets done in client
 	ret := make([]string, 0, len(opts))
 	if err != nil {
-		return []string{}, err
+		return []string{}, checkRateLimit(err)
 	}
 	for i := range opts {
 		ret = append(ret, opts[i].Name)
@@ -152,17 +155,22 @@ func (c *realClient) ListImages(ctx context.Context, productID int32) ([]string,
 func (c *realClient) ListSSHKeys(ctx context.Context) ([]hv.SshKeyResponse, error) {
 	// https://developers.hivelocity.net/reference/get_ssh_key_resource
 	sshKeys, _, err := c.client.SshKeyApi.GetSshKeyResource(ctx, nil) //nolint:bodyclose // Close() gets done in client
-	return sshKeys, err
+	return sshKeys, checkRateLimit(err)
 }
 
-// IsRateLimitExceededError returns true, if the Hivelocity rate limit was reached.
-func IsRateLimitExceededError(err error) bool {
+// checkRateLimit returns true, if the Hivelocity rate limit was reached.
+func checkRateLimit(err error) error {
+	if err == nil {
+		return nil
+	}
+
 	var swaggerErr hv.GenericSwaggerError
 	if !errors.As(err, &swaggerErr) {
-		return false
+		return err
 	}
+
 	if strings.HasPrefix(swaggerErr.Error(), fmt.Sprint(http.StatusTooManyRequests)) {
-		return true
+		return ErrRateLimitExceeded
 	}
-	return false
+	return err
 }
