@@ -29,7 +29,8 @@ import (
 // HivelocityRemediationTemplateReconciler reconciles a HivelocityRemediationTemplate object.
 type HivelocityRemediationTemplateReconciler struct {
 	client.Client
-	Scheme *runtime.Scheme
+	Scheme           *runtime.Scheme
+	WatchFilterValue string
 }
 
 //+kubebuilder:rbac:groups=infrastructure.cluster.x-k8s.io,resources=hivelocityremediationtemplates,verbs=get;list;watch;create;update;patch;delete

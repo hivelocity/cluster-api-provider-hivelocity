@@ -18,10 +18,7 @@ limitations under the License.
 package utils
 
 import (
-	"encoding/json"
-	"fmt"
 	"log"
-	"strings"
 
 	"github.com/go-logr/logr"
 	"github.com/go-logr/zapr"
@@ -29,86 +26,6 @@ import (
 	"go.uber.org/zap/zapcore"
 	"k8s.io/apiserver/pkg/storage/names"
 )
-
-// LabelsToLabelSelector is converting a map of labels to Hivelocity label
-// selector.
-func LabelsToLabelSelector(labels map[string]string) string {
-	parts := make([]string, 0, len(labels))
-	for key, val := range labels {
-		parts = append(
-			parts,
-			fmt.Sprintf("%s==%s", key, val),
-		)
-	}
-	return strings.Join(parts, ",")
-}
-
-// LabelSelectorToLabels is converting an Hivelocity label
-// selector to a map of labels.
-func LabelSelectorToLabels(str string) (map[string]string, error) {
-	labels := make(map[string]string)
-	if str == "" {
-		return labels, nil
-	}
-	input := strings.ReplaceAll(str, "==", `":"`)
-	input = strings.ReplaceAll(input, ",", `","`)
-	input = fmt.Sprintf(`{"%s"}`, input) //nolint:gocritic
-
-	if err := json.Unmarshal([]byte(input), &labels); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal: %w", err)
-	}
-	return labels, nil
-}
-
-// DifferenceOfStringSlices returns the elements in `a` that aren't in `b` as well as elements of `a` not in `b`.
-func DifferenceOfStringSlices(a, b []string) (onlyInA, onlyInB []string) {
-	ma := make(map[string]struct{}, len(a))
-	mb := make(map[string]struct{}, len(b))
-	for _, x := range b {
-		mb[x] = struct{}{}
-	}
-	for _, x := range a {
-		ma[x] = struct{}{}
-	}
-
-	for _, x := range a {
-		if _, found := mb[x]; !found {
-			onlyInA = append(onlyInA, x)
-		}
-	}
-
-	for _, x := range b {
-		if _, found := ma[x]; !found {
-			onlyInB = append(onlyInB, x)
-		}
-	}
-	return
-}
-
-// DifferenceOfIntSlices returns the elements in `a` that aren't in `b` as well as elements of `a` not in `b`.
-func DifferenceOfIntSlices(a, b []int) (onlyInA, onlyInB []int) {
-	ma := make(map[int]struct{}, len(a))
-	mb := make(map[int]struct{}, len(b))
-	for _, x := range b {
-		mb[x] = struct{}{}
-	}
-	for _, x := range a {
-		ma[x] = struct{}{}
-	}
-
-	for _, x := range a {
-		if _, found := mb[x]; !found {
-			onlyInA = append(onlyInA, x)
-		}
-	}
-
-	for _, x := range b {
-		if _, found := ma[x]; !found {
-			onlyInB = append(onlyInB, x)
-		}
-	}
-	return
-}
 
 // StringInList returns a boolean indicating whether strToSearch is a
 // member of the string slice passed as the first argument.
