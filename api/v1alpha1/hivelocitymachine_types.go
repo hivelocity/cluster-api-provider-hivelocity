@@ -117,7 +117,7 @@ type ControllerGeneratedStatus struct {
 }
 
 // HivelocityDeviceType defines the Hivelocity device type.
-// +kubebuilder:validation:Enum=hvCustom;todo-question
+// +kubebuilder:validation:Enum=pool;hvCustom;todo-question
 type HivelocityDeviceType string
 
 // HivelocityMachineStatus defines the observed state of HivelocityMachine.

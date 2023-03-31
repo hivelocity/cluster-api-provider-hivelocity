@@ -104,6 +104,7 @@ spec:
                         description: Type is the Hivelocity Machine Type for this
                           machine.
                         enum:
+                        - pool
                         - hvCustom
                         - todo-question
                         type: string
