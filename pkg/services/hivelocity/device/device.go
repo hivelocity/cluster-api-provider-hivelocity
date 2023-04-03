@@ -107,10 +107,7 @@ func (s *Service) actionAssociateDevice(ctx context.Context) actionResult {
 	// list all devices
 	devices, err := s.scope.HVClient.ListDevices(ctx)
 	if err != nil {
-		if errors.Is(err, hvclient.ErrRateLimitExceeded) {
-			conditions.MarkTrue(s.scope.HivelocityMachine, infrav1.RateLimitExceeded)
-			record.Event(s.scope.HivelocityMachine, "RateLimitExceeded", "exceeded rate limit with calling Hivelocity function ListDevices")
-		}
+		s.handleRateLimitExceeded(err, "ListDevices")
 		return actionError{err: fmt.Errorf("failed to list devices: %w", err)}
 	}
 
@@ -128,10 +125,7 @@ func (s *Service) actionAssociateDevice(ctx context.Context) actionResult {
 	)
 
 	if err := s.scope.HVClient.SetDeviceTags(ctx, device.DeviceId, device.Tags); err != nil {
-		if errors.Is(err, hvclient.ErrRateLimitExceeded) {
-			conditions.MarkTrue(s.scope.HivelocityMachine, infrav1.RateLimitExceeded)
-			record.Event(s.scope.HivelocityMachine, "RateLimitExceeded", "exceeded rate limit with calling Hivelocity function SetDeviceTags")
-		}
+		s.handleRateLimitExceeded(err, "SetDeviceTags")
 		return actionError{err: fmt.Errorf("failed to set tags on device %v: %w", device.DeviceId, err)}
 	}
 
@@ -209,7 +203,7 @@ func (s *Service) actionVerifyAssociate(ctx context.Context) actionResult {
 
 	device, err := s.scope.HVClient.GetDevice(ctx, deviceID)
 	if err != nil {
-		s.handleRateLimitExceeded(err)
+		s.handleRateLimitExceeded(err, "GetDevice")
 		if errors.Is(err, hvclient.ErrDeviceNotFound) {
 			// if device cannot be found, we associate a new one
 			log.Info("Device not found. Go back to StateAssociateDevice")
@@ -234,10 +228,7 @@ func (s *Service) actionVerifyAssociate(ctx context.Context) actionResult {
 	newTagList, updatedTags2 := s.scope.HivelocityMachine.DeviceTag().RemoveFromList(newTagList)
 	if updatedTags1 || updatedTags2 {
 		if err := s.scope.HVClient.SetDeviceTags(ctx, deviceID, newTagList); err != nil {
-			if errors.Is(err, hvclient.ErrRateLimitExceeded) {
-				conditions.MarkTrue(s.scope.HivelocityMachine, infrav1.RateLimitExceeded)
-				record.Event(s.scope.HivelocityMachine, "RateLimitExceeded", "exceeded rate limit with calling Hivelocity function SetDeviceTags")
-			}
+			s.handleRateLimitExceeded(err, "SetDeviceTags")
 			return actionError{err: fmt.Errorf("failed to remove associated machine from tags: %w", err)}
 		}
 	}
@@ -268,10 +259,7 @@ func (s *Service) actionEnsureDeviceShutDown(ctx context.Context) actionResult {
 	}
 
 	err = s.scope.HVClient.ShutdownDevice(ctx, deviceID)
-	if errors.Is(err, hvclient.ErrRateLimitExceeded) {
-		conditions.MarkTrue(s.scope.HivelocityMachine, infrav1.RateLimitExceeded)
-		record.Event(s.scope.HivelocityMachine, "RateLimitExceeded", "exceeded rate limit with calling Hivelocity function ShutdownDevice")
-	}
+	s.handleRateLimitExceeded(err, "ShutdownDevice")
 	// if device is already shut down, we can go to the next step
 	if errors.Is(err, hvclient.ErrDeviceShutDownAlready) {
 		log.V(1).Info("Completed function")
@@ -299,7 +287,7 @@ func (s *Service) actionProvisionDevice(ctx context.Context) actionResult {
 
 	device, err := s.scope.HVClient.GetDevice(ctx, deviceID)
 	if err != nil {
-		s.handleRateLimitExceeded(err)
+		s.handleRateLimitExceeded(err, "GetDevice")
 		if errors.Is(err, hvclient.ErrDeviceNotFound) {
 			// if device cannot be found, we associate a new one
 			log.Info("Device to provision not found. Go back to StateAssociateDevice")
@@ -341,10 +329,7 @@ func (s *Service) actionProvisionDevice(ctx context.Context) actionResult {
 		sshKeyName := s.scope.HivelocityCluster.Spec.SSHKey.Name
 		keys, err := s.scope.HVClient.ListSSHKeys(ctx)
 		if err != nil {
-			if errors.Is(err, hvclient.ErrRateLimitExceeded) {
-				conditions.MarkTrue(s.scope.HivelocityMachine, infrav1.RateLimitExceeded)
-				record.Event(s.scope.HivelocityMachine, "RateLimitExceeded", "exceeded rate limit with calling Hivelocity function ListSSHKeys")
-			}
+			s.handleRateLimitExceeded(err, "ListSSHKeys")
 			return actionError{err: fmt.Errorf("failed to list ssh keys: %w", err)}
 		}
 		sshKeyID, err := findSSHKey(keys, sshKeyName)
@@ -364,10 +349,7 @@ func (s *Service) actionProvisionDevice(ctx context.Context) actionResult {
 	// Provision the device
 	if _, err := s.scope.HVClient.ProvisionDevice(ctx, deviceID, opts); err != nil {
 		// TODO: Handle error that machine is not shut down
-		if errors.Is(err, hvclient.ErrRateLimitExceeded) {
-			conditions.MarkTrue(s.scope.HivelocityMachine, infrav1.RateLimitExceeded)
-			record.Event(s.scope.HivelocityMachine, "RateLimitExceeded", "exceeded rate limit with calling Hivelocity function ProvisionDevice")
-		}
+		s.handleRateLimitExceeded(err, "ProvisionDevice")
 		record.Warnf(s.scope.HivelocityMachine, "FailedProvisionDevice", "Failed to provision device %v: %s", deviceID, err)
 		return actionError{err: fmt.Errorf("failed to provision device %d: %s", deviceID, err)}
 	}
@@ -403,7 +385,7 @@ func (s *Service) actionDeviceProvisioned(ctx context.Context) actionResult {
 
 	device, err := s.scope.HVClient.GetDevice(ctx, deviceID)
 	if err != nil {
-		s.handleRateLimitExceeded(err)
+		s.handleRateLimitExceeded(err, "GetDevice")
 		if errors.Is(err, hvclient.ErrDeviceNotFound) {
 			// fatal error when device was not found
 			conditions.MarkFalse(
@@ -466,7 +448,7 @@ func (s *Service) actionDeleteDeviceDeProvision(ctx context.Context) actionResul
 
 	device, err := s.scope.HVClient.GetDevice(ctx, deviceID)
 	if err != nil {
-		s.handleRateLimitExceeded(err)
+		s.handleRateLimitExceeded(err, "GetDevice")
 		if errors.Is(err, hvclient.ErrDeviceNotFound) {
 			// Nothing to do if device is not found
 			s.scope.Info("Unable to locate Hivelocity device by ID or tags")
@@ -490,10 +472,7 @@ func (s *Service) actionDeleteDeviceDeProvision(ctx context.Context) actionResul
 	// Provision the device
 	if _, err := s.scope.HVClient.ProvisionDevice(ctx, deviceID, opts); err != nil {
 		// TODO: Handle error that machine is not shut down
-		if errors.Is(err, hvclient.ErrRateLimitExceeded) {
-			conditions.MarkTrue(s.scope.HivelocityMachine, infrav1.RateLimitExceeded)
-			record.Event(s.scope.HivelocityMachine, "RateLimitExceeded", "exceeded rate limit with calling Hivelocity function ProvisionDevice")
-		}
+		s.handleRateLimitExceeded(err, "ProvisionDevice")
 		record.Warnf(s.scope.HivelocityMachine, "FailedDeProvisionDevice", "Failed to de-provision device %s: %s", deviceID, err)
 		return actionError{err: fmt.Errorf("failed to de-provision device %d: %s", deviceID, err)}
 	}
@@ -513,7 +492,7 @@ func (s *Service) actionDeleteDeviceDissociate(ctx context.Context) actionResult
 
 	device, err := s.scope.HVClient.GetDevice(ctx, deviceID)
 	if err != nil {
-		s.handleRateLimitExceeded(err)
+		s.handleRateLimitExceeded(err, "GetDevice")
 		if errors.Is(err, hvclient.ErrDeviceNotFound) {
 			// Nothing to do if device is not found
 			s.scope.Info("Unable to locate Hivelocity device by ID or tags")
@@ -529,10 +508,7 @@ func (s *Service) actionDeleteDeviceDissociate(ctx context.Context) actionResult
 
 	if updated1 || updated2 || updated3 {
 		if err := s.scope.HVClient.SetDeviceTags(ctx, device.DeviceId, newTags); err != nil {
-			if errors.Is(err, hvclient.ErrRateLimitExceeded) {
-				conditions.MarkTrue(s.scope.HivelocityMachine, infrav1.RateLimitExceeded)
-				record.Event(s.scope.HivelocityMachine, "RateLimitExceeded", "exceeded rate limit with calling Hivelocity function SetDeviceTags")
-			}
+			s.handleRateLimitExceeded(err, "SetDeviceTags")
 			return actionError{err: fmt.Errorf("failed to set tags: %w", err)}
 		}
 	}
@@ -541,9 +517,9 @@ func (s *Service) actionDeleteDeviceDissociate(ctx context.Context) actionResult
 	return actionComplete{}
 }
 
-func (s *Service) handleRateLimitExceeded(err error) {
+func (s *Service) handleRateLimitExceeded(err error, functionName string) {
 	if errors.Is(err, hvclient.ErrRateLimitExceeded) {
 		conditions.MarkTrue(s.scope.HivelocityMachine, infrav1.RateLimitExceeded)
-		record.Event(s.scope.HivelocityMachine, "RateLimitExceeded", "exceeded rate limit with calling Hivelocity function ListSSHKeys")
+		record.Warnf(s.scope.HivelocityMachine, "RateLimitExceeded", "exceeded rate limit with calling Hivelocity function %q", functionName)
 	}
 }
