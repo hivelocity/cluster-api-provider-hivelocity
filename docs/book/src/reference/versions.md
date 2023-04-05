@@ -19,7 +19,7 @@ and PATCH version release for only bug fixes.
 
 CAPHV's versions are compatible with the following versions of Cluster API
 
-|                         | Cluster API `v1beta1` (`v1.3.x`) |
+|                         | Cluster API `v1beta1` (`v1.4.x`) |
 |-------------------------|----------------------------------|
 | CAPHV v1alpha1 `v1.0.x` | ✓                                |
 
@@ -30,7 +30,7 @@ Multiple CAPHV minor releases can use the same Cluster API minor release.
 For compatibility, check the release notes [here](https://github.com/hivelocity/cluster-api-provider-hivelocity/releases/) to see which v1beta1 Cluster API version each CAPHV version is compatible with.
 
 For example:
-- CAPHV v1.0.x is compatible with Cluster API v1.3.x
+- CAPHV v1.0.x is compatible with Cluster API v1.4.x
 
 ## End-of-Life Timeline
 TBD

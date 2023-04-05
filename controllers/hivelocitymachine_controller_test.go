@@ -114,7 +114,7 @@ var _ = Describe("HivelocityMachineReconciler", func() {
 					Namespace:    testNs.Name,
 					Finalizers:   []string{clusterv1.MachineFinalizer},
 					Labels: map[string]string{
-						clusterv1.ClusterLabelName: capiCluster.Name,
+						clusterv1.ClusterNameLabel: capiCluster.Name,
 					},
 				},
 				Spec: clusterv1.MachineSpec{
@@ -134,8 +134,8 @@ var _ = Describe("HivelocityMachineReconciler", func() {
 					Name:      hivelocityMachineName,
 					Namespace: testNs.Name,
 					Labels: map[string]string{
-						clusterv1.ClusterLabelName:             capiCluster.Name,
-						clusterv1.MachineControlPlaneLabelName: "",
+						clusterv1.ClusterNameLabel:             capiCluster.Name,
+						clusterv1.MachineControlPlaneNameLabel: "",
 					},
 					OwnerReferences: []metav1.OwnerReference{
 						{
@@ -297,7 +297,7 @@ var _ = Describe("Hivelocity secret", func() {
 				Namespace:    "default",
 				Finalizers:   []string{clusterv1.MachineFinalizer},
 				Labels: map[string]string{
-					clusterv1.ClusterLabelName: capiCluster.Name,
+					clusterv1.ClusterNameLabel: capiCluster.Name,
 				},
 			},
 			Spec: clusterv1.MachineSpec{
@@ -320,8 +320,8 @@ var _ = Describe("Hivelocity secret", func() {
 				Name:      hivelocityMachineName,
 				Namespace: "default",
 				Labels: map[string]string{
-					clusterv1.ClusterLabelName:             capiCluster.Name,
-					clusterv1.MachineControlPlaneLabelName: "",
+					clusterv1.ClusterNameLabel:             capiCluster.Name,
+					clusterv1.MachineControlPlaneNameLabel: "",
 				},
 				OwnerReferences: []metav1.OwnerReference{
 					{

@@ -182,7 +182,7 @@ var _ = Describe("Hivelocity ClusterReconciler", func() {
 						Namespace:    namespace,
 						Finalizers:   []string{clusterv1.MachineFinalizer},
 						Labels: map[string]string{
-							clusterv1.ClusterLabelName: capiCluster.Name,
+							clusterv1.ClusterNameLabel: capiCluster.Name,
 						},
 					},
 					Spec: clusterv1.MachineSpec{
@@ -204,7 +204,7 @@ var _ = Describe("Hivelocity ClusterReconciler", func() {
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      hvMachineName,
 						Namespace: namespace,
-						Labels:    map[string]string{clusterv1.ClusterLabelName: capiCluster.Name},
+						Labels:    map[string]string{clusterv1.ClusterNameLabel: capiCluster.Name},
 						OwnerReferences: []metav1.OwnerReference{
 							{
 								APIVersion: clusterv1.GroupVersion.String(),
