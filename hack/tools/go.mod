@@ -11,10 +11,10 @@ require (
 	github.com/joelanford/go-apidiff v0.5.0
 	github.com/onsi/ginkgo/v2 v2.8.0
 	gotest.tools/gotestsum v1.8.2
-	k8s.io/apimachinery v0.26.1
-	k8s.io/code-generator v0.26.1
-	sigs.k8s.io/cluster-api/hack/tools v0.0.0-20230315091215-a32f66e74575
-	sigs.k8s.io/controller-runtime/tools/setup-envtest v0.0.0-20230110013913-9fd57745d6e9
+	k8s.io/apimachinery v0.26.3
+	k8s.io/code-generator v0.26.3
+	sigs.k8s.io/cluster-api/hack/tools v0.0.0-20230404233538-94f54686bd08
+	sigs.k8s.io/controller-runtime/tools/setup-envtest v0.0.0-20230403212152-53057ba616d1
 	sigs.k8s.io/controller-tools v0.11.3
 	sigs.k8s.io/kind v0.17.0
 )
@@ -69,7 +69,7 @@ require (
 	github.com/go-git/gcfg v1.5.0 // indirect
 	github.com/go-git/go-billy/v5 v5.3.1 // indirect
 	github.com/go-git/go-git/v5 v5.4.2 // indirect
-	github.com/go-logr/logr v1.2.3 // indirect
+	github.com/go-logr/logr v1.2.4 // indirect
 	github.com/go-logr/zapr v1.2.3 // indirect
 	github.com/go-openapi/jsonpointer v0.19.5 // indirect
 	github.com/go-openapi/jsonreference v0.20.0 // indirect
