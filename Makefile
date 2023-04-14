@@ -565,6 +565,23 @@ generate-api-ci: generate-manifests generate-go-deepcopy
 cluster-templates: $(KUSTOMIZE)
 	$(KUSTOMIZE) build templates/cluster-templates/$(INFRA_PROVIDER) --load-restrictor LoadRestrictionsNone  > templates/cluster-templates/cluster-template.yaml
 
+.PHONY: delete-workload-cluster
+delete-workload-cluster: ## Deletes the example workload Kubernetes cluster
+	@test $${CLUSTER_NAME?Please set environment variable}
+	@echo 'Your resources will now be deleted, this can take up to 20 minutes'
+	kubectl patch cluster $(CLUSTER_NAME) --type=merge -p '{"spec":{"paused": false}}'
+	kubectl delete cluster $(CLUSTER_NAME)
+	${TIMEOUT} 15m bash -c "while kubectl get cluster | grep $(NAME); do sleep 1; done"
+	@echo 'Cluster deleted'
+
+.PHONY: delete-mgm-cluster
+delete-mgm-cluster: $(CTLPTL) ## Deletes Kind-dev Cluster (default)
+	$(CTLPTL) delete cluster kind-caphv
+
+.PHONY: cluster
+cluster: $(CTLPTL) ## Creates kind-dev Cluster
+	./hack/kind-dev.sh
+
 ##@ Format
 ##########
 # Format #

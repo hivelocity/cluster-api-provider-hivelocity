@@ -276,11 +276,18 @@ cmd_button(
     text="Create Hivelocity Cluster",
 )
 
-
 cmd_button(
-    "Delete Cluster",
+    "Delete WL Cluster",
     argv=["make", "delete-workload-cluster"],
     location=location.NAV,
     icon_name="cloud_download",
-    text="Delete Cluster",
+    text="Delete WL Cluster",
+)
+
+cmd_button(
+    "Delete MGM Cluster",
+    argv=["make", "delete-mgm-cluster"],
+    location=location.NAV,
+    icon_name="cloud_download",
+    text="Delete MGM Cluster",
 )
