@@ -11,4 +11,4 @@ spec:
     name: hivelocity
     key: hivelocity
   sshKey:
-    name: example-name
+    name: ssh-key-hivelocity-pub

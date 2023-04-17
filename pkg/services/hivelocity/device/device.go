@@ -328,7 +328,7 @@ func (s *Service) actionProvisionDevice(ctx context.Context) actionResult {
 	device.Tags = append(device.Tags, tags...)
 
 	opts := hv.BareMetalDeviceUpdate{
-		Hostname:    s.scope.Name(),
+		Hostname:    fmt.Sprintf("%s.example.com", s.scope.Name()), // TODO: HV API requires a FQDN.
 		Tags:        device.Tags,
 		Script:      string(userData), // cloud-init script
 		OsName:      image,
@@ -362,7 +362,8 @@ func (s *Service) actionProvisionDevice(ctx context.Context) actionResult {
 		// TODO: Handle error that machine is not shut down
 		s.handleRateLimitExceeded(err, "ProvisionDevice")
 		record.Warnf(s.scope.HivelocityMachine, "FailedProvisionDevice", "Failed to provision device %v: %s", deviceID, err)
-		return actionError{err: fmt.Errorf("failed to provision device %d: %s", deviceID, err)}
+		return actionContinue{delay: 30 * time.Second}
+		// actionError{err: fmt.Errorf("failed to provision device %d: %s", deviceID, err)}
 	}
 
 	log.V(1).Info("Completed function")
@@ -480,7 +481,7 @@ func (s *Service) actionDeleteDeviceDeProvision(ctx context.Context) actionResul
 		ForceReload: true,
 	}
 
-	// Provision the device
+	// Deprovision the device with default image.
 	if _, err := s.scope.HVClient.ProvisionDevice(ctx, deviceID, opts); err != nil {
 		// TODO: Handle error that machine is not shut down
 		s.handleRateLimitExceeded(err, "ProvisionDevice")

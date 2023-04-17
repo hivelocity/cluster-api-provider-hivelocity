@@ -27,6 +27,7 @@ import (
 	"strings"
 
 	hv "github.com/hivelocity/hivelocity-client-go/client"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 // PowerStatusOff is "OFF".
@@ -99,6 +100,8 @@ func (c *realClient) GetDevice(ctx context.Context, deviceID int32) (hv.BareMeta
 		if strings.HasPrefix(swaggerErr.Error(), fmt.Sprint(http.StatusNotFound)) {
 			return device, ErrDeviceNotFound
 		}
+		log := log.FromContext(ctx)
+		log.Info("GetDevice() failed", "body", string(swaggerErr.Body()))
 	}
 	return device, checkRateLimit(err)
 }
@@ -120,6 +123,11 @@ func (c *realClient) PowerOnDevice(ctx context.Context, deviceID int32) error {
 func (c *realClient) ProvisionDevice(ctx context.Context, deviceID int32, opts hv.BareMetalDeviceUpdate) (hv.BareMetalDevice, error) {
 	// https://developers.hivelocity.net/reference/put_bare_metal_device_id_resource
 	device, _, err := c.client.BareMetalDevicesApi.PutBareMetalDeviceIdResource(ctx, deviceID, opts, nil) //nolint:bodyclose // Close() gets done in client
+	var swaggerErr hv.GenericSwaggerError
+	if errors.As(err, &swaggerErr) {
+		log := log.FromContext(ctx)
+		log.Info("ProvisionDevice() failed", "body", string(swaggerErr.Body()))
+	}
 	return device, checkRateLimit(err)
 }
 

@@ -461,3 +461,7 @@ set-manifest-pull-policy:
 .PHONY: tilt-up
 tilt-up: $(ENVSUBST) $(KUSTOMIZE) $(TILT) cluster  ## Start a mgt-cluster & Tilt. Installs the CRDs and deploys the controllers
 	EXP_CLUSTER_RESOURCE_SET=true $(TILT) up
+
+.PHONY: watch
+watch:
+	watch -n 1 "kubectl get clusters -A ; echo; kubectl get machines -A; echo; kubectl get hivelocitymachine -A; echo; kubectl get events -A --sort-by=metadata.creationTimestamp | tail -8 | tac"
