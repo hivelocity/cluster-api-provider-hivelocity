@@ -131,8 +131,11 @@ func (c *realClient) ListDevices(ctx context.Context) ([]hv.BareMetalDevice, err
 func (c *realClient) ShutdownDevice(ctx context.Context, deviceID int32) error {
 	_, _, err := c.client.DeviceApi.PostPowerResource(ctx, deviceID, "shutdown", nil) //nolint:bodyclose // Close() gets done in client
 	if err != nil {
-		if strings.Contains(err.Error(), "Can't do this while server is powered off.") {
-			return ErrDeviceShutDownAlready
+		err, ok := err.(hv.GenericSwaggerError)
+		if ok {
+			if strings.Contains(string(err.Body()), "Can't do this while server is powered off.") {
+				return ErrDeviceShutDownAlready
+			}
 		}
 		return checkRateLimit(err)
 	}

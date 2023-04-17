@@ -9,7 +9,8 @@ keys_to_skip = ['controller', 'controllerGroup', 'controllerKind', 'reconcileID'
                 'namespace', 'name', 'Machine']
 
 rows_to_skip = [
-    'controller-runtime.webhook'
+    'controller-runtime.webhook', 'certwatcher/certwatcher', 'Registering a validating webhook',
+    'Registering a mutating webhook', 'Starting EventSource'
 ]
 
 def main():
@@ -49,6 +50,8 @@ def handle_line(line):
     level = data.pop('level', '').ljust(5)
     file = data.pop('file', '')
     message = data.pop('message', '')
+    if not data:
+        data=''
     sys.stdout.write(f'{t} {level} "{message}" {file} {data}\n')
 
 
