@@ -21,6 +21,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
 	"time"
 
 	infrav1 "github.com/hivelocity/cluster-api-provider-hivelocity/api/v1alpha1"
@@ -266,13 +267,23 @@ func (s *Service) actionEnsureDeviceShutDown(ctx context.Context) actionResult {
 		return actionComplete{}
 	}
 
+	// temp check for unit tests. We need a better solution for this.
+	if os.Getenv("IS_UNIT_TEST") == "true" {
+		return actionContinue{}
+	}
+
+	// device has been shut down for the first time now
+	if err == nil {
+		return actionContinue{delay: 3 * time.Minute}
+	}
+
 	// device is not shut down yet - wait and call the function again
 	log.Info("Device is not shut down yet", "error from ShutDown endpoint", err)
 
 	// wait for another 10 seconds
 	// TODO: Make this flexible for unit tests that don't want to wait here and real-world cases where we
 	// have to wait longer for a device to be shut down
-	return actionContinue{delay: 1 * time.Second}
+	return actionContinue{delay: 30 * time.Second}
 }
 
 // actionProvisionDevice provisions the device.
