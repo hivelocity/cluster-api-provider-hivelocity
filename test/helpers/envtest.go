@@ -91,6 +91,10 @@ func init() {
 		ErrorIfCRDPathMissing: true,
 		CRDDirectoryPaths:     crdPaths,
 	}
+
+	if err := os.Setenv("IS_UNIT_TEST", "true"); err != nil {
+		panic(err)
+	}
 }
 
 type (
