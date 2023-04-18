@@ -34,7 +34,7 @@ ctlptl_kind-cluster-with-registry () {
 apiVersion: ctlptl.dev/v1alpha1
 kind: Registry
 name: ${CLUSTER_NAME}-registry
-port: 5000
+port: 5001
 ---
 apiVersion: ctlptl.dev/v1alpha1
 kind: Cluster
