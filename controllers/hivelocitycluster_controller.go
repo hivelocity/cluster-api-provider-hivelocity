@@ -153,7 +153,7 @@ func (r *HivelocityClusterReconciler) Reconcile(ctx context.Context, req ctrl.Re
 
 func (r *HivelocityClusterReconciler) reconcileNormal(ctx context.Context, clusterScope *scope.ClusterScope) (ctrl.Result, error) {
 	log := clusterScope.Logger
-	log.V(1).Info("Reconciling HivelocityCluster oooooooooooooooooooooooooooooooooooooooooo")
+	log.V(1).Info("Reconciling HivelocityCluster")
 
 	hvCluster := clusterScope.HivelocityCluster
 

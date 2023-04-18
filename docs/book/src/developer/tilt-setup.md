@@ -18,6 +18,6 @@ templates/cluster-templates/bases/hivelocity-hivelocityCluster.yaml) with
 
 When Tilt is started (everything is green), you can create a Hivelocity cluster with the corresponding button (at the top) in Tilt.
 
-You can use `make watch` to see the output of relevant `kubectl` commands.
+You can use `make watch` to see the output of relevant `kubectl` commands and the tail of the controller.
 
 More: [Logging](logging.md)

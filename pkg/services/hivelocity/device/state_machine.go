@@ -20,9 +20,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"reflect"
 
 	"github.com/go-logr/logr"
+	"github.com/google/go-cmp/cmp"
 	infrav1 "github.com/hivelocity/cluster-api-provider-hivelocity/api/v1alpha1"
 	hvclient "github.com/hivelocity/cluster-api-provider-hivelocity/pkg/services/hivelocity/client"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -71,9 +71,10 @@ func (sm *stateMachine) ReconcileState(ctx context.Context) (actionRes actionRes
 			sm.log.Info("changing provisioning state", "old", initialState.ProvisioningState, "new", sm.nextState)
 			sm.hvMachine.Spec.Status.ProvisioningState = sm.nextState
 		}
-		if !reflect.DeepEqual(initialState, sm.hvMachine.Spec.Status) {
+		if diff := cmp.Diff(initialState, sm.hvMachine.Spec.Status); diff != "" {
 			t := metav1.Now()
 			sm.hvMachine.Spec.Status.LastUpdated = &t
+			sm.log.V(1).Info("spec.status was updated", "diff", diff)
 		}
 	}()
 

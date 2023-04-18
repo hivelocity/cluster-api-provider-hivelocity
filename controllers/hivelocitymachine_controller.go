@@ -62,7 +62,7 @@ type HivelocityMachineReconciler struct {
 func (r *HivelocityMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ ctrl.Result, reterr error) {
 	log := ctrl.LoggerFrom(ctx)
 
-	log.Info("Reconcile HivelocityMachine ***************")
+	log.Info("Reconcile HivelocityMachine")
 
 	// Fetch the HivelocityMachine.
 	hivelocityMachine := &infrav1.HivelocityMachine{}
