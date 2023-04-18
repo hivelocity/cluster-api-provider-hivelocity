@@ -148,7 +148,21 @@
                 <div id="content" class="content">
                     <main>
                         <h1 id="development-with-tilt"><a class="header" href="#development-with-tilt">Development with Tilt</a></h1>
-<p>TBD</p>
+<pre><code>make tilt-up
+</code></pre>
+<p>This will:</p>
+<ul>
+<li>create a local container registry with <code>ctlptl</code></li>
+<li>create a management-cluster in <a href="https://kind.sigs.k8s.io/">Kind</a></li>
+<li>start <a href="https://tilt.dev/">Tilt</a></li>
+</ul>
+<p>Set the device Tag of a device to <code>caphv-device-type=hvCustom</code>. Web-GUI API: https://developers.hivelocity.net/reference/put_device_tag_id_resource</p>
+<p>Upload a SSH public key with the name “ssh-key-hivelocity-pub” (see
+templates/cluster-templates/bases/hivelocity-hivelocityCluster.yaml) with
+<a href="https://developers.hivelocity.net/reference/post_ssh_key_resource">API Add SSH Key</a>.</p>
+<p>When Tilt is started (everything is green), you can create a Hivelocity cluster with the corresponding button (at the top) in Tilt.</p>
+<p>You can use <code>make watch</code> to see the output of relevant <code>kubectl</code> commands.</p>
+<p>More: <a href="logging.html">Logging</a></p>
 
                     </main>
 

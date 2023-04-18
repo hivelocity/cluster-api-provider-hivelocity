@@ -148,7 +148,16 @@
                 <div id="content" class="content">
                     <main>
                         <h1 id="logging"><a class="header" href="#logging">Logging</a></h1>
-<p>TBD</p>
+<pre><code>kubectl -n capi-hivelocity-system logs -f caphv-controller-manager-5cb6548dfb-9nd4k &gt; caphv-controller-manager-5cb6548dfb-9nd4k.log
+</code></pre>
+<p>For debugging you can reduce the log output with this script:</p>
+<pre><code>❯ ./hack/filter-caphv-controller-manager-logs.py caphv-controller-manager-5cb6548dfb-9nd4k.log | tail
+</code></pre>
+<p>Or:</p>
+<pre><code>❯ kubectl -n capi-hivelocity-system logs \
+    $(k -n capi-hivelocity-system get pods | grep caphv-controller-manager | cut -d' ' -f1) \
+    | ./hack/filter-caphv-controller-manager-logs.py - | tail
+</code></pre>
 
                     </main>
 

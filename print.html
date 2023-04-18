@@ -243,9 +243,32 @@ up a <strong>WIP</strong> <em>(work in progress)</em> pull request. Happy coding
 <div style="break-before: page; page-break-before: always;"></div><h1 id="repository-layout-1"><a class="header" href="#repository-layout-1">Repository Layout</a></h1>
 <p>TBD</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="development-with-tilt-1"><a class="header" href="#development-with-tilt-1">Development with Tilt</a></h1>
-<p>TBD</p>
+<pre><code>make tilt-up
+</code></pre>
+<p>This will:</p>
+<ul>
+<li>create a local container registry with <code>ctlptl</code></li>
+<li>create a management-cluster in <a href="https://kind.sigs.k8s.io/">Kind</a></li>
+<li>start <a href="https://tilt.dev/">Tilt</a></li>
+</ul>
+<p>Set the device Tag of a device to <code>caphv-device-type=hvCustom</code>. Web-GUI API: https://developers.hivelocity.net/reference/put_device_tag_id_resource</p>
+<p>Upload a SSH public key with the name “ssh-key-hivelocity-pub” (see
+templates/cluster-templates/bases/hivelocity-hivelocityCluster.yaml) with
+<a href="https://developers.hivelocity.net/reference/post_ssh_key_resource">API Add SSH Key</a>.</p>
+<p>When Tilt is started (everything is green), you can create a Hivelocity cluster with the corresponding button (at the top) in Tilt.</p>
+<p>You can use <code>make watch</code> to see the output of relevant <code>kubectl</code> commands.</p>
+<p>More: <a href="developer/logging.html">Logging</a></p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="logging-1"><a class="header" href="#logging-1">Logging</a></h1>
-<p>TBD</p>
+<pre><code>kubectl -n capi-hivelocity-system logs -f caphv-controller-manager-5cb6548dfb-9nd4k &gt; caphv-controller-manager-5cb6548dfb-9nd4k.log
+</code></pre>
+<p>For debugging you can reduce the log output with this script:</p>
+<pre><code>❯ ./hack/filter-caphv-controller-manager-logs.py caphv-controller-manager-5cb6548dfb-9nd4k.log | tail
+</code></pre>
+<p>Or:</p>
+<pre><code>❯ kubectl -n capi-hivelocity-system logs \
+    $(k -n capi-hivelocity-system get pods | grep caphv-controller-manager | cut -d' ' -f1) \
+    | ./hack/filter-caphv-controller-manager-logs.py - | tail
+</code></pre>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="testing-1"><a class="header" href="#testing-1">Testing</a></h1>
 <p>TBD</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="developing-e2e-tests-1"><a class="header" href="#developing-e2e-tests-1">Developing E2E tests</a></h1>
