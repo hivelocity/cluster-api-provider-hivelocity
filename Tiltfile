@@ -1,6 +1,6 @@
 # -*- mode: Python -*-
 load("ext://uibutton", "cmd_button", "location")
-load("ext://restart_process", "docker_build_with_restart")
+##load("ext://restart_process", "docker_build_with_restart")
 
 kustomize_cmd = "./hack/tools/bin/kustomize"
 envsubst_cmd = "./hack/tools/bin/envsubst"
@@ -136,8 +136,24 @@ def set_env_variables():
 
 # This should have the same versions as the Dockerfile
 tilt_dockerfile_header = """
+# Tilt image
+FROM golang:1.19.6 as tilt-helper
+# Support live reloading with Tilt
+RUN go install github.com/go-delve/delve/cmd/dlv@latest
+RUN wget --output-document /restart.sh --quiet https://raw.githubusercontent.com/tilt-dev/rerun-process-wrapper/master/restart.sh  && \
+    wget --output-document /start.sh --quiet https://raw.githubusercontent.com/tilt-dev/rerun-process-wrapper/master/start.sh && \
+    chmod +x /start.sh && chmod +x /restart.sh && chmod +x /go/bin/dlv && \
+    touch /process.txt && chmod 0777 /process.txt `# pre-create PID file to allow even non-root users to run the image`
+
 FROM gcr.io/distroless/base:debug as tilt
 WORKDIR /
+
+# Delve
+COPY --from=tilt-helper /process.txt .
+COPY --from=tilt-helper /start.sh .
+COPY --from=tilt-helper /restart.sh .
+COPY --from=tilt-helper /go/bin/dlv .
+
 COPY manager .
 """
 
@@ -158,10 +174,18 @@ def caphv():
             yaml = str(encode_yaml_stream(yaml_dict))
             yaml = fixup_yaml_empty_arrays(yaml)
 
+    debug_port = 30000 # int(debug.get("port", 0))
+    if debug_port != 0:
+        # disable optimisations and include line numbers when debugging
+        gcflags = "all=-N -l"
+    else:
+        gcflags = ""
+
     # Set up a local_resource build of the provider's manager binary.
     local_resource(
-        "manager",
-        cmd='mkdir -p .tiltbuild;CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags \'-extldflags "-static"\' -o .tiltbuild/manager',
+        "compile manager binary",
+        cmd='mkdir -p .tiltbuild;CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -gcflags \'{gcflags}\' -ldflags \'-extldflags "-static"\' -o .tiltbuild/manager'.format(
+            gcflags=gcflags),
         deps=["api", "config", "controllers",
               "pkg", "go.mod", "go.sum", "main.go"],
         labels=["CAPHV"],
@@ -174,21 +198,24 @@ def caphv():
 
     # Set up an image build for the provider. The live update configuration syncs the output from the local_resource
     # build into the container.
-    docker_build_with_restart(
+    docker_build(
         ref="ghcr.io/hivelocity/caphv-staging",
         context="./.tiltbuild/",
         dockerfile_contents=tilt_dockerfile_header,
         target="tilt",
-        entrypoint=entrypoint,
+        entrypoint=["sh"],
+        container_args=["/start.sh", "/dlv", "--accept-multiclient", "--api-version=2",
+                    "--headless=true", "--listen=:30000", "exec", "/manager"],
         only="manager",
         live_update=[
             sync(".tiltbuild/manager", "/manager"),
+            run("sh /restart.sh"),
         ],
         ignore=["templates"],
     )
 
     k8s_yaml(blob(yaml))
-    k8s_resource(workload="caphv-controller-manager", labels=["CAPHV"])
+    k8s_resource(workload="caphv-controller-manager", labels=["CAPHV"], port_forwards=["30000:30000"])
     k8s_resource(
         objects=[
             "capi-hivelocity-system:namespace",
