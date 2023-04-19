@@ -256,7 +256,7 @@ up a <strong>WIP</strong> <em>(work in progress)</em> pull request. Happy coding
 templates/cluster-templates/bases/hivelocity-hivelocityCluster.yaml) with
 <a href="https://developers.hivelocity.net/reference/post_ssh_key_resource">API Add SSH Key</a>.</p>
 <p>When Tilt is started (everything is green), you can create a Hivelocity cluster with the corresponding button (at the top) in Tilt.</p>
-<p>You can use <code>make watch</code> to see the output of relevant <code>kubectl</code> commands.</p>
+<p>You can use <code>make watch</code> to see the output of relevant <code>kubectl</code> commands and the tail of the controller.</p>
 <p>More: <a href="developer/logging.html">Logging</a></p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="logging-1"><a class="header" href="#logging-1">Logging</a></h1>
 <pre><code>kubectl -n capi-hivelocity-system logs -f caphv-controller-manager-5cb6548dfb-9nd4k &gt; caphv-controller-manager-5cb6548dfb-9nd4k.log
