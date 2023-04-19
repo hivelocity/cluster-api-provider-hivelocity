@@ -31,7 +31,7 @@ kustomize_substitutions:
   HIVELOCITY_IMAGE_NAME: 1.25.2-ubuntu-20.04-containerd
   HIVELOCITY_CONTROL_PLANE_MACHINE_TYPE: todo
   HIVELOCITY_WORKER_MACHINE_TYPE: todo
-  CLUSTER_NAME: testing
+  CLUSTER_NAME: hvtest
 ```
 
 ## Developing with Tilt

@@ -26,7 +26,9 @@ keys_to_skip = ['controller', 'controllerGroup', 'controllerKind', 'reconcileID'
 
 rows_to_skip = [
     'controller-runtime.webhook', 'certwatcher/certwatcher', 'Registering a validating webhook',
-    'Registering a mutating webhook', 'Starting EventSource'
+    'Registering a mutating webhook', 'Starting EventSource',
+    '"Reconciling finished"',
+    '"Reconciling HivelocityMachine"',
 ]
 
 def main():

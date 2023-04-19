@@ -122,10 +122,12 @@ func (c *realClient) PowerOnDevice(ctx context.Context, deviceID int32) error {
 
 func (c *realClient) ProvisionDevice(ctx context.Context, deviceID int32, opts hv.BareMetalDeviceUpdate) (hv.BareMetalDevice, error) {
 	// https://developers.hivelocity.net/reference/put_bare_metal_device_id_resource
+	log := log.FromContext(ctx)
+	log.Info("calling ProvisionDevice()", "deviceID", deviceID, "opts", opts)
+
 	device, _, err := c.client.BareMetalDevicesApi.PutBareMetalDeviceIdResource(ctx, deviceID, opts, nil) //nolint:bodyclose // Close() gets done in client
 	var swaggerErr hv.GenericSwaggerError
 	if errors.As(err, &swaggerErr) {
-		log := log.FromContext(ctx)
 		log.Info("ProvisionDevice() failed", "body", string(swaggerErr.Body()))
 	}
 	return device, checkRateLimit(err)

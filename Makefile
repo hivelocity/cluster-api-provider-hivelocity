@@ -171,6 +171,17 @@ vet: ## Run go vet against code.
 test: generate fmt vet envtest ## Run tests.
 	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" go test -coverpkg=./... ./... -coverprofile cover.out
 
+.PHONY: watch
+watch: ## Watch CRDs cluster, machines, hivelocitymachine and Events.
+	watch -n 1 "kubectl get clusters -A ; echo; kubectl get machines -A; echo; kubectl get hivelocitymachine -A; echo; kubectl get events -A --sort-by=metadata.creationTimestamp | tail -8 ; echo; ./hack/tail-caphv-controller-logs.sh"
+
+.PHONY: tail-caphv-controller-logs
+tail-caphv-controller-logs: ## Show the last lines of the caphv-controller logs
+	@hack/tail-caphv-controller-logs.sh
+
+.PHONY: ssh-first-control-plane
+ssh-first-control-plane: ## ssh into the first control-plane
+	@hack/ssh-first-control-plane.sh
 .PHONY: ensure-boilerplate
 ensure-boilerplate: ## Ensures that a boilerplate exists in each file by adding missing boilerplates
 	./hack/ensure-boilerplate.sh
@@ -372,17 +383,16 @@ create-workload-cluster: $(KUSTOMIZE) $(ENVSUBST) ## Creates a workload-cluster.
 cluster: $(CTLPTL) ## Creates kind-dev Cluster
 	./hack/kind-dev.sh
 
-.PHONY: delete-cluster
-delete-cluster: $(CTLPTL) ## Deletes Kind-dev Cluster (default)
+.PHONY: delete-mgt-cluster
+delete-mgt-cluster: $(CTLPTL) ## Deletes Kind-dev management cluster (default)
 	$(CTLPTL) delete cluster kind-caphv
 
 .PHONY: delete-registry
-delete-registry: $(CTLPTL) ## Deletes Kind-dev Cluster and the local registry
+delete-registry: $(CTLPTL) ## Deletes the local registry
 	$(CTLPTL) delete registry caphv-registry
 
 .PHONY: delete-cluster-registry
-delete-cluster-registry: $(CTLPTL) ## Deletes Kind-dev Cluster and the local registry
-	$(CTLPTL) delete cluster kind-caphv
+delete-cluster-registry: $(CTLPTL) delete-mgt-cluster ## Deletes Kind-dev Cluster and the local registry
 	$(CTLPTL) delete registry caphv-registry
 
 ##@ Clean
@@ -461,7 +471,3 @@ set-manifest-pull-policy:
 .PHONY: tilt-up
 tilt-up: $(ENVSUBST) $(KUSTOMIZE) $(TILT) cluster  ## Start a mgt-cluster & Tilt. Installs the CRDs and deploys the controllers
 	EXP_CLUSTER_RESOURCE_SET=true $(TILT) up
-
-.PHONY: watch
-watch:
-	watch -n 1 "kubectl get clusters -A ; echo; kubectl get machines -A; echo; kubectl get hivelocitymachine -A; echo; kubectl get events -A --sort-by=metadata.creationTimestamp | tail -8 | tac"
