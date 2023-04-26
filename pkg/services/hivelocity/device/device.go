@@ -330,7 +330,7 @@ func (s *Service) actionProvisionDevice(ctx context.Context) actionResult {
 	opts := hv.BareMetalDeviceUpdate{
 		Hostname:    fmt.Sprintf("%s.example.com", s.scope.Name()), // TODO: HV API requires a FQDN.
 		Tags:        device.Tags,
-		Script:      string(userData), // cloud-init script
+		Script:      "#cloud-config\n" + string(userData), // cloud-init script
 		OsName:      image,
 		ForceReload: true,
 	}

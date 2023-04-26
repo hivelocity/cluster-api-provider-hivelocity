@@ -19,14 +19,16 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"log"
 	"os"
 
 	hvclient "github.com/hivelocity/cluster-api-provider-hivelocity/pkg/services/hivelocity/client"
 	hv "github.com/hivelocity/hivelocity-client-go/client"
 )
 
-const manualDeviceID = 14730
+const manualDeviceID = 15335
 
 func main() {
 	manualTests()
@@ -37,11 +39,9 @@ func cliTestListDevices(ctx context.Context, client hvclient.Client) {
 	if err != nil {
 		panic(err.Error())
 	}
-	device, err := findDeviceByTags("cn=foo", "mn=bar", allDevices)
-	if err != nil {
-		panic(err)
+	for _, device := range allDevices {
+		fmt.Printf("device: %+v\n", device)
 	}
-	fmt.Printf("device: %+v\n", device)
 }
 
 func cliTestSetTags(ctx context.Context, client hvclient.Client) {
@@ -80,15 +80,25 @@ func cliTestListSSHKeys(ctx context.Context, client hvclient.Client) {
 }
 
 func cliTestProvisionDevice(ctx context.Context, client hvclient.Client) {
+	script := `#cloud-config
+write_files:
+- content: |
+		a & b && c <foo>
+	path: /opt/test.txt
+	`
 	opts := hv.BareMetalDeviceUpdate{
 		Hostname: "my-host-name.example.com",
-		// Tags:     createTags("my-cluster-name", "my-host-name", false),
 		OsName:         "Ubuntu 20.x",
-		PublicSshKeyId: 861,
+		PublicSshKeyId: 918,
+		Script:         script,
 	}
 	device, err := client.ProvisionDevice(ctx, manualDeviceID, opts)
 	if err != nil {
-		panic(err)
+		var swaggerErr hv.GenericSwaggerError
+		if errors.As(err, &swaggerErr) {
+			fmt.Println(string(swaggerErr.Body()))
+		}
+		log.Fatalln(err)
 	}
 	fmt.Printf("device: %+v\n", device)
 }
@@ -97,6 +107,9 @@ func manualTests() {
 	factory := hvclient.HivelocityFactory{}
 	client := factory.NewClient(os.Getenv("HIVELOCITY_API_KEY"))
 	ctx := context.Background()
+	if len(os.Args) == 1 {
+		log.Fatalln("see code for possible options")
+	}
 	switch arg := os.Args[1]; arg {
 	case "ListDevices":
 		cliTestListDevices(ctx, client)
