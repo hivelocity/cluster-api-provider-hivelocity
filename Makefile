@@ -173,7 +173,7 @@ test: generate fmt vet envtest ## Run tests.
 
 .PHONY: watch
 watch: ## Watch CRDs cluster, machines, hivelocitymachine and Events.
-	watch -n 1 "kubectl get clusters -A ; echo; kubectl get machines -A; echo; kubectl get hivelocitymachine -A; echo; kubectl get events -A --sort-by=metadata.creationTimestamp | tail -8 ; echo; ./hack/tail-caphv-controller-logs.sh"
+	watch -n 1 hack/output-for-watch.sh
 
 .PHONY: tail-caphv-controller-logs
 tail-caphv-controller-logs: ## Show the last lines of the caphv-controller logs
