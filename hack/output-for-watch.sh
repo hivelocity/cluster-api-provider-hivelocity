@@ -14,50 +14,68 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+function print_heading() {
+    green='\033[0;32m'
+    nc='\033[0m' # No Color
+    echo -e "${green}${1}${nc}"
+}
+
+print_heading Hivelocity
+
 kubectl get clusters -A
 
-echo
+print_heading machines
 
 kubectl get machines -A
 
-echo
+print_heading hivelocitymachine
 
 kubectl get hivelocitymachine -A
 
-echo
+print_heading events
 
 kubectl get events -A --sort-by=metadata.creationTimestamp | tail -8
 
-echo
+print_heading logs
 
 ./hack/tail-caphv-controller-logs.sh
 
+echo
 
 ip=$(kubectl get machine -l cluster.x-k8s.io/control-plane  -o  jsonpath='{.items[0].status.addresses[?(@.type=="InternalIP")].address}' | head -1)
 if [ -z "$ip" ]; then
-    echo "Could not get IP of control-plane"
+    echo "❌ Could not get IP of control-plane"
     exit 1
 fi
 
-echo
 
-if netcat -w 1 -z "$ip" 22; then
-    echo "$ip ssh port is reachable"
+if netcat -w 2 -z "$ip" 22; then
+    echo "👌 $ip ssh port is reachable"
 else
-    echo "ssh port for $ip is not reachable"
+    echo "❌ ssh port for $ip is not reachable"
 fi
 
 echo
 
-tmpdir="${TMPDIR:-/tmp}"
-cluster_name=$(yq .kustomize_substitutions.CLUSTER_NAME tilt-settings.yaml)
-kubeconfig="$tmpdir/$cluster_name-workload-cluster-kubeconfig.yaml"
-kubectl get secrets "$cluster_name-kubeconfig" -ojsonpath='{.data.value}' | base64 -d > "$kubeconfig"
+./hack/get-kubeconfig-of-workload-cluster.sh
 
-if [ ! -s "$kubeconfig" ]; then
-    echo "failed to get kubeconfig of workload cluster"
+kubeconfig=".workload-cluster-kubeconfig.yaml"
+
+
+print_heading "KUBECONFIG=$kubeconfig kubectl cluster-info"
+if KUBECONFIG=$kubeconfig kubectl cluster-info >/dev/null 2>&1; then
+    echo "👌 cluster is reachable"
+else
+    echo "❌ cluster is not reachable"
     exit
 fi
 
-echo "KUBECONFIG=$kubeconfig kubectl cluster-info"
-KUBECONFIG=$kubeconfig kubectl cluster-info 2>/dev/null || echo "failed to connect to workload cluster"
+echo
+
+KUBECONFIG=$kubeconfig kubectl get -n kube-system deployment cilium-operator || echo "❌ cilium-operator not installed?"
+
+KUBECONFIG=$kubeconfig kubectl get -n kube-system deployment ccm-hivelocity || echo "❌ ccm not installed?"
+
+print_heading "workload-cluster nodes"
+
+KUBECONFIG=$kubeconfig kubectl get nodes

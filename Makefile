@@ -40,7 +40,7 @@ export PATH := $(abspath $(TOOLS_BIN_DIR)):$(PATH)
 # Default path for Kubeconfig File.
 
 # Files
-CAPHV_WORKER_CLUSTER_KUBECONFIG ?= "/tmp/workload-kubeconfig"
+CAPHV_WORKER_CLUSTER_KUBECONFIG ?= ".workload-cluster-kubeconfig.yaml"
 
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
 ENVTEST_K8S_VERSION = 1.25.0
@@ -173,7 +173,20 @@ test: generate fmt vet envtest ## Run tests.
 
 .PHONY: watch
 watch: ## Watch CRDs cluster, machines, hivelocitymachine and Events.
-	watch -n 1 hack/output-for-watch.sh
+	watch -c -n 2 hack/output-for-watch.sh
+
+.PHONY: get-kubeconfig-of-workload-cluster
+get-kubeconfig-of-workload-cluster:
+	./hack/get-kubeconfig-of-workload-cluster.sh
+
+.PHONY: k9s-workload-cluster
+k9s-workload-cluster: get-kubeconfig-of-workload-cluster
+	KUBECONFIG=$(CAPHV_WORKER_CLUSTER_KUBECONFIG) k9s
+
+.PHONY: bash-with-kubeconfig-set-to-workload-cluster
+bash-with-kubeconfig-set-to-workload-cluster: get-kubeconfig-of-workload-cluster
+	KUBECONFIG=$(CAPHV_WORKER_CLUSTER_KUBECONFIG) bash
+
 
 .PHONY: tail-caphv-controller-logs
 tail-caphv-controller-logs: ## Show the last lines of the caphv-controller logs
@@ -342,13 +355,20 @@ wait-and-get-secret:
 	# Wait for the kubeconfig to become available.
 	@test $${CLUSTER_NAME?Environment variable is required}
 	${TIMEOUT} 5m bash -c "while ! kubectl get secrets | grep $(CLUSTER_NAME)-kubeconfig; do sleep 1; done"
-	# Get kubeconfig and store it locally.
-	kubectl get secrets $(CLUSTER_NAME)-kubeconfig -o json | jq -r .data.value | base64 --decode > $(CAPHV_WORKER_CLUSTER_KUBECONFIG)
-	${TIMEOUT} 15m bash -c "while ! kubectl --kubeconfig=$(CAPHV_WORKER_CLUSTER_KUBECONFIG) get nodes | grep control-plane; do sleep 1; done"
+	./hack/get-kubeconfig-of-workload-cluster.sh
+	${TIMEOUT} 30m bash -c "while ! kubectl --kubeconfig=$(CAPHV_WORKER_CLUSTER_KUBECONFIG) get nodes | grep control-plane; do sleep 1; done"
+
+	# Install secret for ccm.
+	kubectl create secret -n kube-system generic hivelocity \
+	    --from-literal=hivelocity=$(HIVELOCITY_API_KEY) --save-config \
+		--dry-run=client -o yaml | kubectl --kubeconfig=$(CAPHV_WORKER_CLUSTER_KUBECONFIG) apply -f -
+	echo "installed secret in wl-cluster for CCM"
+
 
 
 install-manifests-cilium:
 	# Deploy cilium
+	test -s $(CAPHV_WORKER_CLUSTER_KUBECONFIG)
 	helm repo add cilium https://helm.cilium.io/
 	helm repo update cilium
 	KUBECONFIG=$(CAPHV_WORKER_CLUSTER_KUBECONFIG) helm upgrade --install cilium cilium/cilium --version 1.12.2 \
@@ -358,12 +378,14 @@ install-manifests-cilium:
 
 install-manifests-ccm:
 	# Deploy Hivelocity Cloud Controller Manager
-	helm repo add hivelocity https://charts.hivelocity.com
+	test -s $(CAPHV_WORKER_CLUSTER_KUBECONFIG)
+	helm repo add hivelocity https://hivelocity.github.io/hivelocity-cloud-controller-manager/
 	helm repo update hivelocity
-	KUBECONFIG=$(CAPHV_WORKER_CLUSTER_KUBECONFIG) helm upgrade --install ccm hivelocity/ccm-hivelocity --version 1.0.11 \
-	--namespace kube-system \
-	--set secret.name=hivelocity \
-	--set secret.key=hivelocity
+	KUBECONFIG=$(CAPHV_WORKER_CLUSTER_KUBECONFIG) helm upgrade --install ccm-hivelocity hivelocity/ccm-hivelocity \
+		--version 0.1.2 \
+		--namespace kube-system \
+		--set secret.name=hivelocity \
+		--set secret.key=hivelocity
 	@echo 'run "kubectl --kubeconfig=$(CAPHV_WORKER_CLUSTER_KUBECONFIG) ..." to work with the new target cluster'
 
 
@@ -470,4 +492,4 @@ set-manifest-pull-policy:
 
 .PHONY: tilt-up
 tilt-up: $(ENVSUBST) $(KUSTOMIZE) $(TILT) cluster  ## Start a mgt-cluster & Tilt. Installs the CRDs and deploys the controllers
-	EXP_CLUSTER_RESOURCE_SET=true $(TILT) up
+	EXP_CLUSTER_RESOURCE_SET=true $(TILT) up --port 10351

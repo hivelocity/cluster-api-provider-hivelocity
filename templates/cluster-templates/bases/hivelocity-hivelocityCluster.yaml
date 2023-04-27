@@ -5,7 +5,7 @@ metadata:
 spec:
   controlPlaneEndpoint:
     host: ""
-    port: 443
+    port: 6443
   controlPlaneRegion: "${HIVELOCITY_REGION}"
   hivelocitySecretRef:
     name: hivelocity
