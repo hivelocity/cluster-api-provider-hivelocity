@@ -20,7 +20,7 @@ spec:
   scope: Namespaced
   versions:
   - additionalPrinterColumns:
-    - description: Cluster to which this HetznerCluster belongs
+    - description: Cluster to which this HivelocityCluster belongs
       jsonPath: .metadata.labels.cluster\.x-k8s\.io/cluster-name
       name: Cluster
       type: string
