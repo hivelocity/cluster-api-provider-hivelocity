@@ -1,0 +1,65 @@
+name: "Manager Image"
+description: "Build and Push Manager Image"
+inputs:
+  registry_password:
+    description: "registry_password"
+    required: true
+runs:
+  using: "composite"
+  steps:
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@4b4e9c3e2d4531116a6f8ba8e71fc6e2cb6e6c8c # v2.5.0
+
+    - name: Login to ghcr.io for CI
+      uses: docker/login-action@f4ef78c080cd8ba55a85445d5b36e214a81df20a # v2.1.0
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ env.registry_password }}
+
+    - name: Generate metadata
+      id: meta
+      uses: ./.github/actions/metadata
+      with:
+        metadata_flavor: ${{ env.metadata_flavor }}
+        metadata_tags: ${{ env.metadata_tags }}
+
+    # Load Golang cache build from GitHub
+    - name: Load caphv Golang cache build from GitHub
+      uses: actions/cache@88522ab9f39a2ea568f7027eddc7d8d8bc9d59c8 # v3.3.1
+      id: cache
+      with:
+        path: /tmp/.cache/caphv
+        key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}-caphv-${{ github.sha }}
+        restore-keys: |
+          ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}-caphv-
+          ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}-
+          ${{ runner.os }}-go-
+
+    - name: Create caphv cache directory
+      if: ${{ steps.cache.outputs.cache-hit != 'true' }}
+      shell: bash
+      run: |
+        mkdir -p /tmp/.cache/caphv
+
+    # Import GitHub's cache build to docker cache
+    - name: Copy caphv Golang cache to docker cache
+      uses: docker/build-push-action@3b5e8027fcad23fda98b2e3ac259d8d67585f671 # v4.0.0
+      with:
+        provenance: false
+        context: /tmp/.cache/caphv
+        file: ./images/cache/Dockerfile
+        push: false
+        platforms: linux/amd64
+        target: import-cache
+
+    - name: Build and push manager image
+      uses: docker/build-push-action@3b5e8027fcad23fda98b2e3ac259d8d67585f671 # v4
+      with:
+        provenance: false
+        context: .
+        push: true
+        file: ./images/caphv/Dockerfile
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+        platforms: linux/amd64

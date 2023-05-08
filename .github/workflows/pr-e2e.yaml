@@ -70,3 +70,4 @@ jobs:
           e2e_name: e2e-basic
           e2e_make_target: test-e2e
           e2e_hivelocity_api_key: ${{ secrets.HIVELOCITY_API_KEY }}
+          e2e_ssh_pub: ${{ secrets.HIVELOCITY_SSH_PUB }}
