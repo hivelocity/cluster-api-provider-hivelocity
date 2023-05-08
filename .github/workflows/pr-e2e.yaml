@@ -1,0 +1,72 @@
+name: E2E PR Blocking
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened, ready_for_review]
+    branches:
+      - main
+      - "releases/**"
+    paths:
+      - "**.go"
+      - "**go.mod"
+      - "**go.sum"
+      - "<templates|test>/**/*.<yml|yaml>"
+      - ".github/actions/**/*"
+      - ".github/workflows/e2e-*"
+      - ".github/workflows/pr-*"
+      - "images/caphv/**"
+      - "!**/vendor/**"
+env:
+  IMAGE_NAME: caphv-staging
+  REGISTRY: ghcr.io/hivelocity
+  metadata_flavor: latest=false
+  metadata_tags: type=ref,event=pr
+  registry_password: ${{ secrets.GITHUB_TOKEN }}
+jobs:
+  manager-image:
+    name: Build and push manager image
+    if: github.event_name != 'pull_request_target' || !github.event.pull_request.draft
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.5.2
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Build and push manager image
+        id: manager-image
+        uses: ./.github/actions/manager-image
+
+  test-release:
+    name: Test Release
+    if: github.event_name != 'pull_request_target' || !github.event.pull_request.draft
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - name: Test Release
+        id: manager-image
+        uses: ./.github/actions/test-release
+
+  e2e-basic:
+    name: End-to-End Test Basic
+    if: github.event_name != 'pull_request_target' || !github.event.pull_request.draft
+    concurrency: ci-${{ github.ref }}-e2e-basic
+    runs-on: ubuntu-latest
+    needs:
+      - manager-image
+      - test-release
+    steps:
+      - name: checkout
+        uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - name: Run e2e Test
+        id: e2e
+        uses: ./.github/actions/e2e
+        with:
+          e2e_name: e2e-basic
+          e2e_make_target: test-e2e
+          e2e_hivelocity_api_key: ${{ secrets.HIVELOCITY_API_KEY }}
