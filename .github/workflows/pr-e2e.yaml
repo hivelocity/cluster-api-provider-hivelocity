@@ -39,7 +39,7 @@ jobs:
         uses: ./.github/actions/manager-image
 
   test-release:
-    name: Test Release
+    name: Create a Test Release
     if: github.event_name != 'pull_request_target' || !github.event.pull_request.draft
     runs-on: ubuntu-latest
     steps:

@@ -53,6 +53,7 @@ STAGING_REGISTRY ?= ghcr.io/hivelocity/cluster-api-provider-hivelocity-staging
 PROD_REGISTRY := ghcr.io/hivelocity/cluster-api-provider-hivelocity
 IMG ?= $(STAGING_REGISTRY):latest
 
+IMAGE_PREFIX ?= ghcr.io/hivelocity
 
 .PHONY: all
 all: build
@@ -284,6 +285,37 @@ $(CONTROLLER_GEN): $(LOCALBIN)
 envtest: $(ENVTEST) ## Download envtest-setup locally if necessary.
 $(ENVTEST): $(LOCALBIN)
 	test -s $(LOCALBIN)/setup-envtest || GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
+
+##@ Testing
+
+ARTIFACTS ?= _artifacts
+$(ARTIFACTS):
+	mkdir -p $(ARTIFACTS)/
+
+KUBEBUILDER_ASSETS ?= $(shell $(SETUP_ENVTEST) use --use-env --bin-dir $(abspath $(TOOLS_BIN_DIR)) -p path $(KUBEBUILDER_ENVTEST_KUBERNETES_VERSION))
+
+E2E_DIR ?= $(ROOT_DIR)/test/e2e
+E2E_CONF_FILE_SOURCE ?= $(E2E_DIR)/config/hivelocity.yaml
+E2E_CONF_FILE ?= $(E2E_DIR)/config/hivelocity-ci-envsubst.yaml
+
+.PHONY: test-unit
+test-unit: $(SETUP_ENVTEST) $(GOTESTSUM) ## Run unit and integration tests
+	@mkdir -p $(shell pwd)/.coverage
+	KUBEBUILDER_ASSETS="$(KUBEBUILDER_ASSETS)" $(GOTESTSUM) --junitfile=.coverage/junit.xml --format testname -- -mod=vendor -covermode=atomic -coverprofile=.coverage/cover.out -p=4 ./controllers/... ./pkg/... ./api/...
+
+.PHONY: e2e-image
+e2e-image: ## Build the e2e manager image
+	docker build --pull --build-arg ARCH=$(ARCH) --build-arg LDFLAGS="$(LDFLAGS)" -t $(IMAGE_PREFIX)/caphv-staging:e2e -f images/caphv/Dockerfile .
+
+.PHONY: $(E2E_CONF_FILE)
+e2e-conf-file: $(E2E_CONF_FILE)
+$(E2E_CONF_FILE): $(ENVSUBST) $(E2E_CONF_FILE_SOURCE)
+	mkdir -p $(shell dirname $(E2E_CONF_FILE))
+	$(ENVSUBST) < $(E2E_CONF_FILE_SOURCE) > $(E2E_CONF_FILE)
+
+.PHONY: test-e2e
+test-e2e: $(E2E_CONF_FILE) $(if $(SKIP_IMAGE_BUILD),,e2e-image) $(ARTIFACTS)
+	GINKGO_FOKUS="'\[Basic\]'" GINKGO_NODES=2 ./hack/ci-e2e-capi.sh
 
 
 ##@ Lint and Verify
