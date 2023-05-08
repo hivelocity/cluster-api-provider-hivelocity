@@ -100,9 +100,10 @@ spec:
           anonymous-auth: "false"
           read-only-port: "0"
           event-qps: "5"
-          rotate-server-certificates: "true"
+          #rotate-server-certificates: "true"
           max-pods: "120"
           resolv-conf: /etc/kubernetes/resolv.conf
+          provider-id: DEVICE_ID_PREKUBEADM
     joinConfiguration:
       nodeRegistration:
         kubeletExtraArgs:
@@ -114,9 +115,10 @@ spec:
           anonymous-auth: "false"
           read-only-port: "0"
           event-qps: "5"
-          rotate-server-certificates: "true"
+          #rotate-server-certificates: "true"
           max-pods: "120"
           resolv-conf: /etc/kubernetes/resolv.conf
+          provider-id: DEVICE_ID_PREKUBEADM
     files:
       - path: /etc/kubernetes/encryption-provider.yaml
         owner: "root:root"
@@ -186,8 +188,9 @@ spec:
           nameserver 1.0.0.1
           nameserver 2606:4700:4700::1111
     preKubeadmCommands:
-      - export CRUN=1.6
-      - export CONTAINERD=1.6.8
+      - set -x
+      - export CRUN=1.8 # update: datasource=github-tags depName=containers/crun versioning=semver-coerced
+      - export CONTAINERD=1.6.18 # update: datasource=github-tags depName=containerd/containerd extractVersion=^v(?<version>.*)$ versioning=semver
       - export KUBERNETES_VERSION=$(echo ${KUBERNETES_VERSION} | sed 's/^v//')
       - localectl set-locale LANG=en_US.UTF-8
       - localectl set-locale LANGUAGE=en_US.UTF-8
@@ -196,12 +199,12 @@ spec:
       - sed -i '/swap/d' /etc/fstab
       - swapoff -a
       - modprobe overlay && modprobe br_netfilter && sysctl --system
-      - wget https://github.com/containerd/containerd/releases/download/v$CONTAINERD/cri-containerd-cni-$CONTAINERD-linux-amd64.tar.gz
-      - wget https://github.com/containerd/containerd/releases/download/v$CONTAINERD/cri-containerd-cni-$CONTAINERD-linux-amd64.tar.gz.sha256sum
+      - wget -q https://github.com/containerd/containerd/releases/download/v$CONTAINERD/cri-containerd-cni-$CONTAINERD-linux-amd64.tar.gz
+      - wget -q https://github.com/containerd/containerd/releases/download/v$CONTAINERD/cri-containerd-cni-$CONTAINERD-linux-amd64.tar.gz.sha256sum
       - sha256sum --check cri-containerd-cni-$CONTAINERD-linux-amd64.tar.gz.sha256sum
       - tar --no-overwrite-dir -C / -xzf cri-containerd-cni-$CONTAINERD-linux-amd64.tar.gz
       - rm -f cri-containerd-cni-$CONTAINERD-linux-amd64.tar.gz cri-containerd-cni-$CONTAINERD-linux-amd64.tar.gz.sha256sum
-      - wget https://github.com/containers/crun/releases/download/$CRUN/crun-$CRUN-linux-amd64 -O /usr/local/sbin/crun && chmod +x /usr/local/sbin/crun
+      - wget -q https://github.com/containers/crun/releases/download/$CRUN/crun-$CRUN-linux-amd64 -O /usr/local/sbin/crun && chmod +x /usr/local/sbin/crun
       - rm -f /etc/cni/net.d/10-containerd-net.conflist
       - chmod -R 644 /etc/cni && chown -R root:root /etc/cni
       - systemctl daemon-reload && systemctl enable containerd && systemctl start containerd
@@ -210,7 +213,12 @@ spec:
       - apt-get update
       - apt-get install -y kubelet=$KUBERNETES_VERSION-00 kubeadm=$KUBERNETES_VERSION-00 kubectl=$KUBERNETES_VERSION-00  bash-completion && apt-mark hold kubelet kubectl kubeadm && systemctl enable kubelet
       - kubeadm config images pull --kubernetes-version $KUBERNETES_VERSION
-      - echo 'source <(kubectl completion bash)' >>~/.bashrc
-      - echo 'export KUBECONFIG=/etc/kubernetes/admin.conf' >>~/.bashrc
+      - echo 'source <(kubectl completion bash)' >> ~root/.bashrc
+      - echo 'export KUBECONFIG=/etc/kubernetes/admin.conf' >> ~root/.bashrc
       - apt-get -y autoremove && apt-get -y clean all
+      - FILE=/run/kubeadm/kubeadm.yaml
+      - if [ ! -e $FILE ]; then FILE=/run/kubeadm/kubeadm-join-config.yaml; fi
+      - DEVICE=$(cat /etc/hosts | grep -oP 'device-\K\d+'| head -1)
+      - echo DEVICE=$DEVICE
+      - sed -i "s#DEVICE_ID_PREKUBEADM#hivelocity://$DEVICE#g" $FILE
   version: "${KUBERNETES_VERSION}"

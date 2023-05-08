@@ -94,7 +94,8 @@ spec:
                 enum:
                 - pool
                 - hvCustom
-                - todo-question
+                - hvControlPlane
+                - hvWorker
                 type: string
             required:
             - imageName

@@ -166,9 +166,10 @@ func (r *HivelocityClusterReconciler) reconcileNormal(ctx context.Context, clust
 	// set failure domains in status using information in spec
 	hvCluster.SetStatusFailureDomain(hvCluster.Spec.ControlPlaneRegion)
 
+	// dirty hack. Loadbalancer are not supported yet.
 	hvCluster.Spec.ControlPlaneEndpoint = &clusterv1.APIEndpoint{
-		Host: "66.165.243.74",
-		Port: 443,
+		Host: "hv.thomas-guettler.de",
+		Port: 6443,
 	}
 	hvCluster.Status.Ready = true
 

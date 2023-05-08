@@ -21,14 +21,23 @@ import sys
 import json
 
 keys_to_skip = ['controller', 'controllerGroup', 'controllerKind', 'reconcileID',
-                'HivelocityMachine', 'HivelocityCluster', 'Cluster',
+                'HivelocityCluster', 'Cluster',
                 'namespace', 'name', 'Machine']
 
 rows_to_skip = [
+    'Bootstrap not ready - requeuing',
     'controller-runtime.webhook', 'certwatcher/certwatcher', 'Registering a validating webhook',
     'Registering a mutating webhook', 'Starting EventSource',
     '"Reconciling finished"',
     '"Reconciling HivelocityMachine"',
+    '"Reconcile HivelocityMachine"',
+    '"Reconciling HivelocityCluster"',
+    '"Creating cluster scope"',
+    '"Starting reconciling cluster"',
+    '"Completed function"',
+    '"Adding request."',
+    '"validate update" v1alpha1/hivelocitymachine_webhook',
+    '"validate update" v1alpha1/hivelocitycluster_webhook',
 ]
 
 def main():
@@ -52,10 +61,6 @@ def read_logs(fd):
         handle_line(line)
 
 def handle_line(line):
-    for r in rows_to_skip:
-        if r in line:
-            return
-
     if not line.startswith('{'):
         sys.stdout.write(line)
         return
@@ -70,7 +75,13 @@ def handle_line(line):
     message = data.pop('message', '')
     if not data:
         data=''
-    sys.stdout.write(f'{t} {level} "{message}" {file} {data}\n')
+
+    new_line = f'{t} {level} "{message}" {file} {data}\n'
+    for r in rows_to_skip:
+        if r in new_line:
+            return
+
+    sys.stdout.write(new_line)
 
 
 if __name__ == '__main__':
