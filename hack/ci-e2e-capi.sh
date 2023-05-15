@@ -24,9 +24,6 @@ cd "${REPO_ROOT}" || exit 1
 export PATH="${REPO_ROOT}/hack/tools/bin:${PATH}"
 export ARTIFACTS="${ARTIFACTS:-${REPO_ROOT}/_artifacts}"
 
-# shellcheck source=../hack/ci-e2e-sshkeys.sh
-source "${REPO_ROOT}/hack/ci-e2e-sshkeys.sh"
-
 export HIVELOCITY_SSH_KEY=ssh-key-hivelocity-pub
 go run test/upload-ssh-pub-key/main.go
 
