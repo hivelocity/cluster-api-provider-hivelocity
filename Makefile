@@ -155,6 +155,10 @@ generate-manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole
 generate-go-deepcopy: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
 	$(CONTROLLER_GEN) object:headerFile="./hack/boilerplate/boilerplate.generatego.txt" paths="./api/..."
 
+
+cluster-templates: $(KUSTOMIZE)
+	$(KUSTOMIZE) build templates/cluster-templates/hivelocity --load-restrictor LoadRestrictionsNone  > templates/cluster-templates/cluster-template.yaml
+
 dry-run: generate
 	cd config/manager && $(KUSTOMIZE) edit set image controller=${STAGING_REGISTRY}:${TAG}
 	mkdir -p dry-run
@@ -310,6 +314,8 @@ e2e-image: ## Build the e2e manager image
 .PHONY: $(E2E_CONF_FILE)
 e2e-conf-file: $(E2E_CONF_FILE)
 $(E2E_CONF_FILE): $(ENVSUBST) $(E2E_CONF_FILE_SOURCE)
+	@test $${MANIFEST_PATH?Environment variable is required}
+	@test $${CAPHV_LATEST_VERSION?Environment variable is required}
 	mkdir -p $(shell dirname $(E2E_CONF_FILE))
 	$(ENVSUBST) < $(E2E_CONF_FILE_SOURCE) > $(E2E_CONF_FILE)
 

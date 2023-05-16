@@ -18,7 +18,7 @@ providers:
         type: "url"
         contract: v1beta1
         files:
-          - sourcePath: "../data/shared/v1beta1/metadata.yaml"
+          - sourcePath: "../data/shared/v1alpha1/metadata.yaml"
         replacements:
           - old: "imagePullPolicy: Always"
             new: "imagePullPolicy: IfNotPresent"
@@ -35,7 +35,7 @@ providers:
         type: "url"
         contract: "v1beta1"
         files:
-          - sourcePath: "../data/shared/v1beta1/metadata.yaml"
+          - sourcePath: "../data/shared/v1alpha1/metadata.yaml"
         replacements:
           - old: "imagePullPolicy: Always"
             new: "imagePullPolicy: IfNotPresent"
@@ -51,7 +51,7 @@ providers:
         value: "https://github.com/kubernetes-sigs/cluster-api/releases/download/v1.4.1/control-plane-components.yaml"
         type: "url"
         files:
-          - sourcePath: "../data/shared/v1beta1/metadata.yaml"
+          - sourcePath: "../data/shared/v1alpha1/metadata.yaml"
         replacements:
           - old: "imagePullPolicy: Always"
             new: "imagePullPolicy: IfNotPresent"

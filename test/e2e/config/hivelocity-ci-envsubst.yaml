@@ -18,7 +18,7 @@ providers:
         type: "url"
         contract: v1beta1
         files:
-          - sourcePath: "../data/shared/v1beta1/metadata.yaml"
+          - sourcePath: "../data/shared/v1alpha1/metadata.yaml"
         replacements:
           - old: "imagePullPolicy: Always"
             new: "imagePullPolicy: IfNotPresent"
@@ -35,7 +35,7 @@ providers:
         type: "url"
         contract: "v1beta1"
         files:
-          - sourcePath: "../data/shared/v1beta1/metadata.yaml"
+          - sourcePath: "../data/shared/v1alpha1/metadata.yaml"
         replacements:
           - old: "imagePullPolicy: Always"
             new: "imagePullPolicy: IfNotPresent"
@@ -51,7 +51,7 @@ providers:
         value: "https://github.com/kubernetes-sigs/cluster-api/releases/download/v1.4.1/control-plane-components.yaml"
         type: "url"
         files:
-          - sourcePath: "../data/shared/v1beta1/metadata.yaml"
+          - sourcePath: "../data/shared/v1alpha1/metadata.yaml"
         replacements:
           - old: "imagePullPolicy: Always"
             new: "imagePullPolicy: IfNotPresent"
@@ -63,12 +63,12 @@ providers:
   - name: hivelocity
     type: InfrastructureProvider
     versions:
-      - name:  # latest published release
-        value: https://github.com/hivelocity/cluster-api-provider-hivelocity/releases/download//infrastructure-components.yaml
+      - name: v1.0.0-alpha.0 # latest published release
+        value: https://github.com/hivelocity/cluster-api-provider-hivelocity/releases/download/v1.0.0-alpha.0/infrastructure-components.yaml
         type: "url"
         contract: v1beta1
         files:
-          - sourcePath: "../metadata.yaml"
+          - sourcePath: "../../../out/metadata.yaml"
           - sourcePath: "../data/infrastructure-hivelocity/v1alpha1/cluster-template.yaml"
       - name: v1.0.99 # next; use manifest from source files
         value: ../../../config/default
@@ -81,7 +81,7 @@ providers:
           - old: --metrics-bind-addr=localhost:8080
             new: --metrics-bind-addr=:8080
         files:
-          - sourcePath: "../metadata.yaml"
+          - sourcePath: "../../../out/metadata.yaml"
           - sourcePath: "../data/infrastructure-hivelocity/v1alpha1/cluster-template.yaml"
 
 variables:
@@ -103,7 +103,7 @@ variables:
   INIT_WITH_BINARY: "https://github.com/kubernetes-sigs/cluster-api/releases/download/v1.1.4/clusterctl-linux-amd64"
   INIT_WITH_PROVIDERS_CONTRACT: "v1beta1"
   INIT_WITH_KUBERNETES_VERSION: "v1.25.2"
-  INIT_WITH_INFRASTRUCTURE_PROVIDER_VERSION:
+  INIT_WITH_INFRASTRUCTURE_PROVIDER_VERSION: v1.0.0-alpha.0
 
   # Cluster Addons
   CILIUM: "./data/cni/cilium/cilium.yaml"
