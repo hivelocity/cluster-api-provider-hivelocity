@@ -37,6 +37,7 @@ import (
 // ClusterScopeParams defines the input parameters used to create a new scope.
 type ClusterScopeParams struct {
 	Client            client.Client
+	APIReader         client.Reader
 	Logger            logr.Logger
 	HVClient          hvclient.Client
 	Cluster           *clusterv1.Cluster
@@ -64,6 +65,7 @@ func NewClusterScope(ctx context.Context, params ClusterScopeParams) (*ClusterSc
 	return &ClusterScope{
 		Logger:            params.Logger,
 		Client:            params.Client,
+		APIReader:         params.APIReader,
 		Cluster:           params.Cluster,
 		HivelocityCluster: params.HivelocityCluster,
 		HVClient:          params.HVClient,
@@ -75,6 +77,7 @@ func NewClusterScope(ctx context.Context, params ClusterScopeParams) (*ClusterSc
 type ClusterScope struct {
 	logr.Logger
 	Client      client.Client
+	APIReader   client.Reader
 	patchHelper *patch.Helper
 	HVClient    hvclient.Client
 
@@ -183,7 +186,7 @@ func (s *ClusterScope) ListMachines(ctx context.Context) ([]*clusterv1.Machine, 
 	return machineList, hivelocityMachineList, nil
 }
 
-// IsControlPlaneReady returns if a machine is a control-plane.
+// IsControlPlaneReady returns nil if the control plane is ready.
 func IsControlPlaneReady(ctx context.Context, c clientcmd.ClientConfig) error {
 	restConfig, err := c.ClientConfig()
 	if err != nil {

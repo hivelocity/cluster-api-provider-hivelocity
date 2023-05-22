@@ -20,6 +20,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -29,8 +30,10 @@ import (
 	hvclient "github.com/hivelocity/cluster-api-provider-hivelocity/pkg/services/hivelocity/client"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/kubernetes"
 	"k8s.io/klog/v2"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/cluster-api/util"
@@ -123,6 +126,7 @@ func (r *HivelocityClusterReconciler) Reconcile(ctx context.Context, req ctrl.Re
 
 	clusterScope, err := scope.NewClusterScope(ctx, scope.ClusterScopeParams{
 		Client:            r.Client,
+		APIReader:         r.APIReader,
 		Logger:            log,
 		Cluster:           cluster,
 		HivelocityCluster: hvCluster,
@@ -175,6 +179,10 @@ func (r *HivelocityClusterReconciler) reconcileNormal(ctx context.Context, clust
 
 	if err := r.reconcileTargetClusterManager(ctx, clusterScope); err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed to reconcile target cluster manager: %w", err)
+	}
+
+	if err := reconcileTargetSecret(ctx, clusterScope); err != nil {
+		return reconcile.Result{}, fmt.Errorf("failed to reconcile target secret: %w", err)
 	}
 
 	log.V(1).Info("Reconciling finished")
@@ -326,6 +334,97 @@ func hvAPIKeyErrorResult(
 	}
 
 	return res, err
+}
+
+func reconcileTargetSecret(ctx context.Context, clusterScope *scope.ClusterScope) error {
+
+	clientConfig, err := clusterScope.ClientConfig(ctx)
+	if err != nil {
+		clusterScope.V(1).Info("failed to get clientconfig with api endpoint")
+		return err
+	}
+
+	if err := scope.IsControlPlaneReady(ctx, clientConfig); err != nil {
+		clusterScope.V(1).Info("Workload Control plane not ready - reconcile target secret again")
+		return err
+	}
+
+	// Workload control plane ready, so we can check if the secret exists already
+
+	// getting client set
+	restConfig, err := clientConfig.ClientConfig()
+	if err != nil {
+		return fmt.Errorf("failed to get rest config: %w", err)
+	}
+
+	targetClientSet, err := kubernetes.NewForConfig(restConfig)
+	if err != nil {
+		return fmt.Errorf("failed to get client set: %w", err)
+	}
+
+	secretName := clusterScope.HivelocityCluster.Spec.HivelocitySecret.Name
+	targetNS := metav1.NamespaceSystem
+	sourceNS := clusterScope.HivelocityCluster.Namespace
+
+	if _, err := targetClientSet.CoreV1().Secrets(targetNS).Get(
+		ctx,
+		secretName,
+		metav1.GetOptions{},
+	); err == nil {
+		// Secret exists. Nothing to do.
+		return nil
+	}
+
+	if !apierrors.IsNotFound(err) {
+		return fmt.Errorf("failed to get secret: %w", err)
+	}
+
+	apiKeySecretName := types.NamespacedName{
+		Namespace: sourceNS,
+		Name:      secretName,
+	}
+	secretManager := secretutil.NewSecretManager(clusterScope.Logger, clusterScope.Client, clusterScope.APIReader)
+	apiKeySecret, err := secretManager.AcquireSecret(ctx, apiKeySecretName, clusterScope.HivelocityCluster, false, clusterScope.HivelocityCluster.DeletionTimestamp.IsZero())
+	if err != nil {
+		return fmt.Errorf("failed to acquire secret: %w", err)
+	}
+
+	key := clusterScope.HivelocityCluster.Spec.HivelocitySecret.Key
+
+	apiKey, keyExists := apiKeySecret.Data[key]
+	if !keyExists {
+		return fmt.Errorf(
+			"error key %s does not exist in secret/%s: %w",
+			key,
+			apiKeySecretName,
+			err,
+		)
+	}
+
+	var immutable bool
+	data := make(map[string][]byte)
+	data[key] = apiKey
+
+	// Save api server information
+	data["apiserver-host"] = []byte(clusterScope.HivelocityCluster.Spec.ControlPlaneEndpoint.Host)
+	data["apiserver-port"] = []byte(strconv.Itoa(int(clusterScope.HivelocityCluster.Spec.ControlPlaneEndpoint.Port)))
+
+	newSecret := corev1.Secret{
+		Immutable: &immutable,
+		Data:      data,
+		TypeMeta:  metav1.TypeMeta{},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      secretName,
+			Namespace: targetNS,
+		},
+	}
+
+	// create secret in cluster
+	if _, err := targetClientSet.CoreV1().Secrets(targetNS).Create(ctx, &newSecret, metav1.CreateOptions{}); err != nil {
+		return fmt.Errorf("failed to create secret: %w", err)
+	}
+
+	return nil
 }
 
 func (r *HivelocityClusterReconciler) reconcileTargetClusterManager(ctx context.Context, clusterScope *scope.ClusterScope) error {
