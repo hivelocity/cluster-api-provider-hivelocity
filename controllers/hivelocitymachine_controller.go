@@ -132,6 +132,7 @@ func (r *HivelocityMachineReconciler) Reconcile(ctx context.Context, req ctrl.Re
 			Cluster:           cluster,
 			HivelocityCluster: hvCluster,
 			HVClient:          hvClient,
+			APIReader:         r.APIReader,
 		},
 		Machine:           machine,
 		HivelocityMachine: hivelocityMachine,

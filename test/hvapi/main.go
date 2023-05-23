@@ -87,7 +87,7 @@ write_files:
 	path: /opt/test.txt
 	`
 	opts := hv.BareMetalDeviceUpdate{
-		Hostname: "my-host-name.example.com",
+		Hostname:       "my-host-name.example.com",
 		OsName:         "Ubuntu 20.x",
 		PublicSshKeyId: 918,
 		Script:         script,
