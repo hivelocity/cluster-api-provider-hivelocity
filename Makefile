@@ -41,6 +41,7 @@ export PATH := $(abspath $(TOOLS_BIN_DIR)):$(PATH)
 
 # Files
 CAPHV_WORKER_CLUSTER_KUBECONFIG ?= ".workload-cluster-kubeconfig.yaml"
+CAPHV_MGT_CLUSTER_KUBECONFIG ?= ".mgt-cluster-kubeconfig.yaml"
 
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
 ENVTEST_K8S_VERSION = 1.25.0
@@ -53,6 +54,7 @@ STAGING_REGISTRY ?= ghcr.io/hivelocity/cluster-api-provider-hivelocity-staging
 PROD_REGISTRY := ghcr.io/hivelocity/cluster-api-provider-hivelocity
 IMG ?= $(STAGING_REGISTRY):latest
 
+IMAGE_PREFIX ?= ghcr.io/hivelocity
 
 .PHONY: all
 all: build
@@ -125,10 +127,20 @@ envsubst: $(ENVSUBST) ## Build a local copy of envsubst
 $(ENVSUBST): $(TOOLS_DIR)/go.mod # Build envsubst from tools folder.
 	cd $(TOOLS_DIR) && go build -tags=tools -o $(ENVSUBST) github.com/drone/envsubst/v2/cmd/envsubst
 
+SETUP_ENVTEST := $(abspath $(TOOLS_BIN_DIR)/setup-envtest)
+setup-envtest: $(SETUP_ENVTEST) ## Build a local copy of setup-envtest
+$(SETUP_ENVTEST): $(TOOLS_DIR)/go.mod # Build setup-envtest from tools folder.
+	cd $(TOOLS_DIR); go mod vendor; go build -mod=vendor -tags=tools -o $(BIN_DIR)/setup-envtest sigs.k8s.io/controller-runtime/tools/setup-envtest
+
 CTLPTL := $(abspath $(TOOLS_BIN_DIR)/ctlptl)
 ctlptl: $(CTLPTL) ## Build a local copy of ctlptl
 $(CTLPTL):
 	cd $(TOOLS_DIR) && go build -tags=tools -o $(CTLPTL) github.com/tilt-dev/ctlptl/cmd/ctlptl
+
+GOTESTSUM := $(abspath $(TOOLS_BIN_DIR)/gotestsum)
+gotestsum: $(GOTESTSUM) # Build gotestsum from tools folder.
+$(GOTESTSUM):
+	cd $(TOOLS_DIR); go build -mod=vendor -tags=tools -o $(BIN_DIR)/gotestsum gotest.tools/gotestsum
 
 install-crds: generate-manifests $(KUSTOMIZE) ## Install CRDs into the K8s cluster specified in ~/.kube/config.
 	$(KUSTOMIZE) build config/crd | kubectl apply -f -
@@ -154,6 +166,10 @@ generate-manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole
 generate-go-deepcopy: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
 	$(CONTROLLER_GEN) object:headerFile="./hack/boilerplate/boilerplate.generatego.txt" paths="./api/..."
 
+
+cluster-templates: $(KUSTOMIZE)
+	$(KUSTOMIZE) build templates/cluster-templates/hivelocity --load-restrictor LoadRestrictionsNone  > templates/cluster-templates/cluster-template.yaml
+
 dry-run: generate
 	cd config/manager && $(KUSTOMIZE) edit set image controller=${STAGING_REGISTRY}:${TAG}
 	mkdir -p dry-run
@@ -167,24 +183,22 @@ fmt: ## Run go fmt against code.
 vet: ## Run go vet against code.
 	go vet ./...
 
-.PHONY: test
-test: generate fmt vet envtest ## Run tests.
-	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" go test -coverpkg=./... ./... -coverprofile cover.out
-
 .PHONY: watch
-watch: ## Watch CRDs cluster, machines, hivelocitymachine and Events.
+watch: $(CAPHV_MGT_CLUSTER_KUBECONFIG) ## Watch CRDs cluster, machines, hivelocitymachine and Events.
 	watch -c -n 2 hack/output-for-watch.sh
 
-.PHONY: get-kubeconfig-of-workload-cluster
-get-kubeconfig-of-workload-cluster:
+$(CAPHV_WORKER_CLUSTER_KUBECONFIG):
 	./hack/get-kubeconfig-of-workload-cluster.sh
 
+$(CAPHV_MGT_CLUSTER_KUBECONFIG):
+	./hack/get-kubeconfig-of-management-cluster.sh
+
 .PHONY: k9s-workload-cluster
-k9s-workload-cluster: get-kubeconfig-of-workload-cluster
+k9s-workload-cluster: $(CAPHV_WORKER_CLUSTER_KUBECONFIG)
 	KUBECONFIG=$(CAPHV_WORKER_CLUSTER_KUBECONFIG) k9s
 
 .PHONY: bash-with-kubeconfig-set-to-workload-cluster
-bash-with-kubeconfig-set-to-workload-cluster: get-kubeconfig-of-workload-cluster
+bash-with-kubeconfig-set-to-workload-cluster: $(CAPHV_WORKER_CLUSTER_KUBECONFIG)
 	KUBECONFIG=$(CAPHV_WORKER_CLUSTER_KUBECONFIG) bash
 
 
@@ -213,7 +227,7 @@ run: generate fmt vet ## Run a controller from your host.
 # (i.e. docker build --platform linux/arm64 ). However, you must enable docker buildKit for it.
 # More info: https://docs.docker.com/develop/develop-images/build_enhancements/
 .PHONY: docker-build
-docker-build: test ## Build docker image with the manager.
+docker-build: test-unit ## Build docker image with the manager.
 	docker build -t ${IMG} .
 
 .PHONY: docker-push
@@ -228,7 +242,7 @@ docker-push: ## Push docker image with the manager.
 # To properly provided solutions that supports more than one platform you should use this option.
 PLATFORMS ?= linux/arm64,linux/amd64,linux/s390x,linux/ppc64le
 .PHONY: docker-buildx
-docker-buildx: test ## Build and push docker image for the manager for cross-platform support
+docker-buildx: test-unit ## Build and push docker image for the manager for cross-platform support
 	# copy existing Dockerfile and insert --platform=${BUILDPLATFORM} into Dockerfile.cross, and preserve the original Dockerfile
 	sed -e '1 s/\(^FROM\)/FROM --platform=\$$\{BUILDPLATFORM\}/; t' -e ' 1,// s//FROM --platform=\$$\{BUILDPLATFORM\}/' Dockerfile > Dockerfile.cross
 	- docker buildx create --name project-v3-builder
@@ -284,6 +298,41 @@ $(CONTROLLER_GEN): $(LOCALBIN)
 envtest: $(ENVTEST) ## Download envtest-setup locally if necessary.
 $(ENVTEST): $(LOCALBIN)
 	test -s $(LOCALBIN)/setup-envtest || GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
+
+##@ Testing
+
+ARTIFACTS ?= _artifacts
+$(ARTIFACTS):
+	mkdir -p $(ARTIFACTS)/
+
+KUBEBUILDER_ASSETS ?= $(shell $(SETUP_ENVTEST) use --use-env --bin-dir $(abspath $(TOOLS_BIN_DIR)) -p path $(KUBEBUILDER_ENVTEST_KUBERNETES_VERSION))
+
+E2E_DIR ?= $(ROOT_DIR)/test/e2e
+E2E_CONF_FILE_SOURCE ?= $(E2E_DIR)/config/hivelocity.yaml
+E2E_CONF_FILE ?= $(E2E_DIR)/config/hivelocity-ci-envsubst.yaml
+
+.PHONY: test-unit
+test-unit: generate fmt vet $(SETUP_ENVTEST) $(GOTESTSUM) ## Run unit and integration tests
+	@mkdir -p $(shell pwd)/.coverage
+	go mod vendor
+	KUBEBUILDER_ASSETS="$(KUBEBUILDER_ASSETS)" $(GOTESTSUM) --junitfile=.coverage/junit.xml --format testname -- -mod=vendor -covermode=atomic -coverprofile=.coverage/cover.out -p=4 ./controllers/... ./pkg/... ./api/...
+
+.PHONY: e2e-image
+e2e-image: ## Build the e2e manager image
+	docker build --pull --build-arg ARCH=$(ARCH) --build-arg LDFLAGS="$(LDFLAGS)" -t $(IMAGE_PREFIX)/caphv-staging:e2e -f images/caphv/Dockerfile .
+
+.PHONY: $(E2E_CONF_FILE)
+e2e-conf-file: $(E2E_CONF_FILE)
+$(E2E_CONF_FILE): $(ENVSUBST) $(E2E_CONF_FILE_SOURCE)
+	#@test $${MANIFEST_PATH?Environment variable is required}
+	#@test $${CAPHV_LATEST_VERSION?Environment variable is required}
+	mkdir -p $(shell dirname $(E2E_CONF_FILE))
+	MANAGEMENT_CLUSTER_NAME="hv-e2e-$$(date +"%Y%m%d-%H%M%S")-$$USER" $(ENVSUBST) < $(E2E_CONF_FILE_SOURCE) > $(E2E_CONF_FILE)
+
+.PHONY: test-e2e
+test-e2e: $(E2E_CONF_FILE) $(if $(SKIP_IMAGE_BUILD),,e2e-image) $(ARTIFACTS)
+	rm -f $(CAPHV_WORKER_CLUSTER_KUBECONFIG) $(CAPHV_MGT_CLUSTER_KUBECONFIG)
+	GINKGO_FOKUS="'\[Basic\]'" GINKGO_NODES=2 E2E_CONF_FILE=$(E2E_CONF_FILE) ./hack/ci-e2e-capi.sh
 
 
 ##@ Lint and Verify
@@ -393,6 +442,9 @@ create-workload-cluster: $(KUSTOMIZE) $(ENVSUBST) ## Creates a workload-cluster.
 	# Create workload Cluster. This is usually called via Tilt.
 	@test $${CLUSTER_NAME?Environment variable is required}
 	@test $${HIVELOCITY_API_KEY?Environment variable is required}
+	rm -f $(CAPHV_WORKER_CLUSTER_KUBECONFIG)
+	go run test/upload-ssh-pub-key/upload-ssh-pub-key.go
+	go run test/claim-devices-or-fail/claim-devices-or-fail.go
 	kubectl create secret generic hivelocity --from-literal=hivelocity=$(HIVELOCITY_API_KEY) --save-config --dry-run=client -o yaml | kubectl apply -f -
 	$(KUSTOMIZE) build templates/cluster-templates/hivelocity --load-restrictor LoadRestrictionsNone  > templates/cluster-templates/cluster-template-hivelocity.yaml
 	cat templates/cluster-templates/cluster-template-hivelocity.yaml | $(ENVSUBST) - > templates/cluster-templates/cluster-template-hivelocity.yaml.apply
@@ -403,6 +455,7 @@ create-workload-cluster: $(KUSTOMIZE) $(ENVSUBST) ## Creates a workload-cluster.
 
 .PHONY: cluster
 cluster: $(CTLPTL) ## Creates kind-dev Cluster
+	rm -f $(CAPHV_WORKER_CLUSTER_KUBECONFIG) $(CAPHV_MGT_CLUSTER_KUBECONFIG)
 	./hack/kind-dev.sh
 
 .PHONY: delete-mgt-cluster

@@ -61,6 +61,9 @@ vendor
 _artifacts
 resp.json
 **manifest.json
+.coverage
+test/e2e/config/hivelocity-ci-envsubst.yaml
+test/e2e/ginkgo-log.txt
 
 # release artifacts
 out
@@ -79,4 +82,4 @@ tmp_*
 
 # generated kube-configs
 .workload-cluster-kubeconfig.yaml
-.mgt-cluster-kube-config.yaml
+.mgt-cluster-kubeconfig.yaml

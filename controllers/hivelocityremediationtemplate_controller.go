@@ -19,7 +19,7 @@ package controllers
 import (
 	"context"
 
-	infrastructurev1alpha1 "github.com/hivelocity/cluster-api-provider-hivelocity/api/v1alpha1"
+	infrav1 "github.com/hivelocity/cluster-api-provider-hivelocity/api/v1alpha1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -57,6 +57,6 @@ func (r *HivelocityRemediationTemplateReconciler) Reconcile(ctx context.Context,
 // SetupWithManager sets up the controller with the Manager.
 func (r *HivelocityRemediationTemplateReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&infrastructurev1alpha1.HivelocityRemediationTemplate{}).
+		For(&infrav1.HivelocityRemediationTemplate{}).
 		Complete(r)
 }

@@ -16,9 +16,10 @@ spec:
             anonymous-auth: "false"
             read-only-port: "0"
             event-qps: "5"
-            #rotate-server-certificates: "true"
+            # rotate-server-certificates: "true"
             max-pods: "220"
             resolv-conf: /etc/kubernetes/resolv.conf
+            provider-id: DEVICE_ID_PREKUBEADM
       files:
         - path: /etc/sysctl.d/99-cilium.conf
           owner: "root:root"
@@ -101,3 +102,8 @@ spec:
         - echo 'source <(kubectl completion bash)' >> ~root/.bashrc
         - echo 'export KUBECONFIG=/etc/kubernetes/admin.conf' >> ~root/.bashrc
         - apt-get -y autoremove && apt-get -y clean all
+        - FILE=/run/kubeadm/kubeadm.yaml
+        - if [ ! -e $FILE ]; then FILE=/run/kubeadm/kubeadm-join-config.yaml; fi
+        - DEVICE=$(cat /etc/hosts | grep -oP 'device-\K\d+'| head -1)
+        - echo DEVICE=$DEVICE
+        - sed -i "s#DEVICE_ID_PREKUBEADM#hivelocity://$DEVICE#g" $FILE

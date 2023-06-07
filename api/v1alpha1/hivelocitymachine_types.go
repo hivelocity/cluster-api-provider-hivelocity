@@ -65,17 +65,11 @@ const (
 	// StateVerifyAssociate .
 	StateVerifyAssociate ProvisioningState = "verify-associate"
 
-	// StateEnsureDeviceShutDown .
-	StateEnsureDeviceShutDown ProvisioningState = "ensure-device-shut-down"
-
 	// StateProvisionDevice .
 	StateProvisionDevice ProvisioningState = "provision-device"
 
 	// StateDeviceProvisioned .
 	StateDeviceProvisioned ProvisioningState = "provisioned"
-
-	// StateDeleteDeviceShutdown .
-	StateDeleteDeviceShutdown ProvisioningState = "delete-shutdown"
 
 	// StateDeleteDeviceDeProvision .
 	StateDeleteDeviceDeProvision ProvisioningState = "delete-deprovision"
@@ -117,7 +111,7 @@ type ControllerGeneratedStatus struct {
 }
 
 // HivelocityDeviceType defines the Hivelocity device type.
-// +kubebuilder:validation:Enum=pool;hvCustom;hvControlPlane;hvWorker
+// +kubebuilder:validation:Enum=pool;hvCustom;hvControlPlane;hvWorker;e2eControlPlane;e2eWorker
 type HivelocityDeviceType string
 
 // HivelocityMachineStatus defines the observed state of HivelocityMachine.

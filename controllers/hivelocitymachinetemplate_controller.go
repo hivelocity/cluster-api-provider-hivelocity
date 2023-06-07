@@ -19,7 +19,7 @@ package controllers
 import (
 	"context"
 
-	infrastructurev1alpha1 "github.com/hivelocity/cluster-api-provider-hivelocity/api/v1alpha1"
+	infrav1 "github.com/hivelocity/cluster-api-provider-hivelocity/api/v1alpha1"
 	hvclient "github.com/hivelocity/cluster-api-provider-hivelocity/pkg/services/hivelocity/client"
 	"sigs.k8s.io/cluster-api/util/predicates"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -60,7 +60,7 @@ func (r *HivelocityMachineTemplateReconciler) Reconcile(ctx context.Context, req
 // SetupWithManager sets up the controller with the Manager.
 func (r *HivelocityMachineTemplateReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager, options controller.Options) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&infrastructurev1alpha1.HivelocityMachineTemplate{}).
+		For(&infrav1.HivelocityMachineTemplate{}).
 		WithEventFilter(predicates.ResourceNotPausedAndHasFilterLabel(ctrl.LoggerFrom(ctx), r.WatchFilterValue)).
 		Complete(r)
 }

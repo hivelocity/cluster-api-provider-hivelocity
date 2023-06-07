@@ -28,7 +28,7 @@ import (
 	hv "github.com/hivelocity/hivelocity-client-go/client"
 )
 
-const manualDeviceID = 15335
+const manualDeviceID = 25135 // 107.155.127.190
 
 func main() {
 	manualTests()
@@ -91,6 +91,7 @@ write_files:
 		OsName:         "Ubuntu 20.x",
 		PublicSshKeyId: 918,
 		Script:         script,
+		ForceReload:    true,
 	}
 	device, err := client.ProvisionDevice(ctx, manualDeviceID, opts)
 	if err != nil {
@@ -101,6 +102,11 @@ write_files:
 		log.Fatalln(err)
 	}
 	fmt.Printf("device: %+v\n", device)
+}
+
+func cliTestShutdownDevice(ctx context.Context, client hvclient.Client) {
+	err := client.ShutdownDevice(ctx, 14730)
+	fmt.Println(err)
 }
 
 func manualTests() {
@@ -129,5 +135,11 @@ func manualTests() {
 	case "ProvisionDevice":
 		cliTestProvisionDevice(ctx, client)
 		os.Exit(0)
+	case "cliTestShutdownDevice":
+		cliTestShutdownDevice(ctx, client)
+		os.Exit(0)
+	default:
+		fmt.Println("No valid command")
+		os.Exit(1)
 	}
 }

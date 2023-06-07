@@ -96,6 +96,8 @@ spec:
                 - hvCustom
                 - hvControlPlane
                 - hvWorker
+                - e2eControlPlane
+                - e2eWorker
                 type: string
             required:
             - imageName

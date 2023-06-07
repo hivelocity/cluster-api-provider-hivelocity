@@ -40,6 +40,16 @@ rows_to_skip = [
     '"validate update" v1alpha1/hivelocitycluster_webhook',
 ]
 
+rows_to_skip_regex = [
+    r'''DEBUG "Started function" device/device.go:\d+ {'HivelocityMachine': {'name': '\S+', 'namespace': '\S+'}, 'function': 'actionDeviceProvisioned'}''',
+]
+
+def printHivelocityMachine(value):
+    return 'HivelocityMachine=' + value.get('name', '')
+
+key_to_output = {
+    'HivelocityMachine': printHivelocityMachine,
+}
 def main():
 
     if len(sys.argv) == 1 or sys.argv[1] in ['-h', '--help']:
@@ -67,6 +77,19 @@ def handle_line(line):
     data = json.loads(line)
     for key in keys_to_skip:
         data.pop(key, None)
+
+    formatted_data = []
+    for key, func in key_to_output.items():
+        if key not in data:
+            continue
+        value = data.pop(key)
+        if not key:
+            continue
+        value = func(value)
+        if not value:
+            continue
+        formatted_data.append(value)
+
     t = data.pop('time', '')
     t = re.sub(r'^.*T(.+)*\..+$', r'\1', t) # '2023-04-17T12:12:53.423Z
 
@@ -76,9 +99,13 @@ def handle_line(line):
     if not data:
         data=''
 
-    new_line = f'{t} {level} "{message}" {file} {data}\n'
+    formatted_data = ' '.join(formatted_data)
+    new_line = f'{t} {level} "{message}" {file} {formatted_data} {data}\n'
     for r in rows_to_skip:
         if r in new_line:
+            return
+    for r in rows_to_skip_regex:
+        if re.search(r, new_line):
             return
 
     sys.stdout.write(new_line)
