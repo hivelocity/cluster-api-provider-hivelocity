@@ -154,17 +154,28 @@ func (r *HivelocityMachineReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	}
 
 	if !hivelocityMachine.ObjectMeta.DeletionTimestamp.IsZero() {
+		baseMsg := fmt.Sprintf("hivelocityMachine has DeletionTimestamp %s ProvisioningState=%s",
+			hivelocityMachine.ObjectMeta.DeletionTimestamp.Time.Format("2006-01-02 15:04:05"),
+			hivelocityMachine.Spec.Status.ProvisioningState)
 		switch hivelocityMachine.Spec.Status.ProvisioningState {
 		case infrav1.StateDeleteDevice:
 			// Device has been removed from cluster - machine can be deleted.
+			log.Info(baseMsg + " do: RemoveFinalizer")
 			controllerutil.RemoveFinalizer(machineScope.HivelocityMachine, infrav1.MachineFinalizer)
 			return reconcile.Result{}, nil
-		case infrav1.StateNone, infrav1.StateAssociateDevice, infrav1.StateVerifyAssociate, infrav1.StateEnsureDeviceShutDown:
-			// if device is not yet provisioned, we can just dissociate the device from the machine with deleting the tags.
+		case infrav1.StateNone, infrav1.StateAssociateDevice, infrav1.StateVerifyAssociate:
+			// if device is not yet provisioned, we can just dissociate the device from the machine by deleting the tags.
+			log.Info(baseMsg + " do: ProvisioningState = StateDeleteDeviceDissociate")
 			hivelocityMachine.Spec.Status.ProvisioningState = infrav1.StateDeleteDeviceDissociate
 			return ctrl.Result{}, nil
-		case infrav1.StateProvisionDevice:
-			// TODO: This depends on the behavior of HV API. We have to deal with the case where a provisioning completes after a deletion timestamp is set.
+		case infrav1.StateDeviceProvisioned, infrav1.StateProvisionDevice:
+			log.Info(baseMsg + " do: ProvisioningState = StateDeleteDeviceDeProvision")
+			hivelocityMachine.Spec.Status.ProvisioningState = infrav1.StateDeleteDeviceDeProvision
+			return ctrl.Result{}, nil
+		case infrav1.StateDeleteDeviceDeProvision:
+			log.Info(baseMsg + " waiting for deprovisioning to finish.")
+		default:
+			log.Info(baseMsg + " do: nothing?")
 		}
 	}
 

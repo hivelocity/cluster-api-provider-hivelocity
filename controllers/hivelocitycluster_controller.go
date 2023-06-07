@@ -28,6 +28,7 @@ import (
 	"github.com/hivelocity/cluster-api-provider-hivelocity/pkg/scope"
 	secretutil "github.com/hivelocity/cluster-api-provider-hivelocity/pkg/secrets"
 	hvclient "github.com/hivelocity/cluster-api-provider-hivelocity/pkg/services/hivelocity/client"
+	"github.com/hivelocity/cluster-api-provider-hivelocity/pkg/services/hivelocity/device"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -171,10 +172,30 @@ func (r *HivelocityClusterReconciler) reconcileNormal(ctx context.Context, clust
 	hvCluster.SetStatusFailureDomain(hvCluster.Spec.ControlPlaneRegion)
 
 	// dirty hack. Loadbalancer are not supported yet.
-	hvCluster.Spec.ControlPlaneEndpoint = &clusterv1.APIEndpoint{
-		Host: "hv.thomas-guettler.de",
-		Port: 6443,
+	if hvCluster.Spec.ControlPlaneEndpoint.Host == "" {
+		var hmt = infrav1.HivelocityMachineTemplate{}
+		name := hvCluster.Name + "-control-plane"
+		err := r.Client.Get(ctx, client.ObjectKey{
+			Namespace: hvCluster.ObjectMeta.Namespace,
+			Name:      name,
+		}, &hmt)
+		if err != nil {
+			return ctrl.Result{}, fmt.Errorf("failed to get HivelocityMachineTemplate %q: %w", name, err)
+		}
+		machineType := hmt.Spec.Template.Spec.Type
+		if machineType == "" {
+			return ctrl.Result{}, fmt.Errorf("Spec.Template.Spec.Type of HivelocityMachineTemplate %q is empty", name)
+		}
+		hvDevice, err := device.GetFirstDevice(ctx, clusterScope.HVClient, machineType, hvCluster.Name, "")
+		if err != nil {
+			return ctrl.Result{}, fmt.Errorf("device.GetFirstDevice() failed: %w", err)
+		}
+		log.Info(fmt.Sprintf("Setting hvCluster.Spec.ControlPlaneEndpoint.Host to %q (machineType=%s).",
+			hvDevice.PrimaryIp, machineType))
+		hvCluster.Spec.ControlPlaneEndpoint.Host = hvDevice.PrimaryIp
+		hvCluster.Spec.ControlPlaneEndpoint.Port = 6443
 	}
+
 	hvCluster.Status.Ready = true
 
 	if err := r.reconcileTargetClusterManager(ctx, clusterScope); err != nil {
@@ -337,7 +358,6 @@ func hvAPIKeyErrorResult(
 }
 
 func reconcileTargetSecret(ctx context.Context, clusterScope *scope.ClusterScope) error {
-
 	clientConfig, err := clusterScope.ClientConfig(ctx)
 	if err != nil {
 		clusterScope.V(1).Info("failed to get clientconfig with api endpoint")
@@ -366,11 +386,13 @@ func reconcileTargetSecret(ctx context.Context, clusterScope *scope.ClusterScope
 	targetNS := metav1.NamespaceSystem
 	sourceNS := clusterScope.HivelocityCluster.Namespace
 
-	if _, err := targetClientSet.CoreV1().Secrets(targetNS).Get(
+	_, err = targetClientSet.CoreV1().Secrets(targetNS).Get(
 		ctx,
 		secretName,
 		metav1.GetOptions{},
-	); err == nil {
+	)
+
+	if err == nil {
 		// Secret exists. Nothing to do.
 		return nil
 	}

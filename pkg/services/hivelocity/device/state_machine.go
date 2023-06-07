@@ -18,13 +18,11 @@ package device
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/go-logr/logr"
 	"github.com/google/go-cmp/cmp"
 	infrav1 "github.com/hivelocity/cluster-api-provider-hivelocity/api/v1alpha1"
-	hvclient "github.com/hivelocity/cluster-api-provider-hivelocity/pkg/services/hivelocity/client"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/cluster-api/util/record"
 )
@@ -55,10 +53,8 @@ func (sm *stateMachine) handlers() map[infrav1.ProvisioningState]stateHandler {
 	return map[infrav1.ProvisioningState]stateHandler{
 		infrav1.StateAssociateDevice:         sm.handleAssociateDevice,
 		infrav1.StateVerifyAssociate:         sm.handleVerifyAssociate,
-		infrav1.StateEnsureDeviceShutDown:    sm.handleEnsureDeviceShutDown,
 		infrav1.StateProvisionDevice:         sm.handleProvisionDevice,
 		infrav1.StateDeviceProvisioned:       sm.handleDeviceProvisioned,
-		infrav1.StateDeleteDeviceShutdown:    sm.handleDeleteDeviceShutdown,
 		infrav1.StateDeleteDeviceDeProvision: sm.handleDeleteDeviceDeProvision,
 		infrav1.StateDeleteDeviceDissociate:  sm.handleDeleteDeviceDissociate,
 	}
@@ -105,21 +101,13 @@ func (sm *stateMachine) handleAssociateDevice(ctx context.Context) actionResult 
 func (sm *stateMachine) handleVerifyAssociate(ctx context.Context) actionResult {
 	actResult := sm.reconciler.actionVerifyAssociate(ctx)
 	if _, ok := actResult.(actionComplete); ok {
-		sm.nextState = infrav1.StateEnsureDeviceShutDown
+		sm.nextState = infrav1.StateProvisionDevice
 	}
 
 	// check whether we need to associate the machine to another device
 	actionGoBack, ok := actResult.(actionGoBack)
 	if ok {
 		sm.nextState = actionGoBack.nextState
-	}
-	return actResult
-}
-
-func (sm *stateMachine) handleEnsureDeviceShutDown(ctx context.Context) actionResult {
-	actResult := sm.reconciler.actionEnsureDeviceShutDown(ctx)
-	if _, ok := actResult.(actionComplete); ok {
-		sm.nextState = infrav1.StateProvisionDevice
 	}
 	return actResult
 }
@@ -142,25 +130,6 @@ func (sm *stateMachine) handleDeviceProvisioned(ctx context.Context) actionResul
 	actResult := sm.reconciler.actionDeviceProvisioned(ctx)
 	if _, ok := actResult.(actionComplete); ok {
 		sm.nextState = infrav1.StateDeviceProvisioned
-	}
-	return actResult
-}
-
-func (sm *stateMachine) handleDeleteDeviceShutdown(ctx context.Context) actionResult {
-	actResult := sm.reconciler.actionEnsureDeviceShutDown(ctx)
-	if _, ok := actResult.(actionComplete); ok {
-		sm.nextState = infrav1.StateDeleteDeviceDeProvision
-	}
-
-	actionErr, ok := actResult.(actionError)
-	if ok {
-		// Filter out NotFound error. If device is not there any more, we just need to delete this machine.
-		if errors.Is(actionErr.err, hvclient.ErrDeviceNotFound) {
-			sm.log.Info("Unable to locate Hivelocity device by ID or tags")
-			record.Warnf(sm.hvMachine, "NoDeviceFound", "Unable to find matching Hivelocity device for %s", sm.hvMachine.Name)
-			sm.nextState = infrav1.StateDeleteDevice
-			return actionComplete{}
-		}
 	}
 	return actResult
 }

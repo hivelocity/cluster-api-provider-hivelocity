@@ -91,7 +91,7 @@ var _ = Describe("Test DeviceTagKey.IsValid", func() {
 			expectIsValid: true,
 		}),
 		Entry("other key", testCaseDeviceTagKeyIsValid{
-			key:           "caph-other",
+			key:           "caphv-other",
 			expectIsValid: false,
 		}),
 	)

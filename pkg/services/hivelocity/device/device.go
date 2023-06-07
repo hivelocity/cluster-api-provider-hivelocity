@@ -21,13 +21,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
+	"sort"
 	"time"
 
 	infrav1 "github.com/hivelocity/cluster-api-provider-hivelocity/api/v1alpha1"
 	"github.com/hivelocity/cluster-api-provider-hivelocity/pkg/scope"
 	hvclient "github.com/hivelocity/cluster-api-provider-hivelocity/pkg/services/hivelocity/client"
 	"github.com/hivelocity/cluster-api-provider-hivelocity/pkg/services/hivelocity/hvtag"
+	"github.com/hivelocity/cluster-api-provider-hivelocity/pkg/utils"
 	hv "github.com/hivelocity/hivelocity-client-go/client"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
@@ -105,16 +106,11 @@ func (s *Service) actionAssociateDevice(ctx context.Context) actionResult {
 	log := s.scope.Logger.WithValues("function", "actionAssociateDevice")
 	log.V(1).Info("Started function")
 
-	// list all devices
-	devices, err := s.scope.HVClient.ListDevices(ctx)
+	device, err := GetFirstDevice(ctx, s.scope.HVClient, s.scope.HivelocityMachine.Spec.Type,
+		s.scope.HivelocityCluster.Name, s.scope.Name())
+
 	if err != nil {
 		s.handleRateLimitExceeded(err, "ListDevices")
-		return actionError{err: fmt.Errorf("failed to list devices: %w", err)}
-	}
-
-	// find available device
-	device, err := findAvailableDeviceFromList(devices, s.scope.HivelocityMachine.Spec.Type, s.scope.HivelocityCluster.Name, s.scope.Name())
-	if err != nil {
 		return actionError{err: fmt.Errorf("failed to find available device: %w", err)}
 	}
 
@@ -137,6 +133,29 @@ func (s *Service) actionAssociateDevice(ctx context.Context) actionResult {
 	return actionComplete{}
 }
 
+// GetFirstDevice finds the first free matching device. The parameter machineName is optional.
+func GetFirstDevice(ctx context.Context, hvclient hvclient.Client, machineType infrav1.HivelocityDeviceType,
+	clusterName string, machineName string) (hv.BareMetalDevice, error) {
+	// list all devices
+	devices, err := hvclient.ListDevices(ctx)
+
+	if err != nil {
+		return hv.BareMetalDevice{}, err
+	}
+
+	// Since we don't have a LoadBalancer we use the IP of the first ControlPlane
+	// for hvCluster.Spec.ControlPlaneEndpoint. When the cluster gets created,
+	// and there are several available devices, we need to get a stable result.
+	// Later, if we have LoadBalancers, then we want to opposite behaviour.
+	// Then, we want list of devices to get randomized, to reduce conflicts
+	// during concurrent associating of devices.
+	sort.Slice(devices, func(i, j int) bool {
+		return devices[i].DeviceId < devices[j].DeviceId
+	})
+
+	return findAvailableDeviceFromList(devices, machineType, clusterName, machineName)
+}
+
 func findAvailableDeviceFromList(devices []hv.BareMetalDevice, deviceType infrav1.HivelocityDeviceType, clusterName, machineName string) (hv.BareMetalDevice, error) {
 	for _, device := range devices {
 		// Ignore if associated already
@@ -145,7 +164,7 @@ func findAvailableDeviceFromList(devices []hv.BareMetalDevice, deviceType infrav
 			// unexpected error - continue
 			continue
 		}
-		if machineTag.Value == machineName {
+		if machineName != "" && machineTag.Value == machineName {
 			// associated to this machine - return
 			return device, nil
 		}
@@ -247,45 +266,6 @@ func hasTimedOut(lastUpdated *metav1.Time, timeout time.Duration) bool {
 	return lastUpdated.Add(timeout).Before(now.Time)
 }
 
-// actionEnsureDeviceShutDown ensures that the device is shut down.
-// This happens through repeatedly calling ShutdownDevice, as the potential error messages of that endpoint
-// (e.g. 'device shut down already') are the most reliable source.
-func (s *Service) actionEnsureDeviceShutDown(ctx context.Context) actionResult {
-	log := s.scope.Logger.WithValues("function", "actionEnsureDeviceShutDown")
-	log.V(1).Info("Started function")
-
-	deviceID, err := s.scope.HivelocityMachine.DeviceIDFromProviderID()
-	if err != nil {
-		return actionError{err: fmt.Errorf("failed to get deviceID from providerID: %w", err)}
-	}
-
-	err = s.scope.HVClient.ShutdownDevice(ctx, deviceID)
-	s.handleRateLimitExceeded(err, "ShutdownDevice")
-	// if device is already shut down, we can go to the next step
-	if errors.Is(err, hvclient.ErrDeviceShutDownAlready) {
-		log.V(1).Info("Completed function")
-		return actionComplete{}
-	}
-
-	// temp check for unit tests. We need a better solution for this.
-	if os.Getenv("IS_UNIT_TEST") == "true" {
-		return actionContinue{}
-	}
-
-	// device has been shut down for the first time now
-	if err == nil {
-		return actionContinue{delay: 3 * time.Minute}
-	}
-
-	// device is not shut down yet - wait and call the function again
-	log.Info("Device is not shut down yet", "error from ShutDown endpoint", err)
-
-	// wait for another 10 seconds
-	// TODO: Make this flexible for unit tests that don't want to wait here and real-world cases where we
-	// have to wait longer for a device to be shut down
-	return actionContinue{delay: 30 * time.Second}
-}
-
 // actionProvisionDevice provisions the device.
 func (s *Service) actionProvisionDevice(ctx context.Context) actionResult {
 	log := s.scope.Logger.WithValues("function", "actionProvisionDevice")
@@ -361,10 +341,12 @@ func (s *Service) actionProvisionDevice(ctx context.Context) actionResult {
 	if _, err := s.scope.HVClient.ProvisionDevice(ctx, deviceID, opts); err != nil {
 		// TODO: Handle error that machine is not shut down
 		s.handleRateLimitExceeded(err, "ProvisionDevice")
-		record.Warnf(s.scope.HivelocityMachine, "FailedProvisionDevice", "Failed to provision device %v: %s", deviceID, err)
+		record.Warnf(s.scope.HivelocityMachine, "FailedProvisionDevice", "Failed to provision device %d: %s", deviceID, err)
 		return actionContinue{delay: 30 * time.Second}
 		// actionError{err: fmt.Errorf("failed to provision device %d: %s", deviceID, err)}
 	}
+
+	record.Eventf(s.scope.HivelocityMachine, "SuccessfulProvisionDevice", "Successfully provisioned device: %d", deviceID)
 
 	log.V(1).Info("Completed function")
 	return actionComplete{}
@@ -432,9 +414,20 @@ func (s *Service) actionDeviceProvisioned(ctx context.Context) actionResult {
 	// update machine object with infos from device
 	conditions.MarkTrue(s.scope.HivelocityMachine, infrav1.DeviceReadyCondition)
 	s.scope.HivelocityMachine.SetMachineStatus(device)
-	s.scope.HivelocityMachine.Status.Ready = true
+	if device.PowerStatus == hvclient.PowerStatusOff {
+		s.scope.HivelocityMachine.Status.Ready = false
+		log.Info("Power is off?",
+			"DeviceId", device.DeviceId,
+			"PowerStatus", device.PowerStatus)
+	} else {
+		s.scope.HivelocityMachine.Status.Ready = true
+	}
 
-	log.V(1).Info("Completed function")
+	log.V(1).Info("Completed function",
+		"DeviceId", device.DeviceId,
+		"PowerStatus", device.PowerStatus,
+		"script", utils.FirstN(device.Script, 50))
+
 	return actionComplete{}
 }
 
@@ -475,7 +468,7 @@ func (s *Service) actionDeleteDeviceDeProvision(ctx context.Context) actionResul
 	newTags, _ = s.scope.DeviceTagMachineType().RemoveFromList(newTags)
 
 	opts := hv.BareMetalDeviceUpdate{
-		Hostname:    s.scope.Name(),
+		Hostname:    s.scope.Name() + "-deleted.example.com",
 		Tags:        newTags,
 		OsName:      defaultImageName,
 		ForceReload: true,
@@ -485,9 +478,11 @@ func (s *Service) actionDeleteDeviceDeProvision(ctx context.Context) actionResul
 	if _, err := s.scope.HVClient.ProvisionDevice(ctx, deviceID, opts); err != nil {
 		// TODO: Handle error that machine is not shut down
 		s.handleRateLimitExceeded(err, "ProvisionDevice")
-		record.Warnf(s.scope.HivelocityMachine, "FailedDeProvisionDevice", "Failed to de-provision device %s: %s", deviceID, err)
+		record.Warnf(s.scope.HivelocityMachine, "FailedDeProvisionDevice", "Failed to de-provision device %d: %s", deviceID, err)
 		return actionError{err: fmt.Errorf("failed to de-provision device %d: %s", deviceID, err)}
 	}
+	record.Eventf(s.scope.HivelocityMachine, "SuccessfulDeProvisionDevice", "Successfully de-provision device %d", deviceID)
+
 	log.V(1).Info("Completed function")
 	return actionComplete{}
 }

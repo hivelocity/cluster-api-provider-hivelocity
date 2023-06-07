@@ -26,6 +26,8 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/antihax/optional"
+	"github.com/hivelocity/cluster-api-provider-hivelocity/pkg/utils"
 	hv "github.com/hivelocity/hivelocity-client-go/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 )
@@ -63,10 +65,13 @@ type HivelocityFactory struct{}
 var (
 	// ErrDeviceNotFound gets returned if no matching device was found.
 	ErrDeviceNotFound = fmt.Errorf("device was not found")
+
 	// ErrDeviceShutDownAlready indicates that the device is shut down already.
 	ErrDeviceShutDownAlready = fmt.Errorf("device is shut down already")
+
 	// ErrDeviceTurnedOnAlready indicates that the device turned on already.
 	ErrDeviceTurnedOnAlready = fmt.Errorf("device is turned on already")
+
 	// ErrRateLimitExceeded indicates that the device turned on already.
 	ErrRateLimitExceeded = fmt.Errorf("rate limit exceeded")
 )
@@ -121,14 +126,31 @@ func (c *realClient) PowerOnDevice(ctx context.Context, deviceID int32) error {
 }
 
 func (c *realClient) ProvisionDevice(ctx context.Context, deviceID int32, opts hv.BareMetalDeviceUpdate) (hv.BareMetalDevice, error) {
-	// https://developers.hivelocity.net/reference/put_bare_metal_device_id_resource
 	log := log.FromContext(ctx)
-	log.Info("calling ProvisionDevice()", "deviceID", deviceID, "opts", opts)
-
-	device, _, err := c.client.BareMetalDevicesApi.PutBareMetalDeviceIdResource(ctx, deviceID, opts, nil) //nolint:bodyclose // Close() gets done in client
 	var swaggerErr hv.GenericSwaggerError
+
+	// First we need to send "shutdown".
+	// https://developers.hivelocity.net/reference/post_power_resource
+	_, _, err := c.client.DeviceApi.PostPowerResource(ctx, deviceID, "shutdown", nil) //nolint:bodyclose // Close() gets done in client
 	if errors.As(err, &swaggerErr) {
-		log.Info("ProvisionDevice() failed", "body", string(swaggerErr.Body()))
+		body := string(swaggerErr.Body())
+		log.Info("ProvisionDevice() failed", "DeviceID", deviceID, "body", body)
+	}
+
+	log.Info("calling ProvisionDevice()", "DeviceID", deviceID, "hostname", opts.Hostname, "OsName", opts.OsName,
+		"script", utils.FirstN(opts.Script, 50),
+		"ForceReload", opts.ForceReload)
+
+	// https://developers.hivelocity.net/reference/put_bare_metal_device_id_resource
+	localVars := hv.BareMetalDevicesApiPutBareMetalDeviceIdResourceOpts{
+		SkipPowerCheck: optional.NewBool(true),
+	}
+
+	device, _, err := c.client.BareMetalDevicesApi.PutBareMetalDeviceIdResource(ctx, deviceID, opts, &localVars) //nolint:bodyclose // Close() gets done in client
+	if errors.As(err, &swaggerErr) {
+		body := string(swaggerErr.Body())
+		log.Info("ProvisionDevice() failed", "DeviceID", deviceID, "body", body)
+		err = fmt.Errorf("%s: %w", body, swaggerErr)
 	}
 	return device, checkRateLimit(err)
 }
@@ -141,11 +163,14 @@ func (c *realClient) ListDevices(ctx context.Context) ([]hv.BareMetalDevice, err
 func (c *realClient) ShutdownDevice(ctx context.Context, deviceID int32) error {
 	_, _, err := c.client.DeviceApi.PostPowerResource(ctx, deviceID, "shutdown", nil) //nolint:bodyclose // Close() gets done in client
 	if err != nil {
-		err, ok := err.(hv.GenericSwaggerError)
+		swaggerErr, ok := err.(hv.GenericSwaggerError)
 		if ok {
-			if strings.Contains(string(err.Body()), "Can't do this while server is powered off.") {
+			body := string(swaggerErr.Body())
+			if strings.Contains(body, "Can't do this while server is powered off.") {
 				return ErrDeviceShutDownAlready
+
 			}
+			err = fmt.Errorf("%s: %w", body, err)
 		}
 		return checkRateLimit(err)
 	}

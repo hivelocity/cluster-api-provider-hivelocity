@@ -14,6 +14,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+if [ ! -s "$KUBECONFIG" ]; then
+    ./hack/get-kubeconfig-of-management-cluster.sh
+fi
+
 function print_heading() {
     green='\033[0;32m'
     nc='\033[0m' # No Color
@@ -42,7 +46,7 @@ print_heading logs
 
 echo
 
-ip=$(kubectl get machine -l cluster.x-k8s.io/control-plane  -o  jsonpath='{.items[0].status.addresses[?(@.type=="InternalIP")].address}' | head -1)
+ip=$(kubectl get machine -A -l cluster.x-k8s.io/control-plane  -o  jsonpath='{.items[0].status.addresses[?(@.type=="InternalIP")].address}' | head -1)
 if [ -z "$ip" ]; then
     echo "❌ Could not get IP of control-plane"
     exit 1

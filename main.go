@@ -22,7 +22,7 @@ import (
 	"fmt"
 	"os"
 
-	infrastructurev1alpha1 "github.com/hivelocity/cluster-api-provider-hivelocity/api/v1alpha1"
+	infrav1 "github.com/hivelocity/cluster-api-provider-hivelocity/api/v1alpha1"
 	"github.com/hivelocity/cluster-api-provider-hivelocity/controllers"
 	hvclient "github.com/hivelocity/cluster-api-provider-hivelocity/pkg/services/hivelocity/client"
 	"github.com/hivelocity/cluster-api-provider-hivelocity/pkg/utils"
@@ -47,7 +47,7 @@ func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 	utilruntime.Must(clusterv1.AddToScheme(scheme))
 	utilruntime.Must(bootstrapv1.AddToScheme(scheme))
-	utilruntime.Must(infrastructurev1alpha1.AddToScheme(scheme))
+	utilruntime.Must(infrav1.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 }
 
@@ -66,8 +66,8 @@ func main() {
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
 	flag.BoolVar(&enableLeaderElection, "leader-elect", true, "Enable leader election for controller manager. Enabling this will ensure there is only one active controller manager.")
 	flag.StringVar(&leaderElectionNamespace, "leader-elect-namespace", "", "Namespace that the controller performs leader election in. If unspecified, the controller will discover which namespace it is running in.")
-	flag.IntVar(&hivelocityClusterConcurrency, "hetznercluster-concurrency", 1, "Number of HetznerClusters to process simultaneously")
-	flag.IntVar(&hivelocityMachineConcurrency, "hivelocitymachine-concurrency", 1, "Number of HcloudMachines to process simultaneously")
+	flag.IntVar(&hivelocityClusterConcurrency, "hivelocitycluster-concurrency", 1, "Number of HivelocityClusters to process simultaneously")
+	flag.IntVar(&hivelocityMachineConcurrency, "hivelocitymachine-concurrency", 1, "Number of HivelocityMachines to process simultaneously")
 	flag.StringVar(&watchFilterValue, "watch-filter", "", fmt.Sprintf("Label value that the controller watches to reconcile cluster-api objects. Label key is always %s. If unspecified, the controller watches for all cluster-api objects.", clusterv1.WatchLabel))
 	flag.StringVar(&watchNamespace, "namespace", "", "Namespace that the controller watches to reconcile cluster-api objects. If unspecified, the controller watches for cluster-api objects across all namespaces.")
 	flag.StringVar(&logLevel, "log-level", "debug", "Specifies log level. Options are 'debug', 'info' and 'error'")
@@ -94,7 +94,7 @@ func main() {
 	}
 
 	// Initialize event recorder.
-	record.InitFromRecorder(mgr.GetEventRecorderFor("hetzner-controller"))
+	record.InitFromRecorder(mgr.GetEventRecorderFor("hv-controller"))
 
 	// Setup the context that's going to be used in controllers and for the manager.
 	ctx := ctrl.SetupSignalHandler()
@@ -141,27 +141,27 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "HivelocityRemediationTemplate")
 		os.Exit(1)
 	}
-	if err = (&infrastructurev1alpha1.HivelocityCluster{}).SetupWebhookWithManager(mgr); err != nil {
+	if err = (&infrav1.HivelocityCluster{}).SetupWebhookWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create webhook", "webhook", "HivelocityCluster")
 		os.Exit(1)
 	}
-	if err = (&infrastructurev1alpha1.HivelocityClusterTemplate{}).SetupWebhookWithManager(mgr); err != nil {
+	if err = (&infrav1.HivelocityClusterTemplate{}).SetupWebhookWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create webhook", "webhook", "HivelocityClusterTemplate")
 		os.Exit(1)
 	}
-	if err = (&infrastructurev1alpha1.HivelocityMachine{}).SetupWebhookWithManager(mgr); err != nil {
+	if err = (&infrav1.HivelocityMachine{}).SetupWebhookWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create webhook", "webhook", "HivelocityMachine")
 		os.Exit(1)
 	}
-	if err = (&infrastructurev1alpha1.HivelocityMachineTemplateWebhook{}).SetupWebhookWithManager(mgr); err != nil {
+	if err = (&infrav1.HivelocityMachineTemplateWebhook{}).SetupWebhookWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create webhook", "webhook", "HivelocityMachineTemplate")
 		os.Exit(1)
 	}
-	if err = (&infrastructurev1alpha1.HivelocityRemediation{}).SetupWebhookWithManager(mgr); err != nil {
+	if err = (&infrav1.HivelocityRemediation{}).SetupWebhookWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create webhook", "webhook", "HivelocityRemediation")
 		os.Exit(1)
 	}
-	if err = (&infrastructurev1alpha1.HivelocityRemediationTemplate{}).SetupWebhookWithManager(mgr); err != nil {
+	if err = (&infrav1.HivelocityRemediationTemplate{}).SetupWebhookWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create webhook", "webhook", "HivelocityRemediationTemplate")
 		os.Exit(1)
 	}

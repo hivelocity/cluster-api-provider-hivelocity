@@ -167,7 +167,7 @@ var _ = Describe("Hivelocity ClusterReconciler", func() {
 				Expect(testEnv.Cleanup(ctx, capiCluster)).To(Succeed())
 			}()
 
-			// Make sure the HCloudCluster exists.
+			// Make sure the HivelocityCluster exists.
 			Eventually(func() error {
 				return testEnv.Get(ctx, client.ObjectKey{Namespace: namespace, Name: hvCluster.Name}, hvCluster)
 			}, timeout, 100*time.Millisecond).Should(BeNil())
@@ -215,7 +215,7 @@ var _ = Describe("Hivelocity ClusterReconciler", func() {
 						},
 					},
 					Spec: infrav1.HivelocityMachineSpec{
-						ImageName: "fedora-control-plane",
+						ImageName: "Ubuntu 20.x",
 						Type:      "pool",
 					},
 				}
@@ -460,10 +460,10 @@ var _ = Describe("Hivelocity secret", func() {
 				Namespace: "default",
 			},
 			Data: map[string][]byte{
-				"HIVELOCITY_API_KEY": []byte("my-token"),
+				"HIVELOCITY_API_KEY": []byte("my-api-key"),
 			},
 		}, infrav1.HivelocitySecretUnreachableReason),
-		Entry("empty hivelocity token", corev1.Secret{
+		Entry("empty hivelocity api key", corev1.Secret{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      "hv-secret",
 				Namespace: "default",
@@ -478,7 +478,7 @@ var _ = Describe("Hivelocity secret", func() {
 				Namespace: "default",
 			},
 			Data: map[string][]byte{
-				"wrongkey": []byte("my-token"),
+				"wrongkey": []byte("my-api-key"),
 			},
 		}, infrav1.HivelocityCredentialsInvalidReason),
 	)

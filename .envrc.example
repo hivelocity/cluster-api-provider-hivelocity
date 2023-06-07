@@ -1,2 +1,3 @@
 # https://direnv.net/
 export HIVELOCITY_API_KEY=...
+export KUBECONFIG=$PWD/.mgt-cluster-kubeconfig.yaml
