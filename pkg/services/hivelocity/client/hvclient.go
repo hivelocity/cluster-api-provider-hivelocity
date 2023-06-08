@@ -144,9 +144,8 @@ func (c *realClient) ProvisionDevice(ctx context.Context, deviceID int32, opts h
 			body := string(swaggerErr.Body())
 			log.Info("ProvisionDevice() failed (PostPowerResource)", "DeviceID", deviceID, "body", body)
 		}
+		time.Sleep(5 * time.Second)
 	}
-
-	time.Sleep(5 * time.Second)
 
 	log.Info("calling ProvisionDevice()", "DeviceID", deviceID, "hostname", opts.Hostname, "OsName", opts.OsName,
 		"script", utils.FirstN(opts.Script, 50),
