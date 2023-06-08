@@ -25,6 +25,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/antihax/optional"
 	"github.com/hivelocity/cluster-api-provider-hivelocity/pkg/utils"
@@ -129,13 +130,23 @@ func (c *realClient) ProvisionDevice(ctx context.Context, deviceID int32, opts h
 	log := log.FromContext(ctx)
 	var swaggerErr hv.GenericSwaggerError
 
-	// First we need to send "shutdown".
-	// https://developers.hivelocity.net/reference/post_power_resource
-	_, _, err := c.client.DeviceApi.PostPowerResource(ctx, deviceID, "shutdown", nil) //nolint:bodyclose // Close() gets done in client
+	power, _, err := c.client.DeviceApi.GetPowerResource(ctx, deviceID, nil) //nolint:bodyclose // Close() gets done in client
 	if errors.As(err, &swaggerErr) {
 		body := string(swaggerErr.Body())
-		log.Info("ProvisionDevice() failed", "DeviceID", deviceID, "body", body)
+		log.Info("ProvisionDevice() failed (GetPowerResource)", "DeviceID", deviceID, "body", body)
 	}
+
+	if power.PowerStatus == "ON" {
+		// First we need to send "shutdown".
+		// https://developers.hivelocity.net/reference/post_power_resource
+		_, _, err := c.client.DeviceApi.PostPowerResource(ctx, deviceID, "shutdown", nil) //nolint:bodyclose // Close() gets done in client
+		if errors.As(err, &swaggerErr) {
+			body := string(swaggerErr.Body())
+			log.Info("ProvisionDevice() failed (PostPowerResource)", "DeviceID", deviceID, "body", body)
+		}
+	}
+
+	time.Sleep(5 * time.Second)
 
 	log.Info("calling ProvisionDevice()", "DeviceID", deviceID, "hostname", opts.Hostname, "OsName", opts.OsName,
 		"script", utils.FirstN(opts.Script, 50),
@@ -149,7 +160,7 @@ func (c *realClient) ProvisionDevice(ctx context.Context, deviceID int32, opts h
 	device, _, err := c.client.BareMetalDevicesApi.PutBareMetalDeviceIdResource(ctx, deviceID, opts, &localVars) //nolint:bodyclose // Close() gets done in client
 	if errors.As(err, &swaggerErr) {
 		body := string(swaggerErr.Body())
-		log.Info("ProvisionDevice() failed", "DeviceID", deviceID, "body", body)
+		log.Info("ProvisionDevice() failed (PutBareMetalDeviceIdResource)", "DeviceID", deviceID, "body", body)
 		err = fmt.Errorf("%s: %w", body, swaggerErr)
 	}
 	return device, checkRateLimit(err)

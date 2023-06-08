@@ -203,7 +203,7 @@ func (r *HivelocityClusterReconciler) reconcileNormal(ctx context.Context, clust
 	}
 
 	if err := reconcileTargetSecret(ctx, clusterScope); err != nil {
-		return reconcile.Result{}, fmt.Errorf("failed to reconcile target secret: %w", err)
+		return reconcile.Result{RequeueAfter: 30 * time.Second}, fmt.Errorf("failed to reconcile target secret: %s", err)
 	}
 
 	log.V(1).Info("Reconciling finished")

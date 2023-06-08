@@ -63,6 +63,8 @@ func CaphvClusterDeploymentSpec(ctx context.Context, inputGetter func() CaphvClu
 		gomega.Expect(os.MkdirAll(input.ArtifactFolder, 0750)).To(gomega.Succeed(), "Invalid argument. input.ArtifactFolder can't be created for %s spec", specName)
 		gomega.Expect(input.E2EConfig.Variables).To(gomega.HaveKey(KubernetesVersion))
 		gomega.Expect(input.E2EConfig.Variables).To(HaveValidVersion(input.E2EConfig.GetVariable(KubernetesVersion)))
+		gomega.Expect(input.ControlPlaneMachineCount).To(gomega.BeNumerically(">", 0))
+		gomega.Expect(input.WorkerMachineCount).To(gomega.BeNumerically(">", 0))
 
 		// Setup a Namespace where to host objects for this spec and create a watcher for the namespace events.
 		namespace, cancelWatches = setupSpecNamespace(ctx, specName, input.BootstrapClusterProxy, input.ArtifactFolder)
@@ -71,9 +73,9 @@ func CaphvClusterDeploymentSpec(ctx context.Context, inputGetter func() CaphvClu
 		clusterName = fmt.Sprintf("%s-%s", specName, util.RandomString(6))
 	})
 
-	ginkgo.It(fmt.Sprintf("Should successfully create a cluster with %d control planes and %d worker machines",
-		input.ControlPlaneMachineCount, input.WorkerMachineCount), func() {
-		ginkgo.By("Creating a workload cluster")
+	ginkgo.It("Should successfully create a cluster with control planes and worker machines", func() {
+		ginkgo.By(fmt.Sprintf("Creating a cluster: %d control-planes %d worker", input.ControlPlaneMachineCount,
+			input.WorkerMachineCount))
 		clusterctl.ApplyClusterTemplateAndWait(ctx, clusterctl.ApplyClusterTemplateAndWaitInput{
 			ClusterProxy: input.BootstrapClusterProxy,
 			ConfigCluster: clusterctl.ConfigClusterInput{
@@ -85,8 +87,8 @@ func CaphvClusterDeploymentSpec(ctx context.Context, inputGetter func() CaphvClu
 				Namespace:                namespace.Name,
 				ClusterName:              clusterName,
 				KubernetesVersion:        input.E2EConfig.GetVariable(KubernetesVersion),
-				ControlPlaneMachineCount: pointer.Int64Ptr(input.ControlPlaneMachineCount),
-				WorkerMachineCount:       pointer.Int64Ptr(input.WorkerMachineCount),
+				ControlPlaneMachineCount: pointer.Int64(input.ControlPlaneMachineCount),
+				WorkerMachineCount:       pointer.Int64(input.WorkerMachineCount),
 			},
 			WaitForClusterIntervals:      input.E2EConfig.GetIntervals(specName, "wait-cluster"),
 			WaitForControlPlaneIntervals: input.E2EConfig.GetIntervals(specName, "wait-control-plane"),
