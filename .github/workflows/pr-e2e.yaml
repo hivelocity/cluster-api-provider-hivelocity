@@ -37,18 +37,18 @@ jobs:
         id: manager-image
         uses: ./.github/actions/manager-image
 
-  # test-release:
-  #   name: Create a Test Release
-  #   if: github.event_name != 'pull_request_target' || !github.event.pull_request.draft
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - name: checkout
-  #       uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3
-  #       with:
-  #         ref: ${{ github.event.pull_request.head.sha }}
-  #     - name: Test Release
-  #       id: manager-image
-  #       uses: ./.github/actions/test-release
+  test-release:
+    name: Create a Test Release
+    if: github.event_name != 'pull_request_target' || !github.event.pull_request.draft
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      #- name: Test Release
+      #  id: manager-image
+      #  uses: ./.github/actions/test-release
 
   e2e-basic:
     name: End-to-End Test Basic
@@ -57,7 +57,7 @@ jobs:
     runs-on: ubuntu-latest
     needs:
       - manager-image
-      #- test-release
+      - test-release
     steps:
       - name: checkout
         uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3
