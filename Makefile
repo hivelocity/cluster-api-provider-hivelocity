@@ -487,7 +487,7 @@ clean-release: ## Remove the release folder
 
 .PHONY: clean-release-git
 clean-release-git: ## Restores the git files usually modified during a release
-	git restore ./*manager_image_patch.yaml ./*manager_pull_policy.yaml
+	git restore ./*manager_config_patch.yaml ./*manager_pull_policy.yaml
 
 ##@ Release
 
@@ -535,7 +535,8 @@ release-notes: $(RELEASE_NOTES_DIR) $(RELEASE_NOTES)
 .PHONY: set-manifest-image
 set-manifest-image:
 	$(info Updating kustomize image patch file for default resource)
-	sed -i'' -e 's@image: .*@image: '"${MANIFEST_IMG}:$(MANIFEST_TAG)"'@' ./config/default/manager_image_patch.yaml
+	sed -i'' -e 's@image: .*@image: '"${MANIFEST_IMG}:$(MANIFEST_TAG)"'@' ./config/default/manager_config_patch.yaml
+
 
 .PHONY: set-manifest-pull-policy
 set-manifest-pull-policy:
