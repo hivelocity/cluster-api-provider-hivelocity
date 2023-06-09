@@ -186,7 +186,7 @@ func (s *ClusterScope) ListMachines(ctx context.Context) ([]*clusterv1.Machine, 
 	return machineList, hivelocityMachineList, nil
 }
 
-// ErrWorkloadControlPlaneNotReady indicates that the control plane is not ready (or not reachable)
+// ErrWorkloadControlPlaneNotReady indicates that the control plane is not ready (or not reachable).
 var ErrWorkloadControlPlaneNotReady = errors.New("Workload ControlPlane not Ready (or not reachable)")
 
 // IsControlPlaneReady returns nil if the control plane is ready.
