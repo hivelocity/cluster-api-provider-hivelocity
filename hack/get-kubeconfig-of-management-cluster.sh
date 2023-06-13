@@ -28,11 +28,20 @@ if [ -s "$kubeconfig" ]; then
     rm .mgt-cluster-kubeconfig.yaml
 fi
 
+# There are two cases:
+#   1. Cluster started via Makefile/Tilt
+#   2. An e2e2 test.
 
-cluster_name=$(yq .managementClusterName test/e2e/config/hivelocity-ci-envsubst.yaml)
-if [[ $(kind get clusters 2>/dev/null) != *"$cluster_name"* ]]; then
-    echo "kind cluster $cluster_name does not exist any more."
-    exit 1
+if [ "$(kubectl config current-config)" = "kind-caphv" ]; then
+    # Cluster started via Maekfile/Tilt
+    cluster_name=caphv
+else
+    # e2e Test
+    cluster_name=$(yq .managementClusterName test/e2e/config/hivelocity-ci-envsubst.yaml)
+    if [[ $(kind get clusters 2>/dev/null) != *"$cluster_name"* ]]; then
+        echo "kind cluster $cluster_name does not exist any more."
+        exit 1
+    fi
 fi
 kind get kubeconfig --name="$cluster_name" > $kubeconfig
 chmod a=,u=rw $kubeconfig

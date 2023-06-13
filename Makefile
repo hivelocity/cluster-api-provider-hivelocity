@@ -444,7 +444,7 @@ create-workload-cluster: $(KUSTOMIZE) $(ENVSUBST) ## Creates a workload-cluster.
 	@test $${HIVELOCITY_API_KEY?Environment variable is required}
 	rm -f $(CAPHV_WORKER_CLUSTER_KUBECONFIG)
 	go run test/upload-ssh-pub-key/upload-ssh-pub-key.go
-	go run test/claim-devices-or-fail/claim-devices-or-fail.go
+	go run test/claim-devices-or-fail/claim-devices-or-fail.go hvControlPlane hvWorker
 	kubectl create secret generic hivelocity --from-literal=hivelocity=$(HIVELOCITY_API_KEY) --save-config --dry-run=client -o yaml | kubectl apply -f -
 	$(KUSTOMIZE) build templates/cluster-templates/hivelocity --load-restrictor LoadRestrictionsNone  > templates/cluster-templates/cluster-template-hivelocity.yaml
 	cat templates/cluster-templates/cluster-template-hivelocity.yaml | $(ENVSUBST) - > templates/cluster-templates/cluster-template-hivelocity.yaml.apply

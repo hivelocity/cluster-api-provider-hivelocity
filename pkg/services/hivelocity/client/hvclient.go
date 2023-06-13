@@ -136,7 +136,7 @@ func (c *realClient) ProvisionDevice(ctx context.Context, deviceID int32, opts h
 		log.Info("ProvisionDevice() failed (GetPowerResource)", "DeviceID", deviceID, "body", body)
 	}
 
-	if power.PowerStatus == "ON" {
+	if power.PowerStatus == PowerStatusOn {
 		// First we need to send "shutdown".
 		// https://developers.hivelocity.net/reference/post_power_resource
 		_, _, err := c.client.DeviceApi.PostPowerResource(ctx, deviceID, "shutdown", nil) //nolint:bodyclose // Close() gets done in client

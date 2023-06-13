@@ -19,6 +19,7 @@ package controllers
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -203,7 +204,11 @@ func (r *HivelocityClusterReconciler) reconcileNormal(ctx context.Context, clust
 	}
 
 	if err := reconcileTargetSecret(ctx, clusterScope); err != nil {
-		return reconcile.Result{RequeueAfter: 30 * time.Second}, fmt.Errorf("failed to reconcile target secret: %s", err)
+		if errors.Is(err, scope.ErrWorkloadControlPlaneNotReady) {
+			log.V(1).Info(err.Error())
+			return reconcile.Result{RequeueAfter: 30 * time.Second}, nil
+		}
+		return reconcile.Result{}, err
 	}
 
 	log.V(1).Info("Reconciling finished")
@@ -365,11 +370,10 @@ func reconcileTargetSecret(ctx context.Context, clusterScope *scope.ClusterScope
 	}
 
 	if err := scope.IsControlPlaneReady(ctx, clientConfig); err != nil {
-		clusterScope.V(1).Info("Workload Control plane not ready - reconcile target secret again")
 		return err
 	}
 
-	// Workload control plane ready, so we can check if the secret exists already
+	// Workload Control plane ready, so we can check if the secret exists already
 
 	// getting client set
 	restConfig, err := clientConfig.ClientConfig()

@@ -186,18 +186,24 @@ func (s *ClusterScope) ListMachines(ctx context.Context) ([]*clusterv1.Machine, 
 	return machineList, hivelocityMachineList, nil
 }
 
+// ErrWorkloadControlPlaneNotReady indicates that the control plane is not ready (or not reachable).
+var ErrWorkloadControlPlaneNotReady = errors.New("Workload ControlPlane not Ready (or not reachable)")
+
 // IsControlPlaneReady returns nil if the control plane is ready.
 func IsControlPlaneReady(ctx context.Context, c clientcmd.ClientConfig) error {
 	restConfig, err := c.ClientConfig()
 	if err != nil {
-		return err
+		return fmt.Errorf("%w: %w", ErrWorkloadControlPlaneNotReady, err)
 	}
 
 	clientSet, err := kubernetes.NewForConfig(restConfig)
 	if err != nil {
-		return err
+		return fmt.Errorf("%w: %w", ErrWorkloadControlPlaneNotReady, err)
 	}
 
 	_, err = clientSet.Discovery().RESTClient().Get().AbsPath("/readyz").DoRaw(ctx)
-	return err
+	if err != nil {
+		return fmt.Errorf("%w: %w", ErrWorkloadControlPlaneNotReady, err)
+	}
+	return nil
 }
