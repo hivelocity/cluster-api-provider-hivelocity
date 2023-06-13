@@ -22,8 +22,7 @@ With the Cluster API Provider Hivelocity, you can trust that your infrastructure
 
 If you want to manage Kubernetes yourself, please contact [Hivelocity](https://www.hivelocity.net/about/contact-us/) to set up your infrastructure.
 
-If you need support for Kubernetes on Hivelocity, you can contact [Syself](https://syself.com/).
-
+If you have questions regarding running (production-ready) clusters with CAPHV, then ask [Syself](https://syself.com/).
 
 ## :sparkles: Features
 
@@ -77,7 +76,8 @@ Participation in the Kubernetes community is governed by the [Kubernetes Code of
 
 ### :bug: Bugs
 
-If you think you have found a bug, please follow these steps:
+If you think you have found a bug, please follow these steps. Even if it just a small
+typo in the docs, please tell us how we can improve the project!
 
 - Take some time to do due diligence in the issue tracker. Your issue might be a duplicate.
 - Get the logs from the cluster controllers and paste them into your issue.
