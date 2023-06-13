@@ -1,27 +1,29 @@
+
 # Kubernetes Cluster API Provider Hivelocity
 
 > :warning: This project is in the development stage. DO NOT USE IN PRODUCTION! :warning:
 
-The Hivelocity Provider is a Kubernetes-native tool that allows you to easily create and manage declarative infrastructure for your Kubernetes clusters on Hivelocity's infrastructure. It offers options for high availability on instant bare metal or custom dedicated setups and simplifies the process of creating, updating, and operating production-ready clusters.
+The Hivelocity Provider is a Kubernetes-native tool that allows you to manager Kubernetes clusters on Hivelocity's infrastructure.
+
+It offers options for high availability on instant bare metal and simplifies the process of creating, updating, and operating production-ready clusters.
 
 You can find more information about Hivelocity and their infrastructure at https://www.hivelocity.net/.
 
 
-> If you have questions or are interested in running production-ready Kubernetes clusters on Hivelocity, then please contact us [Hivelocity](https://www.hivelocity.net/about/contact-us/).
-
-If you have questions regarding running (production-ready) clusters with CAPHV, then ask [Syself](https://syself.com/).
-
 ## :newspaper: What is the Cluster API Provider Hivelocity?
-The Cluster API is an operator that manages infrastructure in a similar way to how Kubernetes manages containers. It uses a declarative API and includes controllers that ensure the desired state of the infrastructure is maintained. This approach, called Infrastructure as Software, allows for more automatic reactions to changes and problems compared to Infrastructure as Code solutions.
 
-The Hivelocity Provider is the infrastructure component of the Cluster API stack that allows the Cluster API to be used on Hivelocity's infrastructure. It enables the creation of stable and highly available Kubernetes clusters, allowing organizations to benefit from the advantages of declarative infrastructure and cost-effectiveness on a global scale. The Hivelocity Provider allows for the creation of stable and highly available Kubernetes clusters on certified HIPAA, PCI, ISAE-3402, SSAE 16 SOC1, and SOC2 infrastructure around the globe.
+[Cluster API](https://cluster-api.sigs.k8s.io/) is an operator that manages infrastructure in a similar way to how Kubernetes manages containers. It uses a declarative API and includes controllers that ensure the desired state of the infrastructure is maintained. This approach, called Infrastructure as Software, allows for more automatic reactions to changes and problems compared to Infrastructure as Code solutions.
 
-With the Hivelocity Provider, you can trust that your infrastructure is in good hands with a provider that has a track record of dynamic performance, static pricing, and a global presence.
+The Cluster API Provider Hivelocity (CAPHV) is the infrastructure component of the Cluster API stack. It allows the Cluster API to be used on Hivelocity's infrastructure. It enables the creation of stable and highly available Kubernetes clusters, allowing organizations to benefit from the advantages of declarative infrastructure and cost-effectiveness on a global scale. The Hivelocity Provider allows for the creation of stable and highly available Kubernetes clusters on certified HIPAA, PCI, ISAE-3402, SSAE 16 SOC1, and SOC2 infrastructure around the globe.
 
----
-## :book: Documentation
+With the Cluster API Provider Hivelocity, you can trust that your infrastructure is in good hands with a provider that has a track record of dynamic performance, static pricing, and a global presence.
 
-Please see our [book](https://hivelocity.github.io/cluster-api-provider-hivelocity) for in-depth documentation.
+## :telephone_receiver: Support
+
+If you want to manage Kubernetes yourself, please contact [Hivelocity](https://www.hivelocity.net/about/contact-us/) to get your infrastructure.
+
+If you need support for Kubernetes on Hivelocity, you can contact [Syself](https://syself.com/).
+
 
 ## :sparkles: Features
 
@@ -31,7 +33,7 @@ Please see our [book](https://hivelocity.github.io/cluster-api-provider-hiveloci
 * Support for single and multi-node control plane clusters (HA Kubernetes)
 * Doesn't use SSH for bootstrapping nodes.
 * Day 2 operations including: updating Kubernetes and nodes, scaling, and self-healing
-* Custom CSR approver for approving kubelet-serving certificate signing requests
+* (Custom CSR approver for approving kubelet-serving certificate signing requests)
 * Support for both Hivelocity instant bare metal and custom dedicated setups
 
 
@@ -45,7 +47,15 @@ Please see: https://hivelocity.github.io/cluster-api-provider-hivelocity/referen
 
 **NOTE:** As the versioning for this project is tied to the versioning of Cluster API, future modifications to this policy may be made to more closely align with other providers in the Cluster API ecosystem.
 
----
+## :book: Documentation
+
+Please see our [book](https://hivelocity.github.io/cluster-api-provider-hivelocity) for in-depth documentation.
+
+## :question: Questions?
+
+* If you have a question related to hardware: [Hivelocity](https://www.hivelocity.net/about/contact-us/)
+* If you have a question related to the Cluster API Provider Hivelocity: [Github Discussions](https://github.com/hivelocity/cluster-api-provider-hivelocity/discussions)
+* If you need commercial support for Cluster API Provider Hivelocity: [Syself](https://syself.com)
 
 ## :busts_in_silhouette: Getting Involved and Contributing
 
