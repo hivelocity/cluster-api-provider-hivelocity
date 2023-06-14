@@ -8,4 +8,3 @@ kustomize_substitutions:
   WORKER_MACHINE_COUNT: "1"
   KUBERNETES_VERSION: v1.25.2
   HIVELOCITY_IMAGE_NAME: 1.25.2-ubuntu-20.04-containerd
-  CLUSTER_NAME: hvtest
