@@ -153,28 +153,25 @@
 <blockquote>
 <p>⚠ This project is in the development stage. DO NOT USE IN PRODUCTION! ⚠</p>
 </blockquote>
-<p>The Hivelocity Provider is a Kubernetes-native tool that allows you to easily create and manage declarative infrastructure for your Kubernetes clusters on Hivelocity’s infrastructure. It offers options for high availability on instant bare metal or custom dedicated setups and simplifies the process of creating, updating, and operating production-ready clusters.</p>
+<p>The Hivelocity Provider is a Kubernetes-native tool that allows you to manage Kubernetes clusters on Hivelocity’s infrastructure.</p>
+<p>It offers options for high availability with instant bare metal and simplifies the process of creating, updating, and operating production-ready clusters.</p>
 <p>You can find more information about Hivelocity and their infrastructure at https://www.hivelocity.net/.</p>
-<blockquote>
-<p>If you have questions or are interested in running production-ready Kubernetes clusters on Hivelocity, then please contact us <a href="https://www.hivelocity.net/about/contact-us/">Hivelocity</a>.</p>
-</blockquote>
-<p>If you have questions regarding running (production-ready) clusters with CAPHV, then ask <a href="https://syself.com/">Syself</a>.</p>
 <h2 id="-what-is-the-cluster-api-provider-hivelocity"><a class="header" href="#-what-is-the-cluster-api-provider-hivelocity">📰 What is the Cluster API Provider Hivelocity?</a></h2>
-<p>The Cluster API is an operator that manages infrastructure in a similar way to how Kubernetes manages containers. It uses a declarative API and includes controllers that ensure the desired state of the infrastructure is maintained. This approach, called Infrastructure as Software, allows for more automatic reactions to changes and problems compared to Infrastructure as Code solutions.</p>
-<p>The Hivelocity Provider is the infrastructure component of the Cluster API stack that allows the Cluster API to be used on Hivelocity’s infrastructure. It enables the creation of stable and highly available Kubernetes clusters, allowing organizations to benefit from the advantages of declarative infrastructure and cost-effectiveness on a global scale. The Hivelocity Provider allows for the creation of stable and highly available Kubernetes clusters on certified HIPAA, PCI, ISAE-3402, SSAE 16 SOC1, and SOC2 infrastructure around the globe.</p>
-<p>With the Hivelocity Provider, you can trust that your infrastructure is in good hands with a provider that has a track record of dynamic performance, static pricing, and a global presence.</p>
-<hr />
-<h2 id="-documentation"><a class="header" href="#-documentation">📖 Documentation</a></h2>
-<p>Please see our <a href="https://hivelocity.github.io/cluster-api-provider-hivelocity">book</a> for in-depth documentation.</p>
+<p><a href="https://cluster-api.sigs.k8s.io/">Cluster API</a> is an operator that manages infrastructure similarly to how Kubernetes manages containers. It uses a declarative API and includes controllers that ensure the desired state of the infrastructure is maintained. This approach, referred to as Infrastructure as Software, allows for more automatic reactions to changes and problems compared to Infrastructure as Code solutions.</p>
+<p>The Cluster API Provider Hivelocity (CAPHV) is the infrastructure component of the Cluster API stack. It enables the use of the Cluster API on Hivelocity’s infrastructure, facilitating the creation of stable and highly available Kubernetes clusters. This allows organizations to benefit from the advantages of declarative infrastructure and cost-effectiveness on a global scale. The Hivelocity Provider enables the creation of stable and highly available Kubernetes clusters on certified HIPAA, PCI, ISAE-3402, SSAE 16 SOC1, and SOC2 infrastructure around the globe.</p>
+<p>With the Cluster API Provider Hivelocity, you can trust that your infrastructure is in good hands with a provider that has a track record of dynamic performance, static pricing, and a global presence.</p>
+<h2 id="-support"><a class="header" href="#-support">📞 Support</a></h2>
+<p>If you want to manage Kubernetes yourself, please contact <a href="https://www.hivelocity.net/about/contact-us/">Hivelocity</a> to set up your infrastructure.</p>
+<p>If you have questions regarding running (production-ready) clusters with CAPHV, then ask <a href="https://syself.com/">Syself</a>.</p>
 <h2 id="-features"><a class="header" href="#-features">✨ Features</a></h2>
 <ul>
 <li>Native Kubernetes manifests and API</li>
-<li>Manages the bootstrapping of Networking and devices.</li>
+<li>Manages the bootstrapping of networking and devices</li>
 <li>Choice of Linux distribution</li>
 <li>Support for single and multi-node control plane clusters (HA Kubernetes)</li>
-<li>Doesn’t use SSH for bootstrapping nodes.</li>
-<li>Day 2 operations including: updating Kubernetes and nodes, scaling, and self-healing</li>
-<li>Custom CSR approver for approving kubelet-serving certificate signing requests</li>
+<li>Does not use SSH for bootstrapping nodes</li>
+<li>Day 2 operations including updating Kubernetes and nodes, scaling, and self-healing</li>
+<li>Custom CSR approver for approving kubelet-serving certificate signing requests (coming soon)</li>
 <li>Support for both Hivelocity instant bare metal and custom dedicated setups</li>
 </ul>
 <h2 id="-get-started"><a class="header" href="#-get-started">🚀 Get Started</a></h2>
@@ -182,49 +179,65 @@
 <h2 id="-compatibility-with-cluster-api-and-kubernetes-versions"><a class="header" href="#-compatibility-with-cluster-api-and-kubernetes-versions">🔥 Compatibility with Cluster API and Kubernetes Versions</a></h2>
 <p>Please see: https://hivelocity.github.io/cluster-api-provider-hivelocity/reference/versions.html</p>
 <p><strong>NOTE:</strong> As the versioning for this project is tied to the versioning of Cluster API, future modifications to this policy may be made to more closely align with other providers in the Cluster API ecosystem.</p>
-<hr />
+<h2 id="-documentation"><a class="header" href="#-documentation">📖 Documentation</a></h2>
+<p>Please see our <a href="https://hivelocity.github.io/cluster-api-provider-hivelocity">book</a> for in-depth documentation.</p>
+<h2 id="-questions"><a class="header" href="#-questions">❓ Questions?</a></h2>
+<ul>
+<li>If you have a question related to hardware: <a href="https://www.hivelocity.net/about/contact-us/">Hivelocity</a></li>
+<li>If you have a question related to the Cluster API Provider Hivelocity: <a href="https://github.com/hivelocity/cluster-api-provider-hivelocity/discussions">Github Discussions</a></li>
+<li>If you need commercial support for Cluster API Provider Hivelocity: <a href="https://syself.com">Syself</a></li>
+</ul>
 <h2 id="-getting-involved-and-contributing"><a class="header" href="#-getting-involved-and-contributing">👥 Getting Involved and Contributing</a></h2>
-<p>Are you interested in contributing to Cluster API Provider Hivelocity? We, the
-maintainers and community, would love your suggestions, contributions, and help!
-If you want to learn more about how to get involved, you can contact the maintainers at any time.</p>
-<p>To set up your environment, try out the development guide.</p>
-<p>In the interest of getting more new people involved, we tag issues with
-<a href="https://github.com/hivelocity/cluster-api-provider-hivelocity/issues?q=is%3Aissue+is%3Aopen+sort%3Aupdated-desc+label%3A%22good+first+issue%22"><code>good first issue</code></a>.
-These are typically issues that have a smaller scope, but are good to get acquainted with the codebase.</p>
-<p>We also encourage ALL active community participants to act as if they are
-maintainers, even if you don’t have “official” write permissions. This is a
-community effort, we are here to serve the Kubernetes community. If you have an
-active interest and you want to get involved, you have real power! Don’t assume
-that the only people who can get things done around here are the “maintainers”.</p>
-<p>We would also love to add more “official” maintainers, so show us what you can
-do!</p>
+<p>Are you interested in contributing to Cluster API Provider Hivelocity? We, the maintainers and community, would love your suggestions, contributions, and help! If you want to learn more about how to get involved, you can contact the maintainers at any time.</p>
+<p>To set up your environment, check out the development guide.</p>
+<p>In the interest of getting more new people involved, we tag issues with <a href="https://github.com/hivelocity/cluster-api-provider-hivelocity/issues?q=is%3Aissue+is%3Aopen+sort%3Aupdated-desc+label%3A%22good+first+issue%22"><code>good first issue</code></a>. These are typically issues that have a smaller scope but are a good way to get acquainted with the codebase.</p>
+<p>We also encourage ALL active community participants to act as if they are maintainers, even if you don’t have “official” write permissions. This is a community effort, and we are here to serve the Kubernetes community. If you have an active interest and you want to get involved, you have real power! Don’t assume that the only people who can get things done around here are the “maintainers”.</p>
+<p>We would also love to add more “official” maintainers, so show us what you can do!</p>
 <h2 id="-code-of-conduct"><a class="header" href="#-code-of-conduct">💫 Code of Conduct</a></h2>
 <p>Participation in the Kubernetes community is governed by the <a href="https://github.com/hivelocity/cluster-api-provider-hivelocity/blob/main/code-of-conduct.md">Kubernetes Code of Conduct</a>.</p>
 <h2 id="-github-issues"><a class="header" href="#-github-issues">🚧 Github Issues</a></h2>
 <h3 id="-bugs"><a class="header" href="#-bugs">🐛 Bugs</a></h3>
-<p>If you think you have found a bug, please follow these steps:</p>
+<p>If you think you have found a bug, please follow these steps. Even if it just a small
+typo in the docs, please tell us how we can improve the project!</p>
 <ul>
-<li>Take some time to give due diligence to the issue tracker. Your issue might be a duplicate.</li>
-<li>Get the logs from the cluster controllers. Paste this into your issue.</li>
+<li>Take some time to do due diligence in the issue tracker. Your issue might be a duplicate.</li>
+<li>Get the logs from the cluster controllers and paste them into your issue.</li>
 <li>Open a <a href="https://github.com/hivelocity/cluster-api-provider-hivelocity/issues/new?template=bug_report.md">bug report</a>.</li>
 <li>Give it a meaningful title to help others who might be searching for your issue in the future.</li>
 <li>If you have questions, reach out to the Cluster API community on the <a href="https://github.com/kubernetes/community/tree/master/communication#slack">Kubernetes Slack channel</a>.</li>
 </ul>
 <h3 id="-tracking-new-features"><a class="header" href="#-tracking-new-features">⭐ Tracking New Features</a></h3>
-<p>We also use the issue tracker to track features. If you have an idea for a feature or think that you can help Cluster API Provider Hivelocity become even more awesome, then follow these steps:</p>
+<p>We also use the issue tracker to track features. If you have an idea for a feature, or think that you can help Cluster API Provider Hivelocity become even more awesome, then follow these steps:</p>
 <ul>
 <li>Open a <a href="https://github.com/hivelocity/cluster-api-provider-hivelocity/issues/new?template=feature_request.md">feature request</a>.</li>
 <li>Give it a meaningful title to help others who might be searching for your issue in the future.</li>
-<li>Define clearly the use case. Use concrete examples, e.g. “I type <code>this</code> and
-Cluster API Provider Hivelocity does <code>that</code>”.</li>
-<li>Some of our larger features will require some design. If you would like to
-include a technical design for your feature, please include it in the issue.</li>
-<li>After the new feature is well understood and the design is agreed upon, we can
-start coding the feature. We would love if you code it. So please open
-up a <strong>WIP</strong> <em>(work in progress)</em> pull request. Happy coding!</li>
+<li>Clearly define the use case. Use concrete examples, e.g. “I type <code>this</code> and Cluster API Provider Hivelocity does <code>that</code>”.</li>
+<li>Some of our larger features will require some design. If you would like to include a technical design for your feature, please include it in the issue.</li>
+<li>After the new feature is well understood and the design is agreed upon, we can start coding the feature. We would love it if you could code it. So please open up a <strong>WIP</strong> <em>(work in progress)</em> pull request. Happy coding!</li>
 </ul>
 <!-- References -->
 <div style="break-before: page; page-break-before: always;"></div><h1 id="getting-started-1"><a class="header" href="#getting-started-1">Getting Started</a></h1>
+<h2 id="terminology"><a class="header" href="#terminology">Terminology</a></h2>
+<p>Before we begin we need to answer some questions.</p>
+<h2 id="what-is-hivelocity"><a class="header" href="#what-is-hivelocity">What is Hivelocity?</a></h2>
+<p>Hivelocity provides Dedicated Servers, Colocation and Cloud Hosting services to customers from over 130 countries since 2002. Hivelocity operates over 70,000 sq ft of data center space offering services in Tampa FL, Miami FL, Atlanta GA, New York NY, and Los Angeles CA. Each of Hivelocity’s data centers are HIPAA, PCI, ISAE-3402, SSAE 16 SOC1 &amp; SOC2 certified.</p>
+<p>Source: <a href="https://www.linkedin.com/company/hivelocity-hosting/">Hivelocity at LinkedIn</a></p>
+<h2 id="what-is-kubernetes"><a class="header" href="#what-is-kubernetes">What is Kubernetes?</a></h2>
+<p>Kubernetes is an open-source container orchestration system for automating software deployment, scaling, and management. Originally designed by Google, the project is now maintained by the Cloud Native Computing Foundation.</p>
+<p>Kubernetes defines a set of building blocks that collectively provide mechanisms that deploy, maintain, and scale applications based on CPU, memory or custom metrics.</p>
+<p>Source: <a href="https://en.wikipedia.org/wiki/Kubernetes">Wikpedia</a></p>
+<h2 id="what-is-cluster-api"><a class="header" href="#what-is-cluster-api">What is Cluster API?</a></h2>
+<p>Cluster API is a Kubernetes sub-project focused on providing declarative APIs and tooling to simplify provisioning, upgrading, and operating multiple Kubernetes clusters.</p>
+<p>The Cluster API project uses Kubernetes-style APIs and patterns to automate cluster lifecycle management for platform operators. The supporting infrastructure, like virtual machines, networks, load balancers, and VPCs, as well as the Kubernetes cluster configuration are all defined in the same way that application developers operate deploying and managing their workloads. This enables consistent and repeatable cluster deployments across a wide variety of infrastructure environments.</p>
+<p>Source: <a href="https://cluster-api.sigs.k8s.io/">cluster-api.sigs.k8s.io</a></p>
+<h2 id="what-is-cluster-api-provider-hivelocity"><a class="header" href="#what-is-cluster-api-provider-hivelocity">What is Cluster API Provider Hivelocity?</a></h2>
+<p>Cluster API Hivelocity adds the infrastructure provider Hivelocity to the list of supported providers. Other providers are AWS, Azure, Google Cloud Platform, OpenStack … (See <a href="https://cluster-api.sigs.k8s.io/reference/providers.html#infrastructure">complete list</a>)</p>
+<h2 id="current-limitations"><a class="header" href="#current-limitations">Current Limitations</a></h2>
+<p>Up to now Loadbalancers are not supported yet. But we are working on it.</p>
+<p>See <a href="https://github.com/hivelocity/cluster-api-provider-hivelocity/issues/55">issue #55</a></p>
+<hr />
+<h2 id="steps"><a class="header" href="#steps">Steps</a></h2>
+<h3 id="step-1-create-servers"><a class="header" href="#step-1-create-servers">Step 1: Create servers</a></h3>
 <p>Create servers at <a href="https://www.hivelocity.net/">Hivelocity</a>.</p>
 <p>Give the servers labels, so that clusters-api-provider-hivelocity knows which
 servers should get part of the cluster.</p>
