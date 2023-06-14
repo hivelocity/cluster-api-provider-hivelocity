@@ -3,8 +3,6 @@
   - [Introduction](./user/introduction.md)
   - [Getting Started](./user/getting-started.md)
   - [Topics](./topics/index.md)
-    - [Restricting Cluster API to certain namespaces](./topics/restricting-cluster-api-to-certain-namespaces.md)
-    - [Failure domains](./topics/failure-domains/index.md)
   - [Troubleshooting](./user/troubleshooting.md)
 - [Developer Guide](./developer/index.md)
   - [Repository Layout](./developer/repository-layout.md)

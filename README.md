@@ -50,7 +50,7 @@ Please see: https://hivelocity.github.io/cluster-api-provider-hivelocity/referen
 
 Please see our [book](https://hivelocity.github.io/cluster-api-provider-hivelocity) for in-depth documentation.
 
-## :question: Questions?
+## :question: Questions
 
 * If you have a question related to hardware: [Hivelocity](https://www.hivelocity.net/about/contact-us/)
 * If you have a question related to the Cluster API Provider Hivelocity: [Github Discussions](https://github.com/hivelocity/cluster-api-provider-hivelocity/discussions)
@@ -103,3 +103,7 @@ We also use the issue tracker to track features. If you have an idea for a featu
 [slack_info]: https://github.com/kubernetes/community/tree/master/communication#slack
 [cluster_api]: https://github.com/kubernetes-sigs/cluster-api
 [quickstart]: https://cluster-api.sigs.k8s.io/user/quick-start.html
+
+# :arrow_right: Next
+
+[Getting Started](https://hivelocity.github.io/cluster-api-provider-hivelocity/user/getting-started.html)
