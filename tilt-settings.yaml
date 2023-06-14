@@ -1,0 +1,11 @@
+kustomize_substitutions:
+  HIVELOCITY_SSH_KEY: test
+  HIVELOCITY_REGION: LAX2
+
+  HIVELOCITY_CONTROL_PLANE_MACHINE_TYPE: hvControlPlane # caphv-device-type=hvControlPlane
+  CONTROL_PLANE_MACHINE_COUNT: "3"
+  HIVELOCITY_WORKER_MACHINE_TYPE: hvWorker # caphv-device-type=hvWorker
+  WORKER_MACHINE_COUNT: "1"
+  KUBERNETES_VERSION: v1.25.2
+  HIVELOCITY_IMAGE_NAME: 1.25.2-ubuntu-20.04-containerd
+  CLUSTER_NAME: hvtest

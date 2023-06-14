@@ -31,19 +31,18 @@ Source: [cluster-api.sigs.k8s.io](https://cluster-api.sigs.k8s.io/)
 Cluster API Hivelocity adds the infrastructure provider Hivelocity to the list of supported providers. Other providers are AWS, Azure, Google Cloud Platform, OpenStack ... (See [complete list](https://cluster-api.sigs.k8s.io/reference/providers.html#infrastructure))
 
 
+
+
 ## Current Limitations
 
 Up to now Loadbalancers are not supported yet. But we are working on it.
 
 See [issue #55](https://github.com/hivelocity/cluster-api-provider-hivelocity/issues/55)
 
----
+## Current State: alpha
 
-## Steps
+Up to now CAPHV is not in the [official list of infrastructure providers](https://cluster-api.sigs.k8s.io/reference/providers.html#infrastructure).
 
-### Step 1: Create servers
+But we are working on it.
 
-Create servers at [Hivelocity](https://www.hivelocity.net/).
-
-Give the servers labels, so that clusters-api-provider-hivelocity knows which
-servers should get part of the cluster.
+Please have a look at the [Developer Guide](../developer/index.md), if you want to setup a cluster.
