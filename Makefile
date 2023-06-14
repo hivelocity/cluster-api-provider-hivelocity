@@ -437,13 +437,17 @@ install-manifests-ccm:
 		--set secret.key=hivelocity
 	@echo 'run "kubectl --kubeconfig=$(CAPHV_WORKER_CLUSTER_KUBECONFIG) ..." to work with the new target cluster'
 
+$(HOME)/.ssh/hivelocity.pub:
+	echo "Creating SSH key-pair to access the nodes which get created by CAPHV"
+	ssh-keygen -f ~/.ssh/hivelocity
 
-create-workload-cluster: $(KUSTOMIZE) $(ENVSUBST) ## Creates a workload-cluster. ENV Variables need to be exported or defined in the tilt-settings.yaml
+create-workload-cluster: $(HOME)/.ssh/hivelocity.pub $(KUSTOMIZE) $(ENVSUBST) ## Creates a workload-cluster. ENV Variables need to be exported or defined in the tilt-settings.yaml
 	# Create workload Cluster. This is usually called via Tilt.
+	exit 1
 	@test $${CLUSTER_NAME?Environment variable is required}
 	@test $${HIVELOCITY_API_KEY?Environment variable is required}
 	rm -f $(CAPHV_WORKER_CLUSTER_KUBECONFIG)
-	go run ./test/upload-ssh-pub-key
+	go run ./cmd upload-ssh-pub-key ssh-key-hivelocity-pub $(HOME)/.ssh/hivelocity.pub
 	go run ./test/claim-devices-or-fail hvControlPlane hvWorker
 	kubectl create secret generic hivelocity --from-literal=hivelocity=$(HIVELOCITY_API_KEY) --save-config --dry-run=client -o yaml | kubectl apply -f -
 	$(KUSTOMIZE) build templates/cluster-templates/hivelocity --load-restrictor LoadRestrictionsNone  > templates/cluster-templates/cluster-template-hivelocity.yaml

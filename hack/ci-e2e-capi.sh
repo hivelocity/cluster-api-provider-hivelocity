@@ -31,7 +31,7 @@ if [ ! -e "$SSH_KEY_NAME" ]; then
     exit 1
 fi
 
-go run test/upload-ssh-pub-key/upload-ssh-pub-key.go
+go run ./cmd upload-ssh-pub-key ssh-key-hivelocity-pub "$HOME/.ssh/hivelocity.pub"
 
 # TODO: read count of machines from config, and then claim them, and fail if not enough
 #       machines could get claimed.
