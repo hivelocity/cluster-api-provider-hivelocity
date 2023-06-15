@@ -210,6 +210,7 @@ tail-caphv-controller-logs: ## Show the last lines of the caphv-controller logs
 .PHONY: ssh-first-control-plane
 ssh-first-control-plane: ## ssh into the first control-plane
 	@hack/ssh-first-control-plane.sh
+	
 .PHONY: ensure-boilerplate
 ensure-boilerplate: ## Ensures that a boilerplate exists in each file by adding missing boilerplates
 	./hack/ensure-boilerplate.sh

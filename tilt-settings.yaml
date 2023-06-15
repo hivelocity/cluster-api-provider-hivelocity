@@ -3,7 +3,7 @@ kustomize_substitutions:
   HIVELOCITY_REGION: LAX2
 
   HIVELOCITY_CONTROL_PLANE_MACHINE_TYPE: hvControlPlane # caphv-device-type=hvControlPlane
-  CONTROL_PLANE_MACHINE_COUNT: "3"
+  CONTROL_PLANE_MACHINE_COUNT: "1"
   HIVELOCITY_WORKER_MACHINE_TYPE: hvWorker # caphv-device-type=hvWorker
   WORKER_MACHINE_COUNT: "1"
   KUBERNETES_VERSION: v1.25.2

@@ -29,7 +29,7 @@ Or:
 
 ```
 ❯ kubectl -n capi-hivelocity-system logs \
-    $(k -n capi-hivelocity-system get pods | grep caphv-controller-manager | cut -d' ' -f1) \
+    $(kubectl -n capi-hivelocity-system get pods | grep caphv-controller-manager | cut -d' ' -f1) \
     | ./hack/filter-caphv-controller-manager-logs.py - | tail
 ```
 

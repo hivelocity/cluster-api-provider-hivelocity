@@ -15,7 +15,7 @@
 # limitations under the License.
 
 export KUBECONFIG=.mgt-cluster-kubeconfig.yaml
-if [ -s "$KUBECONFIG" ]; then
+if [ ! -s "$KUBECONFIG" ]; then
     echo "$KUBECONFIG does not exist or is empty."
     exit 1
 fi
