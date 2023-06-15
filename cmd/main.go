@@ -24,14 +24,9 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func run(cmd *cobra.Command, args []string) {
-	panic("ff")
-}
-
 var rootCmd = &cobra.Command{
 	Use:   "caphvcli",
 	Short: "Cluster API Provider Hivelocity - Command Line Interface",
-	Run:   run,
 }
 
 func Execute() {

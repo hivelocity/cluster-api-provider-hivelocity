@@ -1,8 +1,3 @@
-
-# TODO Docs
-
-* envtest
-
 # Kubernetes Cluster API Provider Hivelocity
 
 > :warning: This project is in the development stage. DO NOT USE IN PRODUCTION! :warning:
@@ -22,7 +17,7 @@ The Cluster API Provider Hivelocity (CAPHV) is the infrastructure component of t
 
 With the Cluster API Provider Hivelocity, you can trust that your infrastructure is in good hands with a provider that has a track record of dynamic performance, static pricing, and a global presence.
 
-## :telephone_receiver: Support
+## :telephone_receiver: Support (TODO)
 
 If you want to manage Kubernetes yourself, please contact [Hivelocity](https://www.hivelocity.net/about/contact-us/) to set up your infrastructure.
 

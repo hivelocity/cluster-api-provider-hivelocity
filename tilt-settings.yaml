@@ -1,5 +1,5 @@
 kustomize_substitutions:
-  HIVELOCITY_SSH_KEY: test
+  HIVELOCITY_SSH_KEY: ssh-key-hivelocity-pub
   HIVELOCITY_REGION: LAX2
 
   HIVELOCITY_CONTROL_PLANE_MACHINE_TYPE: hvControlPlane # caphv-device-type=hvControlPlane
