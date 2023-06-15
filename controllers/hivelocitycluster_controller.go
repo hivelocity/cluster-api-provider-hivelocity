@@ -146,7 +146,8 @@ func (r *HivelocityClusterReconciler) Reconcile(ctx context.Context, req ctrl.Re
 
 	// check whether rate limit has been reached and if so, then wait.
 	if wait := reconcileRateLimit(hvCluster); wait {
-		return ctrl.Result{RequeueAfter: 30 * time.Second}, nil
+		// don't wait too long. Otherwise: context canceled
+		return ctrl.Result{RequeueAfter: 20 * time.Second}, nil
 	}
 
 	// Handle deleted clusters
