@@ -17,6 +17,6 @@ For example it will take up to 22 minutes until the ssh port of the first contro
 
 Here a screenshot, six minutes after the Cluster and MachineDeployment manifests got applied to the management-cluster.
 
-![make watch](./make-watch.png)
+![make watch](./make-watch.jpg)
 
 

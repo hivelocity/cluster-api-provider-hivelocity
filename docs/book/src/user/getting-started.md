@@ -26,6 +26,12 @@ The Cluster API project uses Kubernetes-style APIs and patterns to automate clus
 
 Source: [cluster-api.sigs.k8s.io](https://cluster-api.sigs.k8s.io/)
 
+Cluster API uses Kubernetes Controllers: In a **management-cluster** runs a controller which reconciles the state of **workload-clusters** until the state reaches the desired state.
+
+The desire state gets specified in yaml manifests.
+
+![cluster-api: management-cluster and workload-clusters](./cluster-api.png)
+
 ## What is Cluster API Provider Hivelocity?
 
 Cluster API Hivelocity adds the infrastructure provider Hivelocity to the list of supported providers. Other providers supported by Cluster API are: AWS, Azure, Google Cloud Platform, OpenStack ... (See [complete list](https://cluster-api.sigs.k8s.io/reference/providers.html#infrastructure))

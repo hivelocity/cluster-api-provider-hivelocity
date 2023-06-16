@@ -4,6 +4,8 @@ Hivelocity provides a rich API which you can access and test with your web brows
 
 [developers.hivelocity.net/reference](https://developers.hivelocity.net/reference/)
 
+![Hivelocity API](./hivelocity-api.jpg)
+
 ## APIs
 
 Here are some API which gets used by CAPHV:

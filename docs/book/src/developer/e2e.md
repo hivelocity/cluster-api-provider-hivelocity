@@ -11,6 +11,8 @@ export CAPHV_LATEST_VERSION=<latest-version>
 make test-e2e
 ```
 
+You need patience. Running the e2e tests takes roughly 40 minutes.
+
 ## Updating controller during e2e test
 
 You discovered an error in the code, or you want to add some logging statement while the e2e is running?

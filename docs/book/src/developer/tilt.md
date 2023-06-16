@@ -32,7 +32,7 @@ This will:
 
 You need to press "SPACE" to open a web browser with the URL: http://localhost:10350
 
-![Screenshot of Tilt](./tilt.png)
+![Screenshot of Tilt](./tilt.jpg)
 
 Be sure that all Resources are ok (5/5 in above screenshot).
 
@@ -41,7 +41,7 @@ to create a new Cluster.
 
 Open a terminal and execute [make watch](../topics/make-watch.md)
 
-![make watch](../topics//make-watch.png)
+![make watch](../topics/make-watch.jpg)
 
 The output of [make watch](../topics/make-watch.md) updates itself. You can monitor the progress of the CAPH controller.
 

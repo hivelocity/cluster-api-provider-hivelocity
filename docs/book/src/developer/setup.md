@@ -36,3 +36,9 @@ Create a HIVELOCITY_API_KEY and add it to your `.envrc` file.
 
 You can create this key via the web UI: [my.hivelocity.net/account](https://my.hivelocity.net/account).
 
+## Kind
+
+During development the management-cluster runs in local [kind cluster](https://kind.sigs.k8s.io/).
+
+The tool `kind` gets installed into `hack/tools/bin/` automatically via the Makefile.
+

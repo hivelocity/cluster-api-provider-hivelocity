@@ -7,6 +7,7 @@
     - [Environment Variables](./topics/environment-variables.md)
     - [make watch](./topics/make-watch.md)
     - [Hivelocity API](./topics/hivelocity-api.md)
+    - [Hivelocity IPMI](./topics/hivelocity-ipmi.md)
 - [Developer Guide](./developer/index.md)
   - [Repository Layout](./developer/repository-layout.md)
   - [Setup Dev Env](./developer/setup.md)
