@@ -12,7 +12,7 @@
   - [Setup Dev Env](./developer/setup.md)
   - [Creating your first Cluster](./developer/creating-your-first-cluster.md)
   - [Tilt](./developer/tilt.md)
-  - [Developing](./developer/developiPng.md)
+  - [Developing](./developer/developing.md)
   - [Logging](./developer/logging.md)
   - [Testing](./developer/testing.md)
   - [Developing E2E tests](./developer/e2e.md)
