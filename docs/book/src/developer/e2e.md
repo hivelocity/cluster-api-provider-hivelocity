@@ -1,4 +1,4 @@
-# Developing E2E tests
+# E2E tests
 
 End-to-end tests run in CI, so that changes get automatically tested.
 
