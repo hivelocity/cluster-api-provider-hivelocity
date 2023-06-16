@@ -25,14 +25,14 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var uploadSshKey = &cobra.Command{
+var uploadSSHKey = &cobra.Command{
 	Use:   "upload-ssh-pub-key [flags] SSH_PUB_KEY_NAME SSH_PUB_KEY_FILE",
 	Short: "Uploads a ssh pub-key to Hivelocity",
-	Run:   runUploadSshKey,
+	Run:   runUploadSSHKey,
 	Args:  cobra.ExactArgs(2),
 }
 
-func runUploadSshKey(cmd *cobra.Command, args []string) {
+func runUploadSSHKey(cmd *cobra.Command, args []string) {
 	sshPubKeyName := args[0]
 	sshPubKeyContent, err := os.ReadFile(args[1])
 	if err != nil {

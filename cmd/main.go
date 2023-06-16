@@ -29,6 +29,7 @@ var rootCmd = &cobra.Command{
 	Short: "Cluster API Provider Hivelocity - Command Line Interface",
 }
 
+// Execute rootCmd.
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(err)
@@ -37,6 +38,10 @@ func Execute() {
 }
 
 func main() {
-	rootCmd.AddCommand(uploadSshKey)
-	rootCmd.Execute()
+	rootCmd.AddCommand(uploadSSHKey)
+	err := rootCmd.Execute()
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
 }
