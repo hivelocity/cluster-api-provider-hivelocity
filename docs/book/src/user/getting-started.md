@@ -32,6 +32,9 @@ The desire state gets specified in yaml manifests.
 
 ![cluster-api: management-cluster and workload-clusters](./cluster-api.png)
 
+After the workload-cluster was created successfully, you can **move** the management-cluster into the workload-cluster. This gets done with `clusterclt move`. See [Cluster API Docs "pivot"](https://cluster-api.sigs.k8s.io/clusterctl/commands/move.html#pivot)
+
+
 ## What is Cluster API Provider Hivelocity?
 
 Cluster API Hivelocity adds the infrastructure provider Hivelocity to the list of supported providers. Other providers supported by Cluster API are: AWS, Azure, Google Cloud Platform, OpenStack ... (See [complete list](https://cluster-api.sigs.k8s.io/reference/providers.html#infrastructure))

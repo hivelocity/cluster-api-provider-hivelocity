@@ -6,4 +6,4 @@ the provisioning process of machines.
 ![ipmi screenshot 1](./hivelocity-ipmi-1.jpg)
 
 
-![ipmi screenshot 2](./hivelocity-ipmi-2.jgp)
+![ipmi screenshot 2](./hivelocity-ipmi-2.jpg)
