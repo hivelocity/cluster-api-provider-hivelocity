@@ -33,4 +33,4 @@ kind load docker-image ghcr.io/hivelocity/caphv-staging:e2e --name=$kind_cluster
 kubectl rollout restart deployment -n capi-hivelocity-system caphv-controller-manager
 ```
 
-check `make watch`
+check [make watch](../topics/make-watch.md)

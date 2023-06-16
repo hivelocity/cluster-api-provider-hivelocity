@@ -5,6 +5,7 @@
   - [Topics](./topics/index.md)
     - [Provisioning Machines](./topics/provisioning-machines.md)
     - [Environment Variables](./topics/environment-variables.md)
+    - [make watch](./topics/make-watch.md)
   - [Troubleshooting](./user/troubleshooting.md)
 - [Developer Guide](./developer/index.md)
   - [Repository Layout](./developer/repository-layout.md)

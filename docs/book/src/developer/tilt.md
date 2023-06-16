@@ -38,11 +38,11 @@ Be sure that all Resources are ok (5/5 in above screenshot).
 At the top right side you see an up-arrow icon. You see "Create Hivelocity Cluster" if you hover the button. You can use it
 to create a new Cluster.
 
-Open a terminal and execute `make watch`
+Open a terminal and execute [make watch](../topics/make-watch.md)
 
-![make watch](./make-watch.png)
+![make watch](../topics//make-watch.png)
 
-The output of `make watch` updates itself. You can monitor the progress of the CAPH controller.
+The output of [make watch](../topics/make-watch.md) updates itself. You can monitor the progress of the CAPH controller.
 
 Working with baremetal servers takes time. It takes roughly 20 minutes
 until the ssh port of the first control plane is reachable.

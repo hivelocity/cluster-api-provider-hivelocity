@@ -33,4 +33,4 @@ Or:
     | ./hack/filter-caphv-controller-manager-logs.py - | tail
 ```
 
-The command `make watch` shows the last lines of logs, too.
+The command [make watch](../topics/make-watch.md) shows the last lines of logs, too.

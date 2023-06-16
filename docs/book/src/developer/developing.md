@@ -46,4 +46,4 @@ With `make test` all unit tests are triggered. If they fail out of nowhere, then
 
 With `make generate` new CRDs are generated, this is necessary if you change the api.
 
-With `make watch` you can monitor the progress.
+With [make watch](../topics/make-watch.md) you can monitor the progress.
