@@ -35,6 +35,15 @@ Cluster API Hivelocity adds the infrastructure provider Hivelocity to the list o
 
 ## Current Limitations
 
+### Limitation: Broken Machine State
+
+Sometimes machines get stuck. The hang in state "Reloading" forever. Then the support of Hivelocity
+need to reset the machine.
+
+Related issue at Github [#59](https://github.com/hivelocity/cluster-api-provider-hivelocity/issues/59).
+
+### Limitation: Missing Loadbalancers
+
 Up to now Loadbalancers are not supported yet. But we are working on it.
 
 See [issue #55](https://github.com/hivelocity/cluster-api-provider-hivelocity/issues/55)
