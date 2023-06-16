@@ -28,9 +28,7 @@ Source: [cluster-api.sigs.k8s.io](https://cluster-api.sigs.k8s.io/)
 
 ## What is Cluster API Provider Hivelocity?
 
-Cluster API Hivelocity adds the infrastructure provider Hivelocity to the list of supported providers. Other providers are AWS, Azure, Google Cloud Platform, OpenStack ... (See [complete list](https://cluster-api.sigs.k8s.io/reference/providers.html#infrastructure))
-
-
+Cluster API Hivelocity adds the infrastructure provider Hivelocity to the list of supported providers. Other providers supported by Cluster API are: AWS, Azure, Google Cloud Platform, OpenStack ... (See [complete list](https://cluster-api.sigs.k8s.io/reference/providers.html#infrastructure))
 
 
 ## Current Limitations

@@ -11,8 +11,9 @@ a file. You can adapt it to your needs.
 
 See [tilt-settings.yaml](../../../../tilt-settings.yaml)
 
-Attention: The machine types which you specify in the settings will be labels in for Hivelocity machines. Machines with this label will
-get conditionless provisioned. Be sure that you don't provision machines which run valuable workload!
+Machines with the corresponding `caphv-device-type` tag will get conditionless provisioned. Be sure that you don't provision machines which run valuable workload!
+
+We recommend to use custom device tags for testing.
 
 More about this topic: [Provisioning Machines](../topics/provisioning-machines.md)
 

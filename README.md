@@ -6,7 +6,7 @@ The Hivelocity Provider is a Kubernetes-native tool that allows you to manage Ku
 
 It offers options for high availability with instant bare metal and simplifies the process of creating, updating, and operating production-ready clusters.
 
-You can find more information about Hivelocity and their infrastructure at https://www.hivelocity.net/.
+You can find more information about Hivelocity and their infrastructure at [hivelocity.net](https://www.hivelocity.net).
 
 
 ## :newspaper: What is the Cluster API Provider Hivelocity?
@@ -41,7 +41,7 @@ If you're looking to jump straight into it, check out the [Quick Start Guide](ht
 
 ## :fire: Compatibility with Cluster API and Kubernetes Versions
 
-Please see: https://hivelocity.github.io/cluster-api-provider-hivelocity/reference/versions.html
+Please see: [Versions](https://hivelocity.github.io/cluster-api-provider-hivelocity/reference/versions.html)
 
 **NOTE:** As the versioning for this project is tied to the versioning of Cluster API, future modifications to this policy may be made to more closely align with other providers in the Cluster API ecosystem.
 

@@ -1,13 +1,13 @@
 # Setup a Development Environment
 
-## Labeling Machines
+## Tagging Machines
 
-First you need to label machines, so that the CAPHV controller can select and provision them.
+First you need to tag machines, so that the CAPHV controller can select and provision them.
 
 See [[Provisioning Machines](../topics/provisioning-machines.md) for more about this.
 
 You can use `go run ./test/claim-devices-or-fail` to claim all devices
-with a particular label. But be careful, since all machines with this label will get all existing labels removed. Don't accidentally "free" running machines this way.
+with a particular tag. But be careful, since all machines with this tag will get all existing tags removed. Don't accidentally "free" running machines this way.
 
 ## SSH-Key
 
