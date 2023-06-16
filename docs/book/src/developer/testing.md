@@ -1,6 +1,6 @@
 # Testing
 
-We use (from simple to complex):
+We use these types (from simple to complex):
 
 * Go unit tests
 * [envtest](https://github.com/kubernetes-sigs/controller-runtime/tree/main/pkg/envtest) from controller-runtime
@@ -10,4 +10,4 @@ The unit tests and envtests get executed via `make test-unit`.
 
 Please add new tests, if you add new features. 
 
-Try to use a simple form. For example prefer a unit test to a test which needs envtest.
+Try to use a simple type. For example, prefer to write a unit test to a test which needs envtest.

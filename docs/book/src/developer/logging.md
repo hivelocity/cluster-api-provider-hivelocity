@@ -17,7 +17,7 @@ Then you can fetch the logs:
 ❯ kubectl -n capi-hivelocity-system logs -f caphv-controller-manager-7889d9d768-7m8hr   > caphv-controller-manager-7889d9d768-7m8hr.log
 ```
 
-You can see these logs via Tilt, too.
+You can see these logs via the Tilt UI, too.
 
 For debugging you can reduce the log output with this script:
 

@@ -4,7 +4,7 @@ End-to-end tests run in CI, so that changes get automatically tested.
 
 ## Running local e2e test
 
-If you are interested in running the E2E tests locally, then you can use the following commands:
+If you are interested in running the e2e tests locally, then you can use the following commands:
 ```
 export HIVELOCITY_API_KEY=<api-key>
 export CAPHV_LATEST_VERSION=<latest-version>

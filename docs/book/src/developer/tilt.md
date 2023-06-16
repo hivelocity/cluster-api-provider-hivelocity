@@ -9,7 +9,7 @@ We use [Tilt](https://tilt.dev/) to start a development cluster.
 You need to create a `tilt-settings.yaml` file and specify the values you need. In the git repo is already
 a file. You can adapt it to your needs.
 
-See [tilt-settings.yaml](../../../../tilt-settings.yaml)
+See [tilt-settings.yaml](https://github.com/hivelocity/cluster-api-provider-hivelocity/blob/main/tilt-settings.yaml)
 
 Machines with the corresponding `caphv-device-type` tag will get conditionless provisioned. Be sure that you don't provision machines which run valuable workload!
 
@@ -25,7 +25,7 @@ make tilt-up
 
 This will:
 
-* install Tilt into ` hack/tools/bin`.
+* install Tilt into `hack/tools/bin`.
 * create a local container registry with `ctlptl`.
 * create a management-cluster in [Kind](https://kind.sigs.k8s.io/)
 * start [Tilt](https://tilt.dev/)

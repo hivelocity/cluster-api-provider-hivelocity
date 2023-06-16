@@ -4,23 +4,19 @@
 Developing our provider is quite easy. First, you need to install some base requirements. Second, you need to follow the quickstart documents to set up everything related to Hivelocity. Third, you need to configure your tilt set-up. After having done those three steps, you can start developing with the local Kind cluster and the Tilt UI to create one of the different workload clusters that are already pre-configured.
 
 
-## Developing with Tilt
+## Why Tilt
 
-<p align="center">
-<img alt="tilt" src="../pics/tilt.png" width=800px/>
-</p>
+Provider Integration development requires a lot of iteration, and the “build, tag, push, update deployment” workflow can be very tedious. 
 
-Provider Integration development requires a lot of iteration, and the “build, tag, push, update deployment” workflow can be very tedious. Tilt makes this process much simpler by watching for updates and automatically building and deploying them. To build a kind cluster and to start Tilt, run:
+Tilt makes this process much simpler by watching for updates and automatically building and deploying them.
 
-```shell
-make tilt-up
-```
-> To access the Tilt UI please go to: `http://localhost:10350`
+You just need to update the Go code, and if it compiles, the caphv-controller-manager will get updated.
 
-
-Once your kind management cluster is up and running, you can deploy a workload cluster. This could be done through the Tilt UI, by pressing one of the buttons in the top right corner, e.g. "Create Hivelocity Cluster". This triggers the `make create-workload-cluster`, which uses the environment variables (we defined in the tilt-settings.yaml) and the cluster-template. Additionally, it installs cilium as CNI.
+## Updating the API of the CRDs
 
 If you update the API in some way, you need to run `make generate` in order to generate everything related to kubebuilder and the CRDs.
+
+## Deleting the cluster
 
 To tear down the workload cluster press the "Delete Workload Cluster" button. After a few minutes the resources should be deleted.
 
@@ -31,6 +27,8 @@ $ make delete-cluster
 ```
 
 To delete the registry, use: `make delete-registry` or `make delete-cluster-registry`.
+
+## make help
 
 If you have any trouble finding the right command, then you can use `make help` to get a list of all available make targets.
 

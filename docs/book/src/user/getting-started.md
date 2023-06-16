@@ -53,3 +53,8 @@ Up to now CAPHV is not in the [official list of infrastructure providers](https:
 But we are working on it.
 
 Please have a look at the [Developer Guide](../developer/index.md), if you want to setup a cluster.
+
+## Navigation in the docs
+
+On the left and right side of the documentation you see angle brackets. You can use them to switch 
+to the next/previous page.

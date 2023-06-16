@@ -1,21 +1,20 @@
 # Repository Layout
 
-```
-Here is your text with corrections to typos and grammar mistakes:
-
-# Repository Layout
 
 ```
-├── api                   # This folder is used to store types and their related resources (Go code) present in CAPHV.
+├── api                   # This folder is used to store types and their related resources (Go code)
+|                         # present in CAPHV.
 |                         # The API folder has subfolders for each supported API version.
 |
-├── _artifacts            # This directory is created during e2e tests. It contains yaml files and logs.
+├── _artifacts            # This directory is created during e2e tests. 
+|                         # It contains yaml files and logs.
 |
 ├── bin                   # Binaries, mostly for envtests.
 |
-├── config                # This is a Kubernetes manifest folder containing application resource configurations as
-|                         # kustomize YAML definitions. These are generated from other folders in the repo using
-|                         # `make generate-manifests`.
+├── config                # This is a Kubernetes manifest folder containing application 
+|                         # resource configurations as
+|                         # kustomize YAML definitions. These are generated from other folders in the
+|                         # repo using`make generate-manifests`.
 |                         # More details are in the upstream docs:
 |                         # https://cluster-api.sigs.k8s.io/developer/repository-layout.html#manifest-generation
 |
@@ -40,6 +39,8 @@ Here is your text with corrections to typos and grammar mistakes:
 ├── Tiltfile              # Configuration for https://tilt.dev/.
 ├── tilt-provider.yaml
 ├── tilt-settings.yaml
-├── .envrc.example        # We use direnv to set environment variables. This is optional. See https://direnv.net/.
+├── .envrc.example        # We use direnv to set environment variables. This is optional. 
+|                         # See https://direnv.net/.
+|
 ├── .github               # GitHub config: PR templates, CI, ...
 ```
