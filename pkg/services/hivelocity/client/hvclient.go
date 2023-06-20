@@ -145,7 +145,7 @@ func (c *realClient) ProvisionDevice(ctx context.Context, deviceID int32, opts h
 			log.Info("ProvisionDevice() failed (PostPowerResource)", "DeviceID", deviceID, "body", body)
 		}
 		log.Info("ProvisionDevice() called PostPowerResource shutdown", "DeviceID", deviceID)
-		time.Sleep(5 * time.Second)
+		time.Sleep(30 * time.Second)
 	}
 
 	log.Info("calling ProvisionDevice()", "DeviceID", deviceID, "hostname", opts.Hostname, "OsName", opts.OsName,
@@ -162,6 +162,9 @@ func (c *realClient) ProvisionDevice(ctx context.Context, deviceID int32, opts h
 		body := string(swaggerErr.Body())
 		log.Info("ProvisionDevice() failed (PutBareMetalDeviceIdResource)", "DeviceID", deviceID, "body", body)
 		err = fmt.Errorf("%s: %w", body, swaggerErr)
+	}
+	if err == nil {
+		log.Info("ProvisionDevice() was successful (PutBareMetalDeviceIdResource)", "DeviceID", deviceID)
 	}
 	return device, checkRateLimit(err)
 }

@@ -33,7 +33,6 @@ settings = {
         "HIVELOCITY_IMAGE_NAME": "test-image",
         "HIVELOCITY_CONTROL_PLANE_MACHINE_TYPE": "hvCustom",
         "HIVELOCITY_WORKER_MACHINE_TYPE": "hvCustom",
-        "CLUSTER_NAME": "test",
     },
 }
 

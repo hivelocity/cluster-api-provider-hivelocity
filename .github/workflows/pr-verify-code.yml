@@ -9,7 +9,7 @@ on:
       - "**.md"
 
 jobs:
-  test:
+  verify-code:
     name: Verify Code
     runs-on: ubuntu-latest
     steps:

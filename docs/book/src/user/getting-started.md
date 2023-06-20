@@ -8,8 +8,6 @@ Before we begin we need to answer some questions.
 
 Hivelocity provides Dedicated Servers, Colocation and Cloud Hosting services to customers from over 130 countries since 2002. Hivelocity operates over 70,000 sq ft of data center space offering services in Tampa FL, Miami FL, Atlanta GA, New York NY, and Los Angeles CA. Each of Hivelocity's data centers are HIPAA, PCI, ISAE-3402, SSAE 16 SOC1 & SOC2 certified.
 
-Source: [Hivelocity at LinkedIn](https://www.linkedin.com/company/hivelocity-hosting/)
-
 ## What is Kubernetes?
 
 Kubernetes is an open-source container orchestration system for automating software deployment, scaling, and management. Originally designed by Google, the project is now maintained by the Cloud Native Computing Foundation.
@@ -26,24 +24,54 @@ The Cluster API project uses Kubernetes-style APIs and patterns to automate clus
 
 Source: [cluster-api.sigs.k8s.io](https://cluster-api.sigs.k8s.io/)
 
+Cluster API uses Kubernetes Controllers: In a **management-cluster** runs a controller which reconciles the state of **workload-clusters** until the state reaches the desired state.
+
+The desire state gets specified in yaml manifests.
+
+![cluster-api: management-cluster and workload-clusters](./cluster-api.png)
+
+After the workload-cluster was created successfully, you can **move** the management-cluster into the workload-cluster. This gets done with `clusterclt move`. See [Cluster API Docs "pivot"](https://cluster-api.sigs.k8s.io/clusterctl/commands/move.html#pivot)
+
+
 ## What is Cluster API Provider Hivelocity?
 
-Cluster API Hivelocity adds the infrastructure provider Hivelocity to the list of supported providers. Other providers are AWS, Azure, Google Cloud Platform, OpenStack ... (See [complete list](https://cluster-api.sigs.k8s.io/reference/providers.html#infrastructure))
+Cluster API Hivelocity adds the infrastructure provider Hivelocity to the list of supported providers. Other providers supported by Cluster API are: AWS, Azure, Google Cloud Platform, OpenStack ... (See [complete list](https://cluster-api.sigs.k8s.io/reference/providers.html#infrastructure))
 
 
 ## Current Limitations
+
+### Limitation: Missing Loadbalancers
 
 Up to now Loadbalancers are not supported yet. But we are working on it.
 
 See [issue #55](https://github.com/hivelocity/cluster-api-provider-hivelocity/issues/55)
 
----
+### Limitation: Missing VPC Networking
 
-## Steps
+Up to now the machines have public IPs.
 
-### Step 1: Create servers
+For security nodes should not be accessible from the public internet.
 
-Create servers at [Hivelocity](https://www.hivelocity.net/).
+See [issue #78](https://github.com/hivelocity/cluster-api-provider-hivelocity/issues/78)
 
-Give the servers labels, so that clusters-api-provider-hivelocity knows which
-servers should get part of the cluster.
+## Current Known Issues
+
+### Known Issue: Broken Machine State
+
+Sometimes machines get stuck. The hang in state "Reloading" forever. Then the support of Hivelocity
+need to reset the machine.
+
+Related issue at Github [#59](https://github.com/hivelocity/cluster-api-provider-hivelocity/issues/59).
+
+## Current State: alpha
+
+Up to now CAPHV is not in the [official list of infrastructure providers](https://cluster-api.sigs.k8s.io/reference/providers.html#infrastructure).
+
+But we are working on it.
+
+Please have a look at the [Developer Guide](../developer/index.md), if you want to setup a cluster.
+
+## Navigation in the docs
+
+On the left and right side of the documentation you see angle brackets. You can use them to switch 
+to the next/previous page.
