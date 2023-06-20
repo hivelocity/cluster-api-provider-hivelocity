@@ -1,0 +1,263 @@
+<!DOCTYPE HTML>
+<html lang="en" class="sidebar-visible no-js light">
+    <head>
+        <!-- Book generated using mdBook -->
+        <meta charset="UTF-8">
+        <title>CI - Cluster API Provider Hivelocity</title>
+
+
+        <!-- Custom HTML head -->
+        
+        <meta name="description" content="Documentation for CAPHV">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="theme-color" content="#ffffff" />
+
+        <link rel="shortcut icon" href="../favicon.png">
+        <link rel="stylesheet" href="../css/variables.css">
+        <link rel="stylesheet" href="../css/general.css">
+        <link rel="stylesheet" href="../css/chrome.css">
+        <link rel="stylesheet" href="../css/print.css" media="print">
+
+        <!-- Fonts -->
+        <link rel="stylesheet" href="../FontAwesome/css/font-awesome.css">
+        <link rel="stylesheet" href="../fonts/fonts.css">
+
+        <!-- Highlight.js Stylesheets -->
+        <link rel="stylesheet" href="../highlight.css">
+        <link rel="stylesheet" href="../tomorrow-night.css">
+        <link rel="stylesheet" href="../ayu-highlight.css">
+
+        <!-- Custom theme stylesheets -->
+        <link rel="stylesheet" href="../theme/css/custom.css">
+
+    </head>
+    <body>
+        <!-- Provide site root to javascript -->
+        <script>
+            var path_to_root = "../";
+            var default_theme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "navy" : "light";
+        </script>
+
+        <!-- Work around some values being stored in localStorage wrapped in quotes -->
+        <script>
+            try {
+                var theme = localStorage.getItem('mdbook-theme');
+                var sidebar = localStorage.getItem('mdbook-sidebar');
+
+                if (theme.startsWith('"') && theme.endsWith('"')) {
+                    localStorage.setItem('mdbook-theme', theme.slice(1, theme.length - 1));
+                }
+
+                if (sidebar.startsWith('"') && sidebar.endsWith('"')) {
+                    localStorage.setItem('mdbook-sidebar', sidebar.slice(1, sidebar.length - 1));
+                }
+            } catch (e) { }
+        </script>
+
+        <!-- Set the theme before any content is loaded, prevents flash -->
+        <script>
+            var theme;
+            try { theme = localStorage.getItem('mdbook-theme'); } catch(e) { }
+            if (theme === null || theme === undefined) { theme = default_theme; }
+            var html = document.querySelector('html');
+            html.classList.remove('no-js')
+            html.classList.remove('light')
+            html.classList.add(theme);
+            html.classList.add('js');
+        </script>
+
+        <!-- Hide / unhide sidebar before it is displayed -->
+        <script>
+            var html = document.querySelector('html');
+            var sidebar = 'hidden';
+            if (document.body.clientWidth >= 1080) {
+                try { sidebar = localStorage.getItem('mdbook-sidebar'); } catch(e) { }
+                sidebar = sidebar || 'visible';
+            }
+            html.classList.remove('sidebar-visible');
+            html.classList.add("sidebar-" + sidebar);
+        </script>
+
+        <nav id="sidebar" class="sidebar" aria-label="Table of contents">
+            <div class="sidebar-scrollbox">
+                <ol class="chapter"><li class="chapter-item expanded "><a href="../user/index.html"><strong aria-hidden="true">1.</strong> User Guide</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../user/introduction.html"><strong aria-hidden="true">1.1.</strong> Introduction</a></li><li class="chapter-item expanded "><a href="../user/getting-started.html"><strong aria-hidden="true">1.2.</strong> Getting Started</a></li><li class="chapter-item expanded "><a href="../topics/index.html"><strong aria-hidden="true">1.3.</strong> Topics</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../topics/provisioning-machines.html"><strong aria-hidden="true">1.3.1.</strong> Provisioning Machines</a></li><li class="chapter-item expanded "><a href="../topics/environment-variables.html"><strong aria-hidden="true">1.3.2.</strong> Environment Variables</a></li><li class="chapter-item expanded "><a href="../topics/make-watch.html"><strong aria-hidden="true">1.3.3.</strong> make watch</a></li><li class="chapter-item expanded "><a href="../topics/hivelocity-api.html"><strong aria-hidden="true">1.3.4.</strong> Hivelocity API</a></li><li class="chapter-item expanded "><a href="../topics/hivelocity-ipmi.html"><strong aria-hidden="true">1.3.5.</strong> Hivelocity IPMI</a></li><li class="chapter-item expanded "><a href="../topics/clarifying-scope.html"><strong aria-hidden="true">1.3.6.</strong> Clarifying Scope</a></li></ol></li></ol></li><li class="chapter-item expanded "><a href="../developer/index.html"><strong aria-hidden="true">2.</strong> Developer Guide</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../developer/repository-layout.html"><strong aria-hidden="true">2.1.</strong> Repository Layout</a></li><li class="chapter-item expanded "><a href="../developer/setup.html"><strong aria-hidden="true">2.2.</strong> Setup Dev Env</a></li><li class="chapter-item expanded "><a href="../developer/tilt.html"><strong aria-hidden="true">2.3.</strong> Tilt</a></li><li class="chapter-item expanded "><a href="../developer/developing.html"><strong aria-hidden="true">2.4.</strong> Developing</a></li><li class="chapter-item expanded "><a href="../developer/logging.html"><strong aria-hidden="true">2.5.</strong> Logging</a></li><li class="chapter-item expanded "><a href="../developer/testing.html"><strong aria-hidden="true">2.6.</strong> Testing</a></li><li class="chapter-item expanded "><a href="../developer/ci.html" class="active"><strong aria-hidden="true">2.7.</strong> CI</a></li><li class="chapter-item expanded "><a href="../developer/e2e.html"><strong aria-hidden="true">2.8.</strong> E2E tests</a></li><li class="chapter-item expanded "><a href="../developer/docs.html"><strong aria-hidden="true">2.9.</strong> Docs</a></li></ol></li><li class="chapter-item expanded "><a href="../reference/index.html"><strong aria-hidden="true">3.</strong> Reference Guide</a></li><li><ol class="section"><li class="chapter-item expanded "><a href="../crd/index.html"><strong aria-hidden="true">3.1.</strong> CRD Reference</a></li><li class="chapter-item expanded "><a href="../reference/glossary.html"><strong aria-hidden="true">3.2.</strong> Glossary</a></li><li class="chapter-item expanded "><a href="../reference/ports.html"><strong aria-hidden="true">3.3.</strong> Ports</a></li><li class="chapter-item expanded "><a href="../reference/jobs.html"><strong aria-hidden="true">3.4.</strong> Jobs</a></li><li class="chapter-item expanded "><a href="../reference/code-of-conduct.html"><strong aria-hidden="true">3.5.</strong> Code of Conduct</a></li><li class="chapter-item expanded "><a href="../reference/CONTRIBUTING.html"><strong aria-hidden="true">3.6.</strong> Contributing</a></li><li class="chapter-item expanded "><a href="../reference/versions.html"><strong aria-hidden="true">3.7.</strong> Version Support</a></li></ol></li></ol>
+            </div>
+            <div id="sidebar-resize-handle" class="sidebar-resize-handle"></div>
+        </nav>
+
+        <div id="page-wrapper" class="page-wrapper">
+
+            <div class="page">
+                                <div id="menu-bar-hover-placeholder"></div>
+                <div id="menu-bar" class="menu-bar sticky bordered">
+                    <div class="left-buttons">
+                        <button id="sidebar-toggle" class="icon-button" type="button" title="Toggle Table of Contents" aria-label="Toggle Table of Contents" aria-controls="sidebar">
+                            <i class="fa fa-bars"></i>
+                        </button>
+                        <button id="theme-toggle" class="icon-button" type="button" title="Change theme" aria-label="Change theme" aria-haspopup="true" aria-expanded="false" aria-controls="theme-list">
+                            <i class="fa fa-paint-brush"></i>
+                        </button>
+                        <ul id="theme-list" class="theme-popup" aria-label="Themes" role="menu">
+                            <li role="none"><button role="menuitem" class="theme" id="light">Light</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="rust">Rust</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="coal">Coal</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="navy">Navy</button></li>
+                            <li role="none"><button role="menuitem" class="theme" id="ayu">Ayu</button></li>
+                        </ul>
+                        <button id="search-toggle" class="icon-button" type="button" title="Search. (Shortkey: s)" aria-label="Toggle Searchbar" aria-expanded="false" aria-keyshortcuts="S" aria-controls="searchbar">
+                            <i class="fa fa-search"></i>
+                        </button>
+                    </div>
+
+                    <h1 class="menu-title">Cluster API Provider Hivelocity</h1>
+
+                    <div class="right-buttons">
+                        <a href="../print.html" title="Print this book" aria-label="Print this book">
+                            <i id="print-button" class="fa fa-print"></i>
+                        </a>
+                        <a href="https://github.com/hivelocity/cluster-api-provider-hivelocity/tree/main/docs/book" title="Git repository" aria-label="Git repository">
+                            <i id="git-repository-button" class="fa fa-github"></i>
+                        </a>
+                        <a href="https://github.com/hivelocity/cluster-api-provider-hivelocity/edit/main/docs/book/src/" title="Suggest an edit" aria-label="Suggest an edit">
+                            <i id="git-edit-button" class="fa fa-edit"></i>
+                        </a>
+
+                    </div>
+                </div>
+
+                <div id="search-wrapper" class="hidden">
+                    <form id="searchbar-outer" class="searchbar-outer">
+                        <input type="search" id="searchbar" name="searchbar" placeholder="Search this book ..." aria-controls="searchresults-outer" aria-describedby="searchresults-header">
+                    </form>
+                    <div id="searchresults-outer" class="searchresults-outer hidden">
+                        <div id="searchresults-header" class="searchresults-header"></div>
+                        <ul id="searchresults">
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Apply ARIA attributes after the sidebar and the sidebar toggle button are added to the DOM -->
+                <script>
+                    document.getElementById('sidebar-toggle').setAttribute('aria-expanded', sidebar === 'visible');
+                    document.getElementById('sidebar').setAttribute('aria-hidden', sidebar !== 'visible');
+                    Array.from(document.querySelectorAll('#sidebar a')).forEach(function(link) {
+                        link.setAttribute('tabIndex', sidebar === 'visible' ? 0 : -1);
+                    });
+                </script>
+
+                <div id="content" class="content">
+                    <main>
+                        <h1 id="ci"><a class="header" href="#ci">CI</a></h1>
+<p>We use Github Actions to:</p>
+<ul>
+<li>lint the code, so that it follows best practices</li>
+<li>lint yaml files and markdown (documentation)</li>
+<li>run unit tests</li>
+<li>run e2e tests</li>
+</ul>
+<h2 id="latest-actions"><a class="header" href="#latest-actions">Latest Actions</a></h2>
+<p>You can see the result of the latest jobs here: <a href="https://github.com/hivelocity/cluster-api-provider-hivelocity/actions">github.com/hivelocity/cluster-api-provider-hivelocity/actions</a></p>
+<h2 id="running-github-actions-locally"><a class="header" href="#running-github-actions-locally">Running Github Actions locally</a></h2>
+<p>If you are updating the Github Actions, you can speed up your edit-test feedback loop 
+if you run the actions locally.</p>
+<p>You need to install <a href="https://github.com/nektos/act">nektos/act</a>. </p>
+<p>Then you can have a look at the available jobs:</p>
+<pre><code>act -l
+
+Stage  Job ID               Job name                      Workflow name            Workflow file         Events             
+0      markdown-link-check  Broken Links                  Check PR Markdown links  lint-docs-pr.yml      pull_request       
+0      deploy               deploy                        mdBook github pages      mdbook.yml            push               
+0      test-release         Create a Test Release         E2E PR Blocking          pr-e2e.yaml           pull_request_target
+0      manager-image        Build and push manager image  E2E PR Blocking          pr-e2e.yaml           pull_request_target
+0      golangci             lint                          golangci-lint            pr-golangci-lint.yml  pull_request       
+0      shellcheck           shellcheck-lint               shellcheck               pr-shellcheck.yml     pull_request       
+0      starlark             run starlark lint             starlark                 pr-starlark-lint.yml  pull_request       
+0      unit-test            unit-test                     unit-test                pr-unit-test.yml      pull_request       
+0      verify-code          Verify Code                   Verify PR Code           pr-verify-code.yml    pull_request       
+0      verify-pr-content    verify PR contents            Verify Pull Request      pr-verify.yml         pull_request_target
+0      yamllint             yamllint                      yamllint test            pr-yamllint.yml       pull_request       
+1      e2e-basic            End-to-End Test Basic         E2E PR Blocking          pr-e2e.yaml           pull_request_target
+</code></pre>
+<p>Then you can call single jobs:</p>
+<pre><code>act -j yamllint 
+
+[yamllint test/yamllint] 🚀  Start image=catthehacker/ubuntu:act-latest
+[yamllint test/yamllint]   🐳  docker pull image=catthehacker/ubuntu:act-latest platform= username= forcePull=true
+[yamllint test/yamllint] using DockerAuthConfig authentication for docker pull
+[yamllint test/yamllint]   🐳  docker create image=catthehacker/ubuntu:act-latest platform= entrypoint=[&quot;tail&quot; &quot;-f&quot; &quot;/dev/null&quot;] cmd=[]
+[yamllint test/yamllint]   🐳  docker run image=catthehacker/ubuntu:act-latest platform= entrypoint=[&quot;tail&quot; &quot;-f&quot; &quot;/dev/null&quot;] cmd=[]
+[yamllint test/yamllint]   ☁  git clone 'https://github.com/actions/setup-python' # ref=v4
+[yamllint test/yamllint] ⭐ Run Main actions/checkout@v3
+...
+</code></pre>
+<p>Actions which are known to work with <code>act</code>:</p>
+<ul>
+<li>golangci</li>
+<li>shellcheck</li>
+<li>starlark</li>
+<li>unit-test</li>
+<li>verify-code</li>
+<li>verify-pr-content</li>
+<li>yamllint</li>
+</ul>
+<p>Actions which are known to not work with <code>act</code>:</p>
+<ul>
+<li>markdown-link-check</li>
+</ul>
+<p>Using <code>act</code> is optional and not needed, except you want to update the Github Actions. All actions are
+available as Makefile targets (see <code>make help</code>), too.</p>
+<h2 id="updating-github-actions"><a class="header" href="#updating-github-actions">Updating Github Actions</a></h2>
+<p>In CI the Github Actions of the main branch get executed.</p>
+<p>If you want to update the Github Actions you need to merge the changes to the main branch first.</p>
+<p>See docs for <a href="https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#pull_request_target">pull_request_target</a></p>
+
+                    </main>
+
+                    <nav class="nav-wrapper" aria-label="Page navigation">
+                        <!-- Mobile navigation buttons -->
+                            <a rel="prev" href="../developer/testing.html" class="mobile-nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                                <i class="fa fa-angle-left"></i>
+                            </a>
+
+                            <a rel="next" href="../developer/e2e.html" class="mobile-nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                                <i class="fa fa-angle-right"></i>
+                            </a>
+
+                        <div style="clear: both"></div>
+                    </nav>
+                </div>
+            </div>
+
+            <nav class="nav-wide-wrapper" aria-label="Page navigation">
+                    <a rel="prev" href="../developer/testing.html" class="nav-chapters previous" title="Previous chapter" aria-label="Previous chapter" aria-keyshortcuts="Left">
+                        <i class="fa fa-angle-left"></i>
+                    </a>
+
+                    <a rel="next" href="../developer/e2e.html" class="nav-chapters next" title="Next chapter" aria-label="Next chapter" aria-keyshortcuts="Right">
+                        <i class="fa fa-angle-right"></i>
+                    </a>
+            </nav>
+
+        </div>
+
+
+
+
+        <script>
+            window.playground_copyable = true;
+        </script>
+
+
+        <script src="../elasticlunr.min.js"></script>
+        <script src="../mark.min.js"></script>
+        <script src="../searcher.js"></script>
+
+        <script src="../clipboard.min.js"></script>
+        <script src="../highlight.js"></script>
+        <script src="../book.js"></script>
+
+        <!-- Custom JS scripts -->
+
+
+    </body>
+</html>
