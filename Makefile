@@ -145,6 +145,7 @@ $(GOTESTSUM):
 install-crds: generate-manifests $(KUSTOMIZE) ## Install CRDs into the K8s cluster specified in ~/.kube/config.
 	$(KUSTOMIZE) build config/crd | kubectl apply -f -
 
+
 uninstall-crds: generate-manifests $(KUSTOMIZE) ## Uninstall CRDs from the K8s cluster specified in ~/.kube/config.
 	$(KUSTOMIZE) build config/crd | kubectl delete -f -
 
@@ -209,6 +210,7 @@ tail-caphv-controller-logs: ## Show the last lines of the caphv-controller logs
 .PHONY: ssh-first-control-plane
 ssh-first-control-plane: ## ssh into the first control-plane
 	@hack/ssh-first-control-plane.sh
+
 .PHONY: ensure-boilerplate
 ensure-boilerplate: ## Ensures that a boilerplate exists in each file by adding missing boilerplates
 	./hack/ensure-boilerplate.sh
@@ -256,14 +258,6 @@ docker-buildx: test-unit ## Build and push docker image for the manager for cros
 ifndef ignore-not-found
   ignore-not-found = false
 endif
-
-.PHONY: install
-install: generate-manifests $(KUSTOMIZE) ## Install CRDs into the K8s cluster specified in ~/.kube/config.
-	$(KUSTOMIZE) build config/crd | kubectl apply -f -
-
-.PHONY: uninstall
-uninstall: generate-manifests $(KUSTOMIZE) ## Uninstall CRDs from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
-	$(KUSTOMIZE) build config/crd | kubectl delete --ignore-not-found=$(ignore-not-found) -f -
 
 .PHONY: deploy
 deploy: generate-manifests $(KUSTOMIZE) ## Deploy controller to the K8s cluster specified in ~/.kube/config.
@@ -437,14 +431,20 @@ install-manifests-ccm:
 		--set secret.key=hivelocity
 	@echo 'run "kubectl --kubeconfig=$(CAPHV_WORKER_CLUSTER_KUBECONFIG) ..." to work with the new target cluster'
 
+$(HOME)/.ssh/hivelocity.pub:
+	echo "Creating SSH key-pair to access the nodes which get created by CAPHV"
+	ssh-keygen -f ~/.ssh/hivelocity
 
-create-workload-cluster: $(KUSTOMIZE) $(ENVSUBST) ## Creates a workload-cluster. ENV Variables need to be exported or defined in the tilt-settings.yaml
-	# Create workload Cluster. This is usually called via Tilt.
-	@test $${CLUSTER_NAME?Environment variable is required}
-	@test $${HIVELOCITY_API_KEY?Environment variable is required}
+create-workload-cluster: $(HOME)/.ssh/hivelocity.pub $(KUSTOMIZE) $(ENVSUBST) install-crds ## Creates a workload-cluster. ENV Variables need to be exported or defined in the tilt-settings.yaml
+	# Create workload Cluster.
+	@./hack/ensure-env-variables.sh CLUSTER_NAME HIVELOCITY_API_KEY KUBERNETES_VERSION WORKER_MACHINE_COUNT \
+		HIVELOCITY_REGION CONTROL_PLANE_MACHINE_COUNT HIVELOCITY_CONTROL_PLANE_MACHINE_TYPE HIVELOCITY_WORKER_MACHINE_TYPE \
+		HIVELOCITY_SSH_KEY
+
+	clusterctl init
 	rm -f $(CAPHV_WORKER_CLUSTER_KUBECONFIG)
-	go run test/upload-ssh-pub-key/upload-ssh-pub-key.go
-	go run test/claim-devices-or-fail/claim-devices-or-fail.go hvControlPlane hvWorker
+	go run ./cmd upload-ssh-pub-key $$HIVELOCITY_SSH_KEY $(HOME)/.ssh/hivelocity.pub
+	go run ./test/claim-devices-or-fail $$HIVELOCITY_CONTROL_PLANE_MACHINE_TYPE $$HIVELOCITY_WORKER_MACHINE_TYPE
 	kubectl create secret generic hivelocity --from-literal=hivelocity=$(HIVELOCITY_API_KEY) --save-config --dry-run=client -o yaml | kubectl apply -f -
 	$(KUSTOMIZE) build templates/cluster-templates/hivelocity --load-restrictor LoadRestrictionsNone  > templates/cluster-templates/cluster-template-hivelocity.yaml
 	cat templates/cluster-templates/cluster-template-hivelocity.yaml | $(ENVSUBST) - > templates/cluster-templates/cluster-template-hivelocity.yaml.apply
@@ -453,8 +453,8 @@ create-workload-cluster: $(KUSTOMIZE) $(ENVSUBST) ## Creates a workload-cluster.
 	$(MAKE) install-manifests-cilium
 	$(MAKE) install-manifests-ccm
 
-.PHONY: cluster
-cluster: $(CTLPTL) ## Creates kind-dev Cluster
+.PHONY: create-mgt-cluster
+create-mgt-cluster: $(CTLPTL) ## Creates kind-dev Management Cluster
 	rm -f $(CAPHV_WORKER_CLUSTER_KUBECONFIG) $(CAPHV_MGT_CLUSTER_KUBECONFIG)
 	./hack/kind-dev.sh
 
@@ -545,5 +545,5 @@ set-manifest-pull-policy:
 
 
 .PHONY: tilt-up
-tilt-up: $(ENVSUBST) $(KUSTOMIZE) $(TILT) cluster  ## Start a mgt-cluster & Tilt. Installs the CRDs and deploys the controllers
+tilt-up: $(ENVSUBST) $(KUSTOMIZE) $(TILT) create-mgt-cluster  ## Start a mgt-cluster & Tilt. Installs the CRDs and deploys the controllers
 	EXP_CLUSTER_RESOURCE_SET=true $(TILT) up --port 10351

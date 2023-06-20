@@ -10,7 +10,7 @@ on:
       - "**go.mod"
       - "**go.sum"
 jobs:
-  test:
+  unit-test:
     name: unit-test
     runs-on: ubuntu-latest
     steps:

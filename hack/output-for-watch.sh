@@ -34,7 +34,7 @@ kubectl get machines -A
 
 print_heading hivelocitymachine
 
-kubectl get hivelocitymachine -A
+kubectl get hivelocitymachine -A "-o=custom-columns=NAMESPACE:.metadata.namespace,NAME:.metadata.name,Cluster:.metadata.labels.cluster\.x-k8s\.io/cluster-name,Type:.spec.type,State:.status.deviceState,Ready:.status.ready,ProviderID:.spec.providerID,Machine:.metadata.ownerReferences[?(@.kind==\"Machine\")].name,IP:.status.addresses[?(@.type==\"InternalIP\")].address"
 
 print_heading events
 
@@ -83,3 +83,10 @@ KUBECONFIG=$kubeconfig kubectl get -n kube-system deployment ccm-hivelocity || e
 print_heading "workload-cluster nodes"
 
 KUBECONFIG=$kubeconfig kubectl get nodes
+
+if [ $(kubectl get hivelocitymachine | wc -l) -ne $(KUBECONFIG=$kubeconfig kubectl get nodes | wc -l) ]; then 
+    echo "❌ Number of nodes in wl-cluster does not match number of HivelocityMachines in mgt-cluster"
+else
+    echo "👌 number of nodes in wl-cluster is equal to number of HivelocityMachines in mgt-cluster"
+fi
+

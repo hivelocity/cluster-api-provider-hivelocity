@@ -12,6 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+ROOT_DIR_RELATIVE := ../..
+include $(ROOT_DIR_RELATIVE)/common.mk
+
 # Directories.
 ROOT_DIR:=$(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 TOOLS_DIR := $(realpath ../../hack/tools)
@@ -19,7 +22,7 @@ TOOLS_BIN_DIR := $(TOOLS_DIR)/bin
 BIN_DIR := bin
 MDBOOK_INSTALL := $(realpath ../../hack/ci-install-mdbook.sh)
 # API_DIRS to skip.
-API_DIRS :=
+API_DIRS := api/v1alpha1
 API_SRCS := $(foreach dir, $(API_DIRS), $(call rwildcard,../../$(dir),*.go))
 GENERATED_SRCS := $(foreach dir, $(API_DIRS),../../$(dir)/zz_generated.deepcopy.go ../../$(dir)/zz_generated.conversion.go ../../$(dir)/zz_generated.defaults.go)
 API_FILTERED_SRCS := $(filter-out $(GENERATED_SRCS), $(API_SRCS))

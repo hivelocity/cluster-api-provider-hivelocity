@@ -77,10 +77,10 @@ func releaseOldMachines(ctx context.Context, apiClient *hv.APIClient, deviceType
 		}
 		devicesWithTag = append(devicesWithTag, device)
 	}
-	fmt.Printf("resetting all devices which have %s=%s. Found %d devices\n",
+	fmt.Printf("resetting labels of all devices which have %s=%s. Found %d devices\n",
 		hvtag.DeviceTagKeyDeviceType, deviceType, len(devicesWithTag))
 	for _, device := range devicesWithTag {
-		fmt.Printf("    resetting device %d\n", device.DeviceId)
+		fmt.Printf("    resetting labels of device %d\n", device.DeviceId)
 		_, _, err := apiClient.DeviceApi.PutDeviceTagIdResource(ctx, device.DeviceId, hv.DeviceTag{
 			Tags: []string{tag}}, nil)
 		if err != nil {

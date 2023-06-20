@@ -1,5 +1,4 @@
 #!/bin/bash
-
 # Copyright 2023 The Kubernetes Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,21 +13,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-export KUBECONFIG=.mgt-cluster-kubeconfig.yaml
-if [ ! -s "$KUBECONFIG" ]; then
-    echo "$KUBECONFIG does not exist or is empty."
-    exit 1
-fi
-ip=$(kubectl get machine -A -l cluster.x-k8s.io/control-plane  -o  jsonpath='{.items[0].status.addresses[?(@.type=="InternalIP")].address}' | head -1)
-if [ -z "$ip" ]; then
-    echo "Could not get IP of control-plane"
-    exit 1
+if [ "$#" -lt 1 ]; then
+  echo "Usage: $0 VAR1 VAR2 ..."
+  exit 1
 fi
 
-ssh_file=$HOME/.ssh/hivelocity
-if [ ! -e $ssh_file ]; then
-    echo "$ssh_file does not exist"
-    exit 1
-fi
+missing_vars=()
+for varname in "$@"; do
+  eval varvalue=\$$varname
+  if [ -z "$varvalue" ]; then
+    missing_vars+=("$varname")
+  fi
+done
 
-ssh -i "$ssh_file" "root@$ip"
+if [ ${#missing_vars[@]} -gt 0 ]; then
+  echo "Missing or empty environment variables: ${missing_vars[*]}"
+  exit 1
+fi

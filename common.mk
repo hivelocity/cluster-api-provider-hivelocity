@@ -1,5 +1,3 @@
-#!/bin/bash
-
 # Copyright 2023 The Kubernetes Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,21 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-export KUBECONFIG=.mgt-cluster-kubeconfig.yaml
-if [ ! -s "$KUBECONFIG" ]; then
-    echo "$KUBECONFIG does not exist or is empty."
-    exit 1
-fi
-ip=$(kubectl get machine -A -l cluster.x-k8s.io/control-plane  -o  jsonpath='{.items[0].status.addresses[?(@.type=="InternalIP")].address}' | head -1)
-if [ -z "$ip" ]; then
-    echo "Could not get IP of control-plane"
-    exit 1
-fi
+# Ensure Make is run with bash shell as some syntax below is bash-specific
+SHELL:=bash
+.ONESHELL:
+.EXPORT_ALL_VARIABLES:
+.SHELLFLAGS := -eu -o pipefail -c
+.DELETE_ON_ERROR:
+MAKEFLAGS += --no-builtin-rules
 
-ssh_file=$HOME/.ssh/hivelocity
-if [ ! -e $ssh_file ]; then
-    echo "$ssh_file does not exist"
-    exit 1
-fi
 
-ssh -i "$ssh_file" "root@$ip"
+rwildcard=$(foreach d,$(wildcard $(1:=/*)),$(call rwildcard,$d,$2) $(filter $(subst *,%,$2),$d))
+

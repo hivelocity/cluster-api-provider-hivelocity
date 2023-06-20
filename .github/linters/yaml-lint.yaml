@@ -5,6 +5,7 @@ ignore: |
   config/rbac/**/*.yaml
   config/webhook/**/*.yaml
   test/e2e/data/**/*.yaml
+  vendor/
 rules:
   braces:
     min-spaces-inside: 0

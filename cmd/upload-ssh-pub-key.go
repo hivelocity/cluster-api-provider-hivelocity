@@ -14,25 +14,34 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Package main contains functions to test the Hivelocity API.
 package main
 
 import (
 	"context"
 	"fmt"
-	"log"
 	"os"
 
 	hv "github.com/hivelocity/hivelocity-client-go/client"
+	"github.com/spf13/cobra"
 )
 
-const sshPubKeyName = "ssh-key-hivelocity-pub"
-const sshPubKeyContent = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQCXSatqG8kdtmo2n1VxvHUxq6HkkZ2mazjuLIcPPB5JVtyfe/EBi89mHr0/kYeY0AELk7pqiRshnvvJ9sIm7HC1xqIphE4+/XPNt/fwnFBxdU3WfPf1ho/L9xHaPcojrsC+NvLFcJKr/351EGgeYneUfb4FY7ElAKQq8oxRSMpODfKhg9BRQCDYEvTblLHR8lTUB2Vx7D33TlMThHqTSWuw2aXj8s53XeVFPBhR0KYRt7731M79oo4qPLlVMRwPUH2H2RTdoEHG50x/g+0MXYU0INO2sQMXizWt8rwV8hyiMg41+hteYkAGFOpRjZWD7ez8yMAQ2O3KcJFSgvGOs042nUmqFLB0AZFvSvptIqLBdYHrcgsQgQYVKVC1f+iLjexUQHABbp6liHJ0kSXS3twamgx+WtNsdaEvykUecLHZpzIMBLeCYXOy4S33L7ywnxWO+KOqnF8MZTpQoJP1HBZNJPBExX788UWiBlb/jKTDAksOfR43PNEHyPx8sQFPGf8= hivelocity"
+var uploadSSHKey = &cobra.Command{
+	Use:   "upload-ssh-pub-key [flags] SSH_PUB_KEY_NAME SSH_PUB_KEY_FILE",
+	Short: "Uploads a ssh pub-key to Hivelocity",
+	Run:   runUploadSSHKey,
+	Args:  cobra.ExactArgs(2),
+}
 
-func main() {
+func runUploadSSHKey(cmd *cobra.Command, args []string) {
+	sshPubKeyName := args[0]
+	sshPubKeyContent, err := os.ReadFile(args[1])
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
 	apiKey := os.Getenv("HIVELOCITY_API_KEY")
 	if apiKey == "" {
-		log.Fatalln("Missing environment variable HIVELOCITY_API_KEY")
+		fmt.Println("Missing environment variable HIVELOCITY_API_KEY")
 		os.Exit(1)
 	}
 	ctx := context.WithValue(context.Background(), hv.ContextAPIKey, hv.APIKey{
@@ -45,18 +54,18 @@ func main() {
 	}
 	for _, sshKey := range sshKeyResponses {
 		if sshKey.Name == sshPubKeyName {
-			fmt.Printf("Key %q already exists\n", sshPubKeyName)
+			fmt.Printf("Key %q already exists. ID: %d\n", sshPubKeyName, sshKey.SshKeyId)
 			return
 		}
 	}
 
 	// key does not exist yet
-	_, _, err = apiClient.SshKeyApi.PostSshKeyResource(ctx, hv.SshKey{
+	ssKey, _, err := apiClient.SshKeyApi.PostSshKeyResource(ctx, hv.SshKey{
 		Name:      sshPubKeyName,
-		PublicKey: sshPubKeyContent,
+		PublicKey: string(sshPubKeyContent),
 	}, nil)
 	if err != nil {
 		panic(err)
 	}
-	fmt.Printf("Key %q created\n", sshPubKeyName)
+	fmt.Printf("Key %q created. ID: %d\n", sshPubKeyName, ssKey.SshKeyId)
 }

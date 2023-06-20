@@ -62,4 +62,4 @@ ctlptl_kind-cluster-with-registry caphv ${K8S_VERSION}
 echo ""
 echo ""
 echo ""
-echo "Cluster is ready - you can now tilt up!"
+echo "Mangement Cluster is ready!"

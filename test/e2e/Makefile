@@ -54,21 +54,6 @@ $(KUSTOMIZE): # Build kustomize from tools folder.
 
 HV_TEMPLATES := $(REPO_ROOT)/test/e2e/data/infrastructure-hivelocity
 
-e2e-cilium-templates:
-	helm repo add cilium https://helm.cilium.io/
-	helm repo update cilium
-	helm template cilium cilium/cilium --version 1.12.2 \
-  	--namespace kube-system \
-	-f $(REPO_ROOT)/templates/cilium/cilium.yaml > $(REPO_ROOT)/test/e2e/data/cni/cilium/cilium.yaml
-	sed -i 's/$${BIN_PATH}/$$BIN_PATH/' $(REPO_ROOT)/test/e2e/data/cni/cilium/cilium.yaml
-
-e2e-ccm-templates:
-	helm repo add hivelocity https://hivelocity.github.io/hivelocity-cloud-controller-manager/
-	helm repo update hivelocity
-	helm template ccm hivelocity/ccm-hivelocity \
-		--version 0.1.2 \
-	--namespace kube-system > $(REPO_ROOT)/test/e2e/data/ccm/hivelocity-ccm.yaml
-
 .PHONY: cluster-templates
 cluster-templates: $(KUSTOMIZE) cluster-templates-v1alpha1 ## Generate cluster templates for all versions
 

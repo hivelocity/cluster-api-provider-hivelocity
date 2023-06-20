@@ -87,7 +87,7 @@ func (r *HivelocityClusterReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		if apierrors.IsNotFound(err) {
 			return reconcile.Result{}, nil
 		}
-		return reconcile.Result{}, err
+		return reconcile.Result{RequeueAfter: 1 * time.Second}, err
 	}
 
 	log = log.WithValues("HivelocityCluster", klog.KObj(hvCluster))
@@ -146,7 +146,8 @@ func (r *HivelocityClusterReconciler) Reconcile(ctx context.Context, req ctrl.Re
 
 	// check whether rate limit has been reached and if so, then wait.
 	if wait := reconcileRateLimit(hvCluster); wait {
-		return ctrl.Result{RequeueAfter: 30 * time.Second}, nil
+		// don't wait too long. Otherwise: context canceled
+		return ctrl.Result{RequeueAfter: 20 * time.Second}, nil
 	}
 
 	// Handle deleted clusters
@@ -208,7 +209,7 @@ func (r *HivelocityClusterReconciler) reconcileNormal(ctx context.Context, clust
 			log.V(1).Info(err.Error())
 			return reconcile.Result{RequeueAfter: 30 * time.Second}, nil
 		}
-		return reconcile.Result{}, err
+		return reconcile.Result{RequeueAfter: 5 * time.Second}, err
 	}
 
 	log.V(1).Info("Reconciling finished")
