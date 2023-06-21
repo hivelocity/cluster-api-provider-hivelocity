@@ -39,7 +39,10 @@ go run ./cmd upload-ssh-pub-key ssh-key-hivelocity-pub "$HOME/.ssh/hivelocity.pu
 #       machines could get claimed.
 #       Up to now all machines having these labels will be claimed. The count does
 #       not get checked yet.
-go run test/claim-devices-or-fail/claim-devices-or-fail.go e2eControlPlane e2eWorker
+CONTROL_PLANE_TAG=$(yq .variables.HIVELOCITY_CONTROL_PLANE_MACHINE_TYPE test/e2e/config/hivelocity-ci-envsubst.yaml)
+WORKER_TAG=$(yq .variables.HIVELOCITY_WORKER_MACHINE_TYPE test/e2e/config/hivelocity-ci-envsubst.yaml)
+
+go run test/claim-devices-or-fail/claim-devices-or-fail.go cat ${CONTROL_PLANE_TAG} ${WORKER_TAG}
 
 mkdir -p "$ARTIFACTS"
 echo "+ run tests!"
@@ -48,7 +51,6 @@ if [[ "${CI:-""}" == "true" ]]; then
     make set-manifest-image "MANIFEST_IMG=${IMAGE_PREFIX}/caphv-staging" "MANIFEST_TAG=${TAG}"
     make set-manifest-pull-policy PULL_POLICY=IfNotPresent
 fi
-
 
 make -C test/e2e/ run GINKGO_NODES="${GINKGO_NODES}" GINKGO_FOCUS="${GINKGO_FOKUS}"
 
