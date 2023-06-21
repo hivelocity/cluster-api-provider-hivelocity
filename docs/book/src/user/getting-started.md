@@ -37,6 +37,32 @@ After the workload-cluster was created successfully, you can **move** the manage
 
 Cluster API Hivelocity adds the infrastructure provider Hivelocity to the list of supported providers. Other providers supported by Cluster API are: AWS, Azure, Google Cloud Platform, OpenStack ... (See [complete list](https://cluster-api.sigs.k8s.io/reference/providers.html#infrastructure))
 
+## Setup
+
+At this moment we only support cluster management with tilt. So follow below instructions to create management and workload cluster.
+
+### Create a management cluster
+
+Please run below command and this will use `tilt-provider.yaml` to create the provider and `tilt-settings.yaml` to get all the environment variable -
+```shell
+# Please run the command from root of this repository
+make tilt-up
+```
+
+### Create workload cluster
+
+There is a button in top right corner of the tilt console to create the workload cluster.
+![Screenshot of Tilt](./create_workload.jpg)
+
+### Tear down resources
+
+There is a button in top right corner of the tilt console to create the workload cluster.
+![Screenshot of Tilt](./delete_workload.jpg)
+
+Once done delete management cluster by -
+```shell
+make delete-mgt-cluster
+```
 
 ## Current Limitations
 
@@ -73,5 +99,4 @@ Please have a look at the [Developer Guide](../developer/index.md), if you want 
 
 ## Navigation in the docs
 
-On the left and right side of the documentation you see angle brackets. You can use them to switch 
-to the next/previous page.
+On the left and right side of the documentation you see angle brackets. You can use them to switch to the next/previous page.
