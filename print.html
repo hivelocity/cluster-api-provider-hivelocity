@@ -237,6 +237,22 @@ typo in the docs, please tell us how we can improve the project!</p>
 <p>After the workload-cluster was created successfully, you can <strong>move</strong> the management-cluster into the workload-cluster. This gets done with <code>clusterclt move</code>. See <a href="https://cluster-api.sigs.k8s.io/clusterctl/commands/move.html#pivot">Cluster API Docs “pivot”</a></p>
 <h2 id="what-is-cluster-api-provider-hivelocity"><a class="header" href="#what-is-cluster-api-provider-hivelocity">What is Cluster API Provider Hivelocity?</a></h2>
 <p>Cluster API Hivelocity adds the infrastructure provider Hivelocity to the list of supported providers. Other providers supported by Cluster API are: AWS, Azure, Google Cloud Platform, OpenStack … (See <a href="https://cluster-api.sigs.k8s.io/reference/providers.html#infrastructure">complete list</a>)</p>
+<h2 id="setup"><a class="header" href="#setup">Setup</a></h2>
+<p>At this moment we only support cluster management with tilt. So follow below instructions to create management and workload cluster.</p>
+<h3 id="create-a-management-cluster"><a class="header" href="#create-a-management-cluster">Create a management cluster</a></h3>
+<p>Please run below command and this will use <code>tilt-provider.yaml</code> to create the provider and <code>tilt-settings.yaml</code> to get all the environment variable -</p>
+<pre><code class="language-shell"># Please run the command from root of this repository
+make tilt-up
+</code></pre>
+<h3 id="create-workload-cluster"><a class="header" href="#create-workload-cluster">Create workload cluster</a></h3>
+<p>There is a button in top right corner of the tilt console to create the workload cluster.
+<img src="user/./create_workload.jpg" alt="Screenshot of Tilt" /></p>
+<h3 id="tear-down-resources"><a class="header" href="#tear-down-resources">Tear down resources</a></h3>
+<p>There is a button in top right corner of the tilt console to create the workload cluster.
+<img src="user/./delete_workload.jpg" alt="Screenshot of Tilt" /></p>
+<p>Once done delete management cluster by -</p>
+<pre><code class="language-shell">make delete-mgt-cluster
+</code></pre>
 <h2 id="current-limitations"><a class="header" href="#current-limitations">Current Limitations</a></h2>
 <h3 id="limitation-missing-loadbalancers"><a class="header" href="#limitation-missing-loadbalancers">Limitation: Missing Loadbalancers</a></h3>
 <p>Up to now Loadbalancers are not supported yet. But we are working on it.</p>
@@ -255,8 +271,7 @@ need to reset the machine.</p>
 <p>But we are working on it.</p>
 <p>Please have a look at the <a href="user/../developer/index.html">Developer Guide</a>, if you want to setup a cluster.</p>
 <h2 id="navigation-in-the-docs"><a class="header" href="#navigation-in-the-docs">Navigation in the docs</a></h2>
-<p>On the left and right side of the documentation you see angle brackets. You can use them to switch 
-to the next/previous page.</p>
+<p>On the left and right side of the documentation you see angle brackets. You can use them to switch to the next/previous page.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="topics-1"><a class="header" href="#topics-1">Topics</a></h1>
 <p>This section provides details for some of the operations that need to be performed when managing clusters.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="provisioning-machines"><a class="header" href="#provisioning-machines">Provisioning Machines</a></h1>
@@ -406,8 +421,7 @@ binaries (<code>envsubst</code> and <code>kustomize</code>) which are needed to 
 <div style="break-before: page; page-break-before: always;"></div><h1 id="using-tilt-for-cluster-api-provider-hivelocity"><a class="header" href="#using-tilt-for-cluster-api-provider-hivelocity">Using Tilt for Cluster API Provider Hivelocity</a></h1>
 <p>We use <a href="https://tilt.dev/">Tilt</a> to start a development cluster.</p>
 <h2 id="setting-tilt-up"><a class="header" href="#setting-tilt-up">Setting Tilt up</a></h2>
-<p>You need to create a <code>tilt-settings.yaml</code> file and specify the values you need. In the git repo is already
-a file. You can adapt it to your needs.</p>
+<p>You need to create a <code>tilt-settings.yaml</code> file and specify the values you need. In the git repo is already a file. You can adapt it to your needs.</p>
 <p>Machines with the corresponding <code>caphv-device-type</code> tag will get conditionless provisioned. Be sure that you don’t provision machines which run valuable workload!</p>
 <p>We recommend to use custom device tags for testing.</p>
 <p>More about this topic: <a href="developer/../topics/provisioning-machines.html">Provisioning Machines</a></p>
@@ -425,7 +439,7 @@ a file. You can adapt it to your needs.</p>
 <p><img src="developer/./tilt.jpg" alt="Screenshot of Tilt" /></p>
 <p>Be sure that all Resources are ok (5/5 in above screenshot).</p>
 <p>At the top right side you see an up-arrow icon. You see “Create Hivelocity Cluster” if you hover the button. You can use it
-to create a new Cluster.</p>
+to create a new workload cluster.</p>
 <p>Open a terminal and execute <a href="developer/../topics/make-watch.html">make watch</a></p>
 <p><img src="developer/../topics/make-watch.jpg" alt="make watch" /></p>
 <p>The output of <a href="developer/../topics/make-watch.html">make watch</a> updates itself. You can monitor the progress of the CAPH controller.</p>

@@ -150,8 +150,7 @@
                         <h1 id="using-tilt-for-cluster-api-provider-hivelocity"><a class="header" href="#using-tilt-for-cluster-api-provider-hivelocity">Using Tilt for Cluster API Provider Hivelocity</a></h1>
 <p>We use <a href="https://tilt.dev/">Tilt</a> to start a development cluster.</p>
 <h2 id="setting-tilt-up"><a class="header" href="#setting-tilt-up">Setting Tilt up</a></h2>
-<p>You need to create a <code>tilt-settings.yaml</code> file and specify the values you need. In the git repo is already
-a file. You can adapt it to your needs.</p>
+<p>You need to create a <code>tilt-settings.yaml</code> file and specify the values you need. In the git repo is already a file. You can adapt it to your needs.</p>
 <p>Machines with the corresponding <code>caphv-device-type</code> tag will get conditionless provisioned. Be sure that you don’t provision machines which run valuable workload!</p>
 <p>We recommend to use custom device tags for testing.</p>
 <p>More about this topic: <a href="../topics/provisioning-machines.html">Provisioning Machines</a></p>
@@ -169,7 +168,7 @@ a file. You can adapt it to your needs.</p>
 <p><img src="./tilt.jpg" alt="Screenshot of Tilt" /></p>
 <p>Be sure that all Resources are ok (5/5 in above screenshot).</p>
 <p>At the top right side you see an up-arrow icon. You see “Create Hivelocity Cluster” if you hover the button. You can use it
-to create a new Cluster.</p>
+to create a new workload cluster.</p>
 <p>Open a terminal and execute <a href="../topics/make-watch.html">make watch</a></p>
 <p><img src="../topics/make-watch.jpg" alt="make watch" /></p>
 <p>The output of <a href="../topics/make-watch.html">make watch</a> updates itself. You can monitor the progress of the CAPH controller.</p>

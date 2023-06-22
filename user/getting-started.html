@@ -166,6 +166,22 @@
 <p>After the workload-cluster was created successfully, you can <strong>move</strong> the management-cluster into the workload-cluster. This gets done with <code>clusterclt move</code>. See <a href="https://cluster-api.sigs.k8s.io/clusterctl/commands/move.html#pivot">Cluster API Docs “pivot”</a></p>
 <h2 id="what-is-cluster-api-provider-hivelocity"><a class="header" href="#what-is-cluster-api-provider-hivelocity">What is Cluster API Provider Hivelocity?</a></h2>
 <p>Cluster API Hivelocity adds the infrastructure provider Hivelocity to the list of supported providers. Other providers supported by Cluster API are: AWS, Azure, Google Cloud Platform, OpenStack … (See <a href="https://cluster-api.sigs.k8s.io/reference/providers.html#infrastructure">complete list</a>)</p>
+<h2 id="setup"><a class="header" href="#setup">Setup</a></h2>
+<p>At this moment we only support cluster management with tilt. So follow below instructions to create management and workload cluster.</p>
+<h3 id="create-a-management-cluster"><a class="header" href="#create-a-management-cluster">Create a management cluster</a></h3>
+<p>Please run below command and this will use <code>tilt-provider.yaml</code> to create the provider and <code>tilt-settings.yaml</code> to get all the environment variable -</p>
+<pre><code class="language-shell"># Please run the command from root of this repository
+make tilt-up
+</code></pre>
+<h3 id="create-workload-cluster"><a class="header" href="#create-workload-cluster">Create workload cluster</a></h3>
+<p>There is a button in top right corner of the tilt console to create the workload cluster.
+<img src="./create_workload.jpg" alt="Screenshot of Tilt" /></p>
+<h3 id="tear-down-resources"><a class="header" href="#tear-down-resources">Tear down resources</a></h3>
+<p>There is a button in top right corner of the tilt console to create the workload cluster.
+<img src="./delete_workload.jpg" alt="Screenshot of Tilt" /></p>
+<p>Once done delete management cluster by -</p>
+<pre><code class="language-shell">make delete-mgt-cluster
+</code></pre>
 <h2 id="current-limitations"><a class="header" href="#current-limitations">Current Limitations</a></h2>
 <h3 id="limitation-missing-loadbalancers"><a class="header" href="#limitation-missing-loadbalancers">Limitation: Missing Loadbalancers</a></h3>
 <p>Up to now Loadbalancers are not supported yet. But we are working on it.</p>
@@ -184,8 +200,7 @@ need to reset the machine.</p>
 <p>But we are working on it.</p>
 <p>Please have a look at the <a href="../developer/index.html">Developer Guide</a>, if you want to setup a cluster.</p>
 <h2 id="navigation-in-the-docs"><a class="header" href="#navigation-in-the-docs">Navigation in the docs</a></h2>
-<p>On the left and right side of the documentation you see angle brackets. You can use them to switch 
-to the next/previous page.</p>
+<p>On the left and right side of the documentation you see angle brackets. You can use them to switch to the next/previous page.</p>
 
                     </main>
 
