@@ -111,7 +111,7 @@ $(SETUP_ENVTEST): $(TOOLS_DIR)/go.mod # Build setup-envtest from tools folder.
 CTLPTL := $(abspath $(TOOLS_BIN_DIR)/ctlptl)
 ctlptl: $(CTLPTL) ## Build a local copy of ctlptl
 $(CTLPTL):
-	cd $(TOOLS_DIR) && go build -tags=tools -o $(CTLPTL) github.com/tilt-dev/ctlptl/cmd/ctlptl
+	cd $(TOOLS_DIR) && go build -mod=mod -tags=tools -o $(CTLPTL) github.com/tilt-dev/ctlptl/cmd/ctlptl
 
 CLUSTERCTL := $(abspath $(TOOLS_BIN_DIR)/clusterctl)
 clusterctl: $(CLUSTERCTL) ## Build a local copy of clusterctl
@@ -442,6 +442,14 @@ create-workload-cluster: $(HOME)/.ssh/hivelocity.pub $(KUSTOMIZE) $(ENVSUBST) in
 create-mgt-cluster: $(CTLPTL) $(KIND) $(KUBECTL) $(ENVSUBST) $(KUSTOMIZE) ## Creates kind-dev Management Cluster
 	rm -f $(CAPHV_WORKER_CLUSTER_KUBECONFIG) $(CAPHV_MGT_CLUSTER_KUBECONFIG)
 	./hack/kind-dev.sh
+
+.PHONY: delete-workload-cluster
+delete-workload-cluster: ## Deletes the example workload Kubernetes cluster
+	@test $${CLUSTER_NAME?Please set environment variable}
+	@echo 'Your Hivelocity resources will now be deleted.'
+	kubectl delete cluster/$(CLUSTER_NAME)
+	kubectl wait --for=delete cluster/$(CLUSTER_NAME) --timeout=15m
+	@echo 'Cluster deleted'
 
 .PHONY: delete-mgt-cluster
 delete-mgt-cluster: $(CTLPTL) ## Deletes Kind-dev management cluster (default)
