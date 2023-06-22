@@ -26,7 +26,7 @@ if [ -z "$ip" ]; then
 fi
 
 ssh_file=$HOME/.ssh/hivelocity
-if [ ! -e $ssh_file ]; then
+if [ ! -e "$ssh_file" ]; then
     echo "$ssh_file does not exist"
     exit 1
 fi

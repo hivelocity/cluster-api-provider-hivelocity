@@ -67,10 +67,10 @@ confirm() {
 
 install_ctlptl() {
     if [[ "${OSTYPE}" == "linux"* ]]; then
-      curl -fsSL https://github.com/tilt-dev/ctlptl/releases/download/v${MINIMUM_CTLPTL_VERSION}/ctlptl.${MINIMUM_CTLPTL_VERSION}.linux.x86_64.tar.gz | tar -xzv ctlptl
+      curl -fsSL "https://github.com/tilt-dev/ctlptl/releases/download/v${MINIMUM_CTLPTL_VERSION}/ctlptl.${MINIMUM_CTLPTL_VERSION}.linux.x86_64.tar.gz" | tar -xzv ctlptl
       copy_binary
     elif [[ "$OSTYPE" == "darwin"* ]]; then
-      curl -fsSL https://github.com/tilt-dev/ctlptl/releases/download/v${MINIMUM_CTLPTL_VERSION}/ctlptl.${MINIMUM_CTLPTL_VERSION}.mac.x86_64.tar.gz | tar -xzv ctlptl
+      curl -fsSL "https://github.com/tilt-dev/ctlptl/releases/download/v${MINIMUM_CTLPTL_VERSION}/ctlptl.${MINIMUM_CTLPTL_VERSION}.mac.x86_64.tar.gz" | tar -xzv ctlptl
       copy_binary
     else
       set +x

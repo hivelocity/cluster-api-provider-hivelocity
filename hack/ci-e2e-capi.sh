@@ -17,7 +17,9 @@
 set -o errexit
 set -o pipefail
 
-REPO_ROOT=$(realpath $(dirname "${BASH_SOURCE[0]}")/..)
+BASE_DIR=$(dirname "${BASH_SOURCE[0]}")
+REPO_ROOT=$(realpath "$BASE_DIR/..")
+
 cd "${REPO_ROOT}" || exit 1
 
 # Make sure the tools binaries are on the path.
@@ -43,11 +45,10 @@ mkdir -p "$ARTIFACTS"
 echo "+ run tests!"
 
 if [[ "${CI:-""}" == "true" ]]; then
-    make set-manifest-image MANIFEST_IMG=${IMAGE_PREFIX}/caphv-staging MANIFEST_TAG=${TAG}
+    make set-manifest-image "MANIFEST_IMG=${IMAGE_PREFIX}/caphv-staging" "MANIFEST_TAG=${TAG}"
     make set-manifest-pull-policy PULL_POLICY=IfNotPresent
 fi
 
 
 make -C test/e2e/ run GINKGO_NODES="${GINKGO_NODES}" GINKGO_FOCUS="${GINKGO_FOKUS}"
 
-test_status="${?}"

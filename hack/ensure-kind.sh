@@ -68,10 +68,10 @@ confirm() {
 
 install_kind() {
     if [[ "${OSTYPE}" == "linux"* ]]; then
-      curl -sLo "kind" https://github.com/kubernetes-sigs/kind/releases/download/v${MINIMUM_KIND_VERSION}/kind-linux-amd64
+      curl -sLo "kind" "https://github.com/kubernetes-sigs/kind/releases/download/v${MINIMUM_KIND_VERSION}/kind-linux-amd64"
       copy_binary
     elif [[ "$OSTYPE" == "darwin"* ]]; then
-      curl -sLo "kind" https://github.com/kubernetes-sigs/kind/releases/download/v${MINIMUM_KIND_VERSION}/kind-darwin-amd64
+      curl -sLo "kind" "https://github.com/kubernetes-sigs/kind/releases/download/v${MINIMUM_KIND_VERSION}/kind-darwin-amd64"
       copy_binary
     else
       set +x

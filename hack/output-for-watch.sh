@@ -63,11 +63,11 @@ echo
 
 ./hack/get-kubeconfig-of-workload-cluster.sh
 
-kubeconfig=".workload-cluster-kubeconfig.yaml"
+kubeconfig_wl=".workload-cluster-kubeconfig.yaml"
 
 
-print_heading "KUBECONFIG=$kubeconfig kubectl cluster-info"
-if KUBECONFIG=$kubeconfig kubectl cluster-info >/dev/null 2>&1; then
+print_heading "KUBECONFIG=$kubeconfig_wl kubectl cluster-info"
+if KUBECONFIG=$kubeconfig_wl kubectl cluster-info >/dev/null 2>&1; then
     echo "👌 cluster is reachable"
 else
     echo "❌ cluster is not reachable"
@@ -76,15 +76,15 @@ fi
 
 echo
 
-KUBECONFIG=$kubeconfig kubectl get -n kube-system deployment cilium-operator || echo "❌ cilium-operator not installed?"
+KUBECONFIG=$kubeconfig_wl kubectl get -n kube-system deployment cilium-operator || echo "❌ cilium-operator not installed?"
 
-KUBECONFIG=$kubeconfig kubectl get -n kube-system deployment ccm-hivelocity || echo "❌ ccm not installed?"
+KUBECONFIG=$kubeconfig_wl kubectl get -n kube-system deployment ccm-hivelocity || echo "❌ ccm not installed?"
 
 print_heading "workload-cluster nodes"
 
-KUBECONFIG=$kubeconfig kubectl get nodes
+KUBECONFIG=$kubeconfig_wl kubectl get nodes
 
-if [ $(kubectl get hivelocitymachine | wc -l) -ne $(KUBECONFIG=$kubeconfig kubectl get nodes | wc -l) ]; then 
+if [ "$(kubectl get hivelocitymachine | wc -l)" -ne "$(KUBECONFIG=\"$kubeconfig_wl\" kubectl get nodes | wc -l)" ]; then 
     echo "❌ Number of nodes in wl-cluster does not match number of HivelocityMachines in mgt-cluster"
 else
     echo "👌 number of nodes in wl-cluster is equal to number of HivelocityMachines in mgt-cluster"

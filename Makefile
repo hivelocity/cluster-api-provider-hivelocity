@@ -78,64 +78,56 @@ help: ## Display this help.
 
 ##@ Binaries / Software
 
-.PHONY: install-ctlptl
-install-ctlptl: ## Installs CTLPTL (CLI for declaratively setting up local Kubernetes clusters)
-	MINIMUM_CTLPTL_VERSION=$(MINIMUM_CTLPTL_VERSION) ./hack/ensure-ctlptl.sh
-
 .PHONY: check-go
 check-go: ## Checks go version
 	MINIMUM_GO_VERSION=$(MINIMUM_GO_VERSION) ./hack/ensure-go.sh
 
-install-kind: ## Installs Kind (Kubernetes-in-Docker)
-	MINIMUM_KIND_VERSION=$(MINIMUM_KIND_VERSION) ./hack/ensure-kind.sh
-
-.PHONY: install-kubectl
-install-kubectl: ## Installs Kubectl (CLI for kubernetes)
-	MINIMUM_KUBECTL_VERSION=$(MINIMUM_KUBECTL_VERSION) ./hack/ensure-kubectl.sh
-
-.PHONY: install-tilt
-install-tilt: ## Installs Tilt (watches files, builds containers, ships to k8s)
-	MINIMUM_TILT_VERSION=$(MINIMUM_TILT_VERSION) ./hack/ensure-tilt.sh
-
-.PHONY: install-clusterctl
-install-clusterctl: ## Installs clusterctl
-	MINIMUM_CLUSTERCTL_VERSION=$(MINIMUM_CLUSTERCTL_VERSION) ./hack/ensure-clusterctl.sh
-
-install-dev-prerequisites: ## Installs all necessary dependencies
-	@echo "Start checking dependencies"
-	$(MAKE) install-ctlptl
-	$(MAKE) check-go
-	$(MAKE) install-kind
-	$(MAKE) install-kubectl
-	$(MAKE) install-tilt
-	$(MAKE) install-clusterctl
-	@echo "Finished: All dependencies up to date"
+CONTROLLER_GEN := $(abspath $(TOOLS_BIN_DIR)/controller-gen)
+controller-gen: $(CONTROLLER_GEN) ## Build a local copy of controller-gen
+$(CONTROLLER_GEN): $(TOOLS_DIR)/go.mod # Build controller-gen from tools folder.
+	cd $(TOOLS_DIR) && go build -mod=vendor -tags=tools -o $(BIN_DIR)/controller-gen sigs.k8s.io/controller-tools/cmd/controller-gen
 
 KUSTOMIZE := $(abspath $(TOOLS_BIN_DIR)/kustomize)
 kustomize: $(KUSTOMIZE) ## Build a local copy of kustomize
 $(KUSTOMIZE): # Build kustomize from tools folder.
-	cd $(TOOLS_DIR) && go build -tags=tools -o $(KUSTOMIZE) sigs.k8s.io/kustomize/kustomize/v4
+	cd $(TOOLS_DIR) && go build -mod=vendor -tags=tools -o $(KUSTOMIZE) sigs.k8s.io/kustomize/kustomize/v4
 
 TILT := $(abspath $(TOOLS_BIN_DIR)/tilt)
 tilt: $(TILT) ## Build a local copy of tilt
 $(TILT):
 	@mkdir -p $(TOOLS_BIN_DIR)
-	MINIMUM_TILT_VERSION=0.31.2 hack/ensure-tilt.sh
+	MINIMUM_TILT_VERSION=0.32.4 hack/ensure-tilt.sh
 
 ENVSUBST := $(abspath $(TOOLS_BIN_DIR)/envsubst)
 envsubst: $(ENVSUBST) ## Build a local copy of envsubst
 $(ENVSUBST): $(TOOLS_DIR)/go.mod # Build envsubst from tools folder.
-	cd $(TOOLS_DIR) && go build -tags=tools -o $(ENVSUBST) github.com/drone/envsubst/v2/cmd/envsubst
+	cd $(TOOLS_DIR) && go build -mod=vendor -tags=tools -o $(ENVSUBST) github.com/drone/envsubst/v2/cmd/envsubst
 
 SETUP_ENVTEST := $(abspath $(TOOLS_BIN_DIR)/setup-envtest)
 setup-envtest: $(SETUP_ENVTEST) ## Build a local copy of setup-envtest
 $(SETUP_ENVTEST): $(TOOLS_DIR)/go.mod # Build setup-envtest from tools folder.
-	cd $(TOOLS_DIR); go mod vendor; go build -mod=vendor -tags=tools -o $(BIN_DIR)/setup-envtest sigs.k8s.io/controller-runtime/tools/setup-envtest
+	cd $(TOOLS_DIR); go build -mod=vendor -tags=tools -o $(BIN_DIR)/setup-envtest sigs.k8s.io/controller-runtime/tools/setup-envtest
 
 CTLPTL := $(abspath $(TOOLS_BIN_DIR)/ctlptl)
 ctlptl: $(CTLPTL) ## Build a local copy of ctlptl
 $(CTLPTL):
-	cd $(TOOLS_DIR) && go build -mod=mod -tags=tools -o $(CTLPTL) github.com/tilt-dev/ctlptl/cmd/ctlptl
+	cd $(TOOLS_DIR) && go build -mod=vendor -tags=tools -o $(CTLPTL) github.com/tilt-dev/ctlptl/cmd/ctlptl
+
+CLUSTERCTL := $(abspath $(TOOLS_BIN_DIR)/clusterctl)
+clusterctl: $(CLUSTERCTL) ## Build a local copy of clusterctl
+$(CLUSTERCTL): $(TOOLS_DIR)/go.mod
+	cd $(TOOLS_DIR) && go build -mod=vendor -tags=tools -o $(CLUSTERCTL) sigs.k8s.io/cluster-api/cmd/clusterctl
+
+
+KIND := $(abspath $(TOOLS_BIN_DIR)/kind)
+kind: $(KIND) ## Build a local copy of kind
+$(KIND): $(TOOLS_DIR)/go.mod
+	cd $(TOOLS_DIR) && go build -mod=vendor -tags=tools -o $(KIND) sigs.k8s.io/kind
+
+KUBECTL := $(abspath $(TOOLS_BIN_DIR)/kubectl)
+kubectl: $(KUBECTL) ## Build a local copy of kind
+$(KUBECTL): $(TOOLS_DIR)/go.mod
+	cd $(TOOLS_DIR) && go build -mod=vendor -tags=tools -o $(KUBECTL) k8s.io/kubectl
 
 GOTESTSUM := $(abspath $(TOOLS_BIN_DIR)/gotestsum)
 gotestsum: $(GOTESTSUM) # Build gotestsum from tools folder.
@@ -143,11 +135,11 @@ $(GOTESTSUM):
 	cd $(TOOLS_DIR); go build -mod=vendor -tags=tools -o $(BIN_DIR)/gotestsum gotest.tools/gotestsum
 
 install-crds: generate-manifests $(KUSTOMIZE) ## Install CRDs into the K8s cluster specified in ~/.kube/config.
-	$(KUSTOMIZE) build config/crd | kubectl apply -f -
+	$(KUSTOMIZE) build config/crd | $(KUBECTL) apply -f -
 
 
 uninstall-crds: generate-manifests $(KUSTOMIZE) ## Uninstall CRDs from the K8s cluster specified in ~/.kube/config.
-	$(KUSTOMIZE) build config/crd | kubectl delete -f -
+	$(KUSTOMIZE) build config/crd | $(KUBECTL) delete -f -
 
 ##@ Development
 
@@ -155,7 +147,7 @@ uninstall-crds: generate-manifests $(KUSTOMIZE) ## Uninstall CRDs from the K8s c
 generate: ## Run all generate-manifests, generate-go-deepcopyand generate-go-conversions targets
 	$(MAKE) generate-manifests generate-go-deepcopy
 
-generate-manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
+generate-manifests: $(CONTROLLER_GEN) ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
 	$(CONTROLLER_GEN) \
 			paths=./api/... \
 			paths=./controllers/... \
@@ -262,11 +254,11 @@ endif
 .PHONY: deploy
 deploy: generate-manifests $(KUSTOMIZE) ## Deploy controller to the K8s cluster specified in ~/.kube/config.
 	cd config/manager && $(KUSTOMIZE) edit set image controller=${IMG}
-	$(KUSTOMIZE) build config/default | kubectl apply -f -
+	$(KUSTOMIZE) build config/default | $(KUBECTL) apply -f -
 
 .PHONY: undeploy
 undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/config. Call with ignore-not-found=true to ignore resource not found errors during deletion.
-	$(KUSTOMIZE) build config/default | kubectl delete --ignore-not-found=$(ignore-not-found) -f -
+	$(KUSTOMIZE) build config/default | $(KUBECTL) delete --ignore-not-found=$(ignore-not-found) -f -
 
 ##@ Build Dependencies
 
@@ -281,12 +273,6 @@ ENVTEST ?= $(LOCALBIN)/setup-envtest
 
 ## Tool Versions
 CONTROLLER_TOOLS_VERSION ?= v0.10.0
-
-.PHONY: controller-gen
-controller-gen: $(CONTROLLER_GEN) ## Download controller-gen locally if necessary. If wrong version is installed, it will be overwritten.
-$(CONTROLLER_GEN): $(LOCALBIN)
-	test -s $(LOCALBIN)/controller-gen && $(LOCALBIN)/controller-gen --version | grep -q $(CONTROLLER_TOOLS_VERSION) || \
-	GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-tools/cmd/controller-gen@$(CONTROLLER_TOOLS_VERSION)
 
 .PHONY: envtest
 envtest: $(ENVTEST) ## Download envtest-setup locally if necessary.
@@ -308,8 +294,7 @@ E2E_CONF_FILE ?= $(E2E_DIR)/config/hivelocity-ci-envsubst.yaml
 .PHONY: test-unit
 test-unit: generate fmt vet $(SETUP_ENVTEST) $(GOTESTSUM) ## Run unit and integration tests
 	@mkdir -p $(shell pwd)/.coverage
-	go mod vendor
-	KUBEBUILDER_ASSETS="$(KUBEBUILDER_ASSETS)" $(GOTESTSUM) --junitfile=.coverage/junit.xml --format testname -- -mod=vendor -covermode=atomic -coverprofile=.coverage/cover.out -p=4 ./controllers/... ./pkg/... ./api/...
+	KUBEBUILDER_ASSETS="$(KUBEBUILDER_ASSETS)" $(GOTESTSUM) --junitfile=.coverage/junit.xml --format testname -- -covermode=atomic -coverprofile=.coverage/cover.out -p=4 ./controllers/... ./pkg/... ./api/...
 
 .PHONY: e2e-image
 e2e-image: ## Build the e2e manager image
@@ -397,14 +382,14 @@ verify-tiltfile: ## Verify Tiltfile format
 wait-and-get-secret:
 	# Wait for the kubeconfig to become available.
 	@test $${CLUSTER_NAME?Environment variable is required}
-	${TIMEOUT} 5m bash -c "while ! kubectl get secrets | grep $(CLUSTER_NAME)-kubeconfig; do sleep 1; done"
+	${TIMEOUT} 5m bash -c "while ! $(KUBECTL) get secrets | grep $(CLUSTER_NAME)-kubeconfig; do sleep 1; done"
 	./hack/get-kubeconfig-of-workload-cluster.sh
-	${TIMEOUT} 30m bash -c "while ! kubectl --kubeconfig=$(CAPHV_WORKER_CLUSTER_KUBECONFIG) get nodes | grep control-plane; do sleep 1; done"
+	${TIMEOUT} 30m bash -c "while ! $(KUBECTL) --kubeconfig=$(CAPHV_WORKER_CLUSTER_KUBECONFIG) get nodes | grep control-plane; do sleep 1; done"
 
 	# Install secret for ccm.
-	kubectl create secret -n kube-system generic hivelocity \
+	$(KUBECTL)  create secret -n kube-system generic hivelocity \
 	    --from-literal=hivelocity=$(HIVELOCITY_API_KEY) --save-config \
-		--dry-run=client -o yaml | kubectl --kubeconfig=$(CAPHV_WORKER_CLUSTER_KUBECONFIG) apply -f -
+		--dry-run=client -o yaml | $(KUBECTL) --kubeconfig=$(CAPHV_WORKER_CLUSTER_KUBECONFIG) apply -f -
 	echo "installed secret in wl-cluster for CCM"
 
 
@@ -441,30 +426,22 @@ create-workload-cluster: $(HOME)/.ssh/hivelocity.pub $(KUSTOMIZE) $(ENVSUBST) in
 		HIVELOCITY_REGION CONTROL_PLANE_MACHINE_COUNT HIVELOCITY_CONTROL_PLANE_MACHINE_TYPE HIVELOCITY_WORKER_MACHINE_TYPE \
 		HIVELOCITY_SSH_KEY
 
-	clusterctl init
+	$(CLUSTERCTL) init
 	rm -f $(CAPHV_WORKER_CLUSTER_KUBECONFIG)
 	go run ./cmd upload-ssh-pub-key $$HIVELOCITY_SSH_KEY $(HOME)/.ssh/hivelocity.pub
 	go run ./test/claim-devices-or-fail $$HIVELOCITY_CONTROL_PLANE_MACHINE_TYPE $$HIVELOCITY_WORKER_MACHINE_TYPE
-	kubectl create secret generic hivelocity --from-literal=hivelocity=$(HIVELOCITY_API_KEY) --save-config --dry-run=client -o yaml | kubectl apply -f -
+	$(KUBECTL)  create secret generic hivelocity --from-literal=hivelocity=$(HIVELOCITY_API_KEY) --save-config --dry-run=client -o yaml | $(KUBECTL) apply -f -
 	$(KUSTOMIZE) build templates/cluster-templates/hivelocity --load-restrictor LoadRestrictionsNone  > templates/cluster-templates/cluster-template-hivelocity.yaml
 	cat templates/cluster-templates/cluster-template-hivelocity.yaml | $(ENVSUBST) - > templates/cluster-templates/cluster-template-hivelocity.yaml.apply
-	kubectl apply -f templates/cluster-templates/cluster-template-hivelocity.yaml.apply
+	$(KUBECTL)  apply -f templates/cluster-templates/cluster-template-hivelocity.yaml.apply
 	$(MAKE) wait-and-get-secret
 	$(MAKE) install-manifests-cilium
 	$(MAKE) install-manifests-ccm
 
 .PHONY: create-mgt-cluster
-create-mgt-cluster: $(CTLPTL) ## Creates kind-dev Management Cluster
+create-mgt-cluster: $(CTLPTL) $(KIND) $(KUBECTL) $(ENVSUBST) $(KUSTOMIZE) ## Creates kind-dev Management Cluster
 	rm -f $(CAPHV_WORKER_CLUSTER_KUBECONFIG) $(CAPHV_MGT_CLUSTER_KUBECONFIG)
 	./hack/kind-dev.sh
-
-.PHONY: delete-workload-cluster
-delete-workload-cluster: ## Deletes the example workload Kubernetes cluster
-	@test $${CLUSTER_NAME?Please set environment variable}
-	@echo 'Your Hivelocity resources will now be deleted.'
-        kubectl delete cluster/$(CLUSTER_NAME)
-	kubectl wait --for=delete cluster/$(CLUSTER_NAME) --timeout=15m
-	@echo 'Cluster deleted'
 
 .PHONY: delete-mgt-cluster
 delete-mgt-cluster: $(CTLPTL) ## Deletes Kind-dev management cluster (default)
@@ -553,5 +530,6 @@ set-manifest-pull-policy:
 
 
 .PHONY: tilt-up
-tilt-up: $(ENVSUBST) $(KUSTOMIZE) $(TILT) create-mgt-cluster  ## Start a mgt-cluster & Tilt. Installs the CRDs and deploys the controllers
+tilt-up: $(TILT) create-mgt-cluster  ## Start a mgt-cluster & Tilt. Installs the CRDs and deploys the controllers
+	exit 1
 	EXP_CLUSTER_RESOURCE_SET=true $(TILT) up --port 10351
