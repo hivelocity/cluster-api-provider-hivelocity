@@ -20,7 +20,7 @@ fi
 
 missing_vars=()
 for varname in "$@"; do
-  eval varvalue=\$$varname
+  eval varvalue="\$$varname"
   if [ -z "$varvalue" ]; then
     missing_vars+=("$varname")
   fi

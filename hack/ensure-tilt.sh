@@ -17,14 +17,17 @@
 set -o errexit
 set -o nounset
 set -o pipefail
+set -x
 
 REPO_ROOT=$(git rev-parse --show-toplevel)
 
+: "${MINIMUM_TILT_VERSION:?MINIMUM_TILT_VERSION is unset or empty}"
+
 install_tilt() {
     if [[ "${OSTYPE}" == "linux"* ]]; then
-      cd ${REPO_ROOT}/hack/tools/bin && curl -fsSL https://github.com/tilt-dev/tilt/releases/download/v$MINIMUM_TILT_VERSION/tilt.$MINIMUM_TILT_VERSION.linux.x86_64.tar.gz | tar -xzv tilt && cd -
+      cd "${REPO_ROOT}/hack/tools/bin" && curl -fsSL "https://github.com/tilt-dev/tilt/releases/download/v$MINIMUM_TILT_VERSION/tilt.$MINIMUM_TILT_VERSION.linux.x86_64.tar.gz" | tar -xzv tilt && cd -
     elif [[ "$OSTYPE" == "darwin"* ]]; then
-      cd ${REPO_ROOT}/hack/tools/bin && curl -fsSL https://github.com/tilt-dev/tilt/releases/download/v$MINIMUM_TILT_VERSION/tilt.$MINIMUM_TILT_VERSION.mac.x86_64.tar.gz | tar -xzv tilt && cd -
+      cd "${REPO_ROOT}/hack/tools/bin" && curl -fsSL "https://github.com/tilt-dev/tilt/releases/download/v$MINIMUM_TILT_VERSION/tilt.$MINIMUM_TILT_VERSION.mac.x86_64.tar.gz" | tar -xzv tilt && cd -
     else
       set +x
       echo "The installer does not work for your platform: $OSTYPE"

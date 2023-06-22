@@ -20,9 +20,6 @@ COPY . /src/cluster-api-provider-hivelocity
 WORKDIR /src/cluster-api-provider-hivelocity
 RUN --mount=type=cache,target=/root/.cache --mount=type=cache,target=/go/pkg \
     GOOS=${TARGETOS} GOARCH=${TARGETARCH} CGO_ENABLED=0 \
-    go mod vendor
-RUN --mount=type=cache,target=/root/.cache --mount=type=cache,target=/go/pkg \
-    GOOS=${TARGETOS} GOARCH=${TARGETARCH} CGO_ENABLED=0 \
     go build -mod=vendor -ldflags "${LDFLAGS} -extldflags '-static'" \
     -o manager main.go
 
