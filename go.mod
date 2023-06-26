@@ -4,7 +4,7 @@ go 1.19
 
 //replace sigs.k8s.io/cluster-api => sigs.k8s.io/cluster-api v1.4.1
 
-replace sigs.k8s.io/cluster-api/test/framework => sigs.k8s.io/cluster-api/test v1.4.2
+//replace sigs.k8s.io/cluster-api/test/framework => sigs.k8s.io/cluster-api/test v1.4.2
 
 require (
 	github.com/antihax/optional v1.0.0
