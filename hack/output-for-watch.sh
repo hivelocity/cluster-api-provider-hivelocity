@@ -84,9 +84,14 @@ print_heading "workload-cluster nodes"
 
 KUBECONFIG=$kubeconfig_wl kubectl get nodes
 
-if [ "$(kubectl get hivelocitymachine | wc -l)" -ne "$(KUBECONFIG=\"$kubeconfig_wl\" kubectl get nodes | wc -l)" ]; then 
+if [ "$(kubectl get hivelocitymachine | wc -l)" -ne "$(KUBECONFIG="$kubeconfig_wl" kubectl get nodes | wc -l)" ]; then
     echo "❌ Number of nodes in wl-cluster does not match number of HivelocityMachines in mgt-cluster"
 else
     echo "👌 number of nodes in wl-cluster is equal to number of HivelocityMachines in mgt-cluster"
 fi
 
+not_approved=$(KUBECONFIG=$kubeconfig_wl kubectl get csr --no-headers | grep -v Approved)
+if [ -n "$not_approved" ]; then
+    echo "❌ (CSRs)certificate signing requests which are not approved"
+    echo "$not_approved"
+fi

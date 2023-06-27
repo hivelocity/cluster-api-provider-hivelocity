@@ -63,10 +63,11 @@ var _ = BeforeSuite(func() {
 	wg.Add(1)
 
 	Expect((&HivelocityClusterReconciler{
-		Client:           testEnv.Manager.GetClient(),
-		APIReader:        testEnv.Manager.GetAPIReader(),
-		HVClientFactory:  testEnv.HVClientFactory,
-		WatchFilterValue: "",
+		Client:                         testEnv.Manager.GetClient(),
+		APIReader:                      testEnv.Manager.GetAPIReader(),
+		HVClientFactory:                testEnv.HVClientFactory,
+		WatchFilterValue:               "",
+		TargetClusterManagersWaitGroup: &wg,
 	}).SetupWithManager(ctx, testEnv.Manager, controller.Options{})).To(Succeed())
 
 	Expect((&HivelocityMachineReconciler{

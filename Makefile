@@ -35,8 +35,8 @@ EXP_DIR := exp
 BIN_DIR := bin
 TEST_DIR := test
 TOOLS_DIR := hack/tools
-TOOLS_BIN_DIR := $(TOOLS_DIR)/$(BIN_DIR)
-export PATH := $(abspath $(TOOLS_BIN_DIR)):$(PATH)
+TOOLS_BIN_DIR := $(abspath $(TOOLS_DIR)/$(BIN_DIR))
+export PATH := $(TOOLS_BIN_DIR):$(PATH)
 # Default path for Kubeconfig File.
 
 # Files
@@ -115,8 +115,9 @@ $(CTLPTL):
 
 CLUSTERCTL := $(abspath $(TOOLS_BIN_DIR)/clusterctl)
 clusterctl: $(CLUSTERCTL) ## Build a local copy of clusterctl
-$(CLUSTERCTL): $(TOOLS_DIR)/go.mod
-	cd $(TOOLS_DIR) && go build -mod=readonly -tags=tools -o $(CLUSTERCTL) sigs.k8s.io/cluster-api/cmd/clusterctl
+$(CLUSTERCTL):
+	curl -sSLf https://github.com/kubernetes-sigs/cluster-api/releases/download/v1.4.3/clusterctl-linux-amd64 -o $(CLUSTERCTL)
+	chmod a+rx $(CLUSTERCTL)
 
 
 KIND := $(abspath $(TOOLS_BIN_DIR)/kind)
@@ -125,9 +126,10 @@ $(KIND): $(TOOLS_DIR)/go.mod
 	cd $(TOOLS_DIR) && go build -mod=readonly -tags=tools -o $(KIND) sigs.k8s.io/kind
 
 KUBECTL := $(abspath $(TOOLS_BIN_DIR)/kubectl)
-kubectl: $(KUBECTL) ## Build a local copy of kind
+kubectl: $(KUBECTL) ## Build a local copy of kubectl
 $(KUBECTL): $(TOOLS_DIR)/go.mod
-	cd $(TOOLS_DIR) && go build -mod=readonly -tags=tools -o $(KUBECTL) k8s.io/kubectl
+	curl -fsSL "https://dl.k8s.io/release/v1.27.3/bin/linux/amd64/kubectl" -o $(KUBECTL)
+	chmod a+rx $(KUBECTL)
 
 GOTESTSUM := $(abspath $(TOOLS_BIN_DIR)/gotestsum)
 gotestsum: $(GOTESTSUM) # Build gotestsum from tools folder.
@@ -421,7 +423,7 @@ $(HOME)/.ssh/hivelocity.pub:
 	echo "Creating SSH key-pair to access the nodes which get created by CAPHV"
 	ssh-keygen -f ~/.ssh/hivelocity
 
-create-workload-cluster: $(HOME)/.ssh/hivelocity.pub $(KUSTOMIZE) $(ENVSUBST) install-crds ## Creates a workload-cluster. ENV Variables need to be exported or defined in the tilt-settings.yaml
+create-workload-cluster: $(HOME)/.ssh/hivelocity.pub $(CLUSTERCTL) $(KUSTOMIZE) $(ENVSUBST) install-crds ## Creates a workload-cluster. ENV Variables need to be exported or defined in the tilt-settings.yaml
 	# Create workload Cluster.
 	@./hack/ensure-env-variables.sh CLUSTER_NAME HIVELOCITY_API_KEY KUBERNETES_VERSION WORKER_MACHINE_COUNT \
 		HIVELOCITY_REGION CONTROL_PLANE_MACHINE_COUNT HIVELOCITY_CONTROL_PLANE_MACHINE_TYPE HIVELOCITY_WORKER_MACHINE_TYPE \
@@ -540,5 +542,4 @@ set-manifest-pull-policy:
 
 .PHONY: tilt-up
 tilt-up: $(TILT) create-mgt-cluster  ## Start a mgt-cluster & Tilt. Installs the CRDs and deploys the controllers
-	exit 1
 	EXP_CLUSTER_RESOURCE_SET=true $(TILT) up --port 10351

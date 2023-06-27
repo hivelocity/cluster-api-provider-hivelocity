@@ -21,6 +21,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"sync"
 
 	infrav1 "github.com/hivelocity/cluster-api-provider-hivelocity/api/v1alpha1"
 	"github.com/hivelocity/cluster-api-provider-hivelocity/controllers"
@@ -99,12 +100,16 @@ func main() {
 	// Setup the context that's going to be used in controllers and for the manager.
 	ctx := ctrl.SetupSignalHandler()
 
+	var wg sync.WaitGroup
+	wg.Add(1)
+
 	if err = (&controllers.HivelocityClusterReconciler{
-		Client:           mgr.GetClient(),
-		APIReader:        mgr.GetAPIReader(),
-		HVClientFactory:  &hvclient.HivelocityFactory{},
-		Scheme:           mgr.GetScheme(),
-		WatchFilterValue: watchFilterValue,
+		Client:                         mgr.GetClient(),
+		APIReader:                      mgr.GetAPIReader(),
+		HVClientFactory:                &hvclient.HivelocityFactory{},
+		Scheme:                         mgr.GetScheme(),
+		WatchFilterValue:               watchFilterValue,
+		TargetClusterManagersWaitGroup: &wg,
 	}).SetupWithManager(ctx, mgr, controller.Options{MaxConcurrentReconciles: hivelocityClusterConcurrency}); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "HivelocityCluster")
 		os.Exit(1)
