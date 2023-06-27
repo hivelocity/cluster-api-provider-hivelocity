@@ -16,7 +16,7 @@ spec:
             anonymous-auth: "false"
             read-only-port: "0"
             event-qps: "5"
-            # rotate-server-certificates: "true"
+            rotate-server-certificates: "true"
             max-pods: "220"
             resolv-conf: /etc/kubernetes/resolv.conf
             provider-id: DEVICE_ID_PREKUBEADM

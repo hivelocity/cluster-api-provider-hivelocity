@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	infrav1 "github.com/hivelocity/cluster-api-provider-hivelocity/api/v1alpha1"
@@ -30,6 +31,7 @@ import (
 	secretutil "github.com/hivelocity/cluster-api-provider-hivelocity/pkg/secrets"
 	hvclient "github.com/hivelocity/cluster-api-provider-hivelocity/pkg/services/hivelocity/client"
 	"github.com/hivelocity/cluster-api-provider-hivelocity/pkg/services/hivelocity/device"
+	certificatesv1 "k8s.io/api/certificates/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -67,6 +69,10 @@ type HivelocityClusterReconciler struct {
 
 	APIReader       client.Reader
 	HVClientFactory hvclient.Factory
+
+	targetClusterManagersStopCh    map[types.NamespacedName]chan struct{}
+	targetClusterManagersLock      sync.Mutex
+	TargetClusterManagersWaitGroup *sync.WaitGroup
 }
 
 //+kubebuilder:rbac:groups=cluster.x-k8s.io,resources=clusters;clusters/status,verbs=get;list;watch
@@ -200,8 +206,15 @@ func (r *HivelocityClusterReconciler) reconcileNormal(ctx context.Context, clust
 
 	hvCluster.Status.Ready = true
 
-	if err := r.reconcileTargetClusterManager(ctx, clusterScope); err != nil {
+	result, err := r.reconcileTargetClusterManager(ctx, clusterScope)
+
+	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed to reconcile target cluster manager: %w", err)
+	}
+
+	emptyResult := reconcile.Result{}
+	if result != emptyResult {
+		return result, nil
 	}
 
 	if err := reconcileTargetSecret(ctx, clusterScope); err != nil {
@@ -249,7 +262,6 @@ func (r *HivelocityClusterReconciler) reconcileDelete(ctx context.Context, clust
 		return reconcile.Result{}, fmt.Errorf("failed to release HivelocitySecret: %w", err)
 	}
 
-	/* todo, later.
 	// Stop CSR manager
 	r.targetClusterManagersLock.Lock()
 	defer r.targetClusterManagersLock.Unlock()
@@ -262,7 +274,6 @@ func (r *HivelocityClusterReconciler) reconcileDelete(ctx context.Context, clust
 		close(stopCh)
 		delete(r.targetClusterManagersStopCh, key)
 	}
-	*/
 
 	// Cluster is deleted so remove the finalizer.
 	controllerutil.RemoveFinalizer(clusterScope.HivelocityCluster, infrav1.ClusterFinalizer)
@@ -454,8 +465,7 @@ func reconcileTargetSecret(ctx context.Context, clusterScope *scope.ClusterScope
 	return nil
 }
 
-func (r *HivelocityClusterReconciler) reconcileTargetClusterManager(ctx context.Context, clusterScope *scope.ClusterScope) error {
-	/* question targetClusterManagersLock.Lock()
+func (r *HivelocityClusterReconciler) reconcileTargetClusterManager(ctx context.Context, clusterScope *scope.ClusterScope) (res reconcile.Result, err error) {
 	r.targetClusterManagersLock.Lock()
 	defer r.targetClusterManagersLock.Unlock()
 
@@ -468,12 +478,18 @@ func (r *HivelocityClusterReconciler) reconcileTargetClusterManager(ctx context.
 		// create a new cluster manager
 		m, err := r.newTargetClusterManager(ctx, clusterScope)
 		if err != nil {
-			return fmt.Errorf("failed to create a clusterManager for HivelocityCluster %s/%s: %w",
+			return res, fmt.Errorf("failed to create a clusterManager for HivelocityCluster %s/%s: %w",
 				clusterScope.HivelocityCluster.Namespace,
 				clusterScope.HivelocityCluster.Name,
 				err,
-		    )
+			)
 		}
+
+		// manager could not be created yet - reconcile again
+		if m == nil {
+			return reconcile.Result{Requeue: true}, nil
+		}
+
 		r.targetClusterManagersStopCh[key] = make(chan struct{})
 
 		ctx, cancel := context.WithCancel(ctx)
@@ -500,11 +516,8 @@ func (r *HivelocityClusterReconciler) reconcileTargetClusterManager(ctx context.
 			cancel()
 		}()
 	}
-	*/
-	return nil
+	return res, nil
 }
-
-/* question ManagementCluster, is this the target-cluster? Then the name is misleading.
 
 var _ ManagementCluster = &managementCluster{}
 
@@ -565,12 +578,15 @@ func (r *HivelocityClusterReconciler) newTargetClusterManager(ctx context.Contex
 	}
 
 	return clusterMgr, nil
-}.
-*/
+}
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *HivelocityClusterReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager, options controller.Options) error {
 	log := log.FromContext(ctx)
+
+	if r.targetClusterManagersStopCh == nil {
+		r.targetClusterManagersStopCh = make(map[types.NamespacedName]chan struct{})
+	}
 
 	controller, err := ctrl.NewControllerManagedBy(mgr).
 		WithOptions(options).

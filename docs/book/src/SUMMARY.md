@@ -9,6 +9,7 @@
     - [Hivelocity API](./topics/hivelocity-api.md)
     - [Hivelocity IPMI](./topics/hivelocity-ipmi.md)
     - [Clarifying Scope](./topics/clarifying-scope.md)
+    - [CSR Controller](./topics/csr_controller.md)
 - [Developer Guide](./developer/index.md)
   - [Repository Layout](./developer/repository-layout.md)
   - [Setup Dev Env](./developer/setup.md)
