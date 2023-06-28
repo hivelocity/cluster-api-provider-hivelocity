@@ -51,8 +51,8 @@ ENVTEST_K8S_VERSION = 1.25.0
 GOLANGCI_LINT := $(abspath $(TOOLS_BIN_DIR)/golangci-lint)
 
 # Release variables
-STAGING_REGISTRY ?= ghcr.io/hivelocity/cluster-api-provider-hivelocity-staging
-PROD_REGISTRY := ghcr.io/hivelocity/cluster-api-provider-hivelocity
+STAGING_REGISTRY ?= ghcr.io/hivelocity/caphv-staging
+PROD_REGISTRY := ghcr.io/hivelocity/caphv-staging
 IMG ?= $(STAGING_REGISTRY):latest
 
 IMAGE_PREFIX ?= ghcr.io/hivelocity

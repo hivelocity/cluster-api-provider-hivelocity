@@ -26,24 +26,37 @@ cd "${REPO_ROOT}" || exit 1
 export PATH="${REPO_ROOT}/hack/tools/bin:${PATH}"
 export ARTIFACTS="${ARTIFACTS:-${REPO_ROOT}/_artifacts}"
 
-export HIVELOCITY_SSH_KEY=ssh-key-hivelocity-pub
-export SSH_KEY_NAME=$HOME/.ssh/hivelocity
-if [ ! -e "$SSH_KEY_NAME" ]; then
-    echo "$SSH_KEY_NAME does not exit."
+# shellcheck source=../hack/ci-e2e-sshkeys.sh
+source "${REPO_ROOT}/hack/ci-e2e-sshkeys.sh"
+
+# We need to export the SSH_KEY_NAME as a environment variable
+SSH_KEY_NAME=caphv-e2e-$(
+    head /dev/urandom | tr -dc A-Za-z0-9 | head -c 12
+    echo ''
+)
+echo "SSH Key Name : $SSH_KEY_NAME"
+export SSH_KEY_PATH=/tmp/${SSH_KEY_NAME}
+echo "SSH Key Path : $SSH_KEY_PATH"
+export HIVELOCITY_SSH_KEY=${SSH_KEY_NAME}
+create_ssh_key ${SSH_KEY_PATH}
+trap 'remove_ssh_key ${SSH_KEY_NAME}' EXIT
+
+if [ ! -e "$SSH_KEY_PATH" ]; then
+    echo "$SSH_KEY_PATH does not exit."
     exit 1
 fi
 
-go run ./cmd upload-ssh-pub-key ssh-key-hivelocity-pub "$HOME/.ssh/hivelocity.pub"
+go run ./cmd upload-ssh-pub-key $HIVELOCITY_SSH_KEY "$SSH_KEY_PATH.pub"
 
 CONTROL_PLANE_TAG=$(yq .variables.HIVELOCITY_CONTROL_PLANE_MACHINE_TYPE "$E2E_CONF_FILE")
 WORKER_TAG=$(yq .variables.HIVELOCITY_WORKER_MACHINE_TYPE "$E2E_CONF_FILE")
 
 echo "#####################################################################################################"
-echo "All devices with on of these caphv-device-type tags will get claimed. They will get provisioned soon:"
+echo "All devices with one of these caphv-device-type tags will get claimed. They will get provisioned soon:"
 echo "$CONTROL_PLANE_TAG $WORKER_TAG"
 echo "#####################################################################################################"
 
-go run test/claim-devices-or-fail/claim-devices-or-fail.go cat ${CONTROL_PLANE_TAG} ${WORKER_TAG}
+go run test/claim-devices-or-fail/claim-devices-or-fail.go ${CONTROL_PLANE_TAG} ${WORKER_TAG}
 
 mkdir -p "$ARTIFACTS"
 echo "+ run tests!"

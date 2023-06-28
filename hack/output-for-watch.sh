@@ -46,12 +46,11 @@ print_heading logs
 
 echo
 
-ip=$(kubectl get machine -A -l cluster.x-k8s.io/control-plane  -o  jsonpath='{.items[0].status.addresses[?(@.type=="InternalIP")].address}' | head -1)
+ip=$(kubectl get machine -A -l cluster.x-k8s.io/control-plane -o jsonpath='{.items[0].status.addresses[?(@.type=="InternalIP")].address}' | head -1)
 if [ -z "$ip" ]; then
     echo "❌ Could not get IP of control-plane"
     exit 1
 fi
-
 
 if netcat -w 2 -z "$ip" 22; then
     echo "👌 $ip ssh port is reachable"
@@ -64,7 +63,6 @@ echo
 ./hack/get-kubeconfig-of-workload-cluster.sh
 
 kubeconfig_wl=".workload-cluster-kubeconfig.yaml"
-
 
 print_heading "KUBECONFIG=$kubeconfig_wl kubectl cluster-info"
 if KUBECONFIG=$kubeconfig_wl kubectl cluster-info >/dev/null 2>&1; then
