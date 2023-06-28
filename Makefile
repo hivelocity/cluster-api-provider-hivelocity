@@ -321,6 +321,10 @@ test-e2e: $(E2E_CONF_FILE) $(if $(SKIP_IMAGE_BUILD),,e2e-image) $(ARTIFACTS)
 
 ##@ Lint and Verify
 
+.PHONY: modules
+modules: ## Runs go mod to ensure modules are up to date.
+	go mod tidy
+
 golangci-lint: $(GOLANGCI_LINT) ## Build a local copy of golangci-lint
 $(GOLANGCI_LINT): .github/workflows/pr-golangci-lint.yml # Download golanci-lint using hack script into tools folder.
 	hack/ensure-golangci-lint.sh \
