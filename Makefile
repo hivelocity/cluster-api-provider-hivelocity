@@ -117,7 +117,7 @@ $(CTLPTL):
 CLUSTERCTL := $(abspath $(TOOLS_BIN_DIR)/clusterctl)
 clusterctl: $(CLUSTERCTL) ## Build a local copy of clusterctl
 $(CLUSTERCTL):
-	curl -sSLf https://github.com/kubernetes-sigs/cluster-api/releases/download/v1.4.3/clusterctl-linux-amd64 -o $(CLUSTERCTL)
+	curl -sSLf https://github.com/kubernetes-sigs/cluster-api/releases/download/v1.4.3/clusterctl-$$(go env GOOS)-$$(go env GOARCH) -o $(CLUSTERCTL)
 	chmod a+rx $(CLUSTERCTL)
 
 KIND := $(abspath $(TOOLS_BIN_DIR)/kind)
@@ -128,7 +128,7 @@ $(KIND): $(TOOLS_DIR)/go.mod
 KUBECTL := $(abspath $(TOOLS_BIN_DIR)/kubectl)
 kubectl: $(KUBECTL) ## Build a local copy of kubectl
 $(KUBECTL): $(TOOLS_DIR)/go.mod
-	curl -fsSL "https://dl.k8s.io/release/v1.27.3/bin/linux/amd64/kubectl" -o $(KUBECTL)
+	curl -fsSL "https://dl.k8s.io/release/v1.27.3/bin/$$(go env GOOS)/$$(go env GOARCH)/kubectl" -o $(KUBECTL)
 	chmod a+rx $(KUBECTL)
 
 GOTESTSUM := $(abspath $(TOOLS_BIN_DIR)/gotestsum)
