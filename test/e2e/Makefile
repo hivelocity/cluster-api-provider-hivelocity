@@ -40,10 +40,11 @@ BIN_DIR := bin
 TOOLS_BIN_DIR := $(TOOLS_DIR)/$(BIN_DIR)
 GINKGO := $(abspath $(TOOLS_BIN_DIR)/ginkgo)
 KUSTOMIZE := $(TOOLS_BIN_DIR)/kustomize
+export GOBIN := $(abspath $(TOOLS_BIN_DIR))
 
 ginkgo: $(GINKGO)
 $(GINKGO): # Build ginkgo from tools folder.
-	cd $(TOOLS_DIR) && go build -mod=vendor -tags=tools -o $(GINKGO) github.com/onsi/ginkgo/v2/ginkgo
+	go install github.com/onsi/ginkgo/v2/ginkgo@v2.11.0
 
 $(KUSTOMIZE): # Build kustomize from tools folder.
 	KUSTOMIZE_VERSION=4.5.7	$(REPO_ROOT)/hack/ensure-kustomize.sh

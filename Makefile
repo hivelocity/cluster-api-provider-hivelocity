@@ -37,6 +37,7 @@ TEST_DIR := test
 TOOLS_DIR := hack/tools
 TOOLS_BIN_DIR := $(abspath $(TOOLS_DIR)/$(BIN_DIR))
 export PATH := $(TOOLS_BIN_DIR):$(PATH)
+export GOBIN := $(abspath $(TOOLS_BIN_DIR))
 # Default path for Kubeconfig File.
 
 # Files
@@ -85,12 +86,12 @@ check-go: ## Checks go version
 CONTROLLER_GEN := $(abspath $(TOOLS_BIN_DIR)/controller-gen)
 controller-gen: $(CONTROLLER_GEN) ## Build a local copy of controller-gen
 $(CONTROLLER_GEN): $(TOOLS_DIR)/go.mod # Build controller-gen from tools folder.
-	cd $(TOOLS_DIR) && go build -mod=readonly -tags=tools -o $(BIN_DIR)/controller-gen sigs.k8s.io/controller-tools/cmd/controller-gen
+	go install sigs.k8s.io/controller-tools/cmd/controller-gen@v0.12.0
 
 KUSTOMIZE := $(abspath $(TOOLS_BIN_DIR)/kustomize)
 kustomize: $(KUSTOMIZE) ## Build a local copy of kustomize
 $(KUSTOMIZE): # Build kustomize from tools folder.
-	cd $(TOOLS_DIR) && go build -mod=readonly -tags=tools -o $(KUSTOMIZE) sigs.k8s.io/kustomize/kustomize/v4
+	go install sigs.k8s.io/kustomize/kustomize/v4@v4.5.7
 
 TILT := $(abspath $(TOOLS_BIN_DIR)/tilt)
 tilt: $(TILT) ## Build a local copy of tilt
@@ -101,17 +102,17 @@ $(TILT):
 ENVSUBST := $(abspath $(TOOLS_BIN_DIR)/envsubst)
 envsubst: $(ENVSUBST) ## Build a local copy of envsubst
 $(ENVSUBST): $(TOOLS_DIR)/go.mod # Build envsubst from tools folder.
-	cd $(TOOLS_DIR) && go build -mod=readonly -tags=tools -o $(ENVSUBST) github.com/drone/envsubst/v2/cmd/envsubst
+	go install github.com/drone/envsubst/v2/cmd/envsubst@latest
 
 SETUP_ENVTEST := $(abspath $(TOOLS_BIN_DIR)/setup-envtest)
 setup-envtest: $(SETUP_ENVTEST) ## Build a local copy of setup-envtest
 $(SETUP_ENVTEST): $(TOOLS_DIR)/go.mod # Build setup-envtest from tools folder.
-	cd $(TOOLS_DIR); go build -mod=readonly -tags=tools -o $(BIN_DIR)/setup-envtest sigs.k8s.io/controller-runtime/tools/setup-envtest
+	go install sigs.k8s.io/controller-runtime/tools/setup-envtest@v0.0.0-20230620070423-a784ee78d04b
 
 CTLPTL := $(abspath $(TOOLS_BIN_DIR)/ctlptl)
 ctlptl: $(CTLPTL) ## Build a local copy of ctlptl
 $(CTLPTL):
-	cd $(TOOLS_DIR) && go build -mod=mod -tags=tools -o $(CTLPTL) github.com/tilt-dev/ctlptl/cmd/ctlptl
+	go install github.com/tilt-dev/ctlptl/cmd/ctlptl@v0.8.20
 
 CLUSTERCTL := $(abspath $(TOOLS_BIN_DIR)/clusterctl)
 clusterctl: $(CLUSTERCTL) ## Build a local copy of clusterctl
@@ -119,11 +120,10 @@ $(CLUSTERCTL):
 	curl -sSLf https://github.com/kubernetes-sigs/cluster-api/releases/download/v1.4.3/clusterctl-linux-amd64 -o $(CLUSTERCTL)
 	chmod a+rx $(CLUSTERCTL)
 
-
 KIND := $(abspath $(TOOLS_BIN_DIR)/kind)
 kind: $(KIND) ## Build a local copy of kind
 $(KIND): $(TOOLS_DIR)/go.mod
-	cd $(TOOLS_DIR) && go build -mod=readonly -tags=tools -o $(KIND) sigs.k8s.io/kind
+	go install sigs.k8s.io/kind@v0.20.0
 
 KUBECTL := $(abspath $(TOOLS_BIN_DIR)/kubectl)
 kubectl: $(KUBECTL) ## Build a local copy of kubectl
@@ -134,7 +134,10 @@ $(KUBECTL): $(TOOLS_DIR)/go.mod
 GOTESTSUM := $(abspath $(TOOLS_BIN_DIR)/gotestsum)
 gotestsum: $(GOTESTSUM) # Build gotestsum from tools folder.
 $(GOTESTSUM):
-	cd $(TOOLS_DIR); go build -mod=readonly -tags=tools -o $(BIN_DIR)/gotestsum gotest.tools/gotestsum
+	go install gotest.tools/gotestsum@v1.10.0
+
+all-tools: $(GOTESTSUM) $(KIND) $(KUBECTL) $(CLUSTERCTL) $(CTLPTL) $(SETUP_ENVTEST) $(ENVSUBST) $(KUSTOMIZE) $(CONTROLLER_GEN)
+	echo 'done'
 
 install-crds: generate-manifests $(KUSTOMIZE) ## Install CRDs into the K8s cluster specified in ~/.kube/config.
 	$(KUSTOMIZE) build config/crd | $(KUBECTL) apply -f -
@@ -196,7 +199,6 @@ k9s-workload-cluster: $(CAPHV_WORKER_CLUSTER_KUBECONFIG)
 .PHONY: bash-with-kubeconfig-set-to-workload-cluster
 bash-with-kubeconfig-set-to-workload-cluster: $(CAPHV_WORKER_CLUSTER_KUBECONFIG)
 	KUBECONFIG=$(CAPHV_WORKER_CLUSTER_KUBECONFIG) bash
-
 
 .PHONY: tail-caphv-controller-logs
 tail-caphv-controller-logs: ## Show the last lines of the caphv-controller logs
