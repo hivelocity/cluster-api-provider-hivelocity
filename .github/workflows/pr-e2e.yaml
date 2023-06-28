@@ -1,5 +1,6 @@
 name: E2E PR Blocking
 on:
+  workflow_dispatch:
   pull_request_target:
     types: [opened, synchronize, reopened, ready_for_review]
     branches:
@@ -15,6 +16,7 @@ on:
       - ".github/workflows/pr-*"
       - "images/caphv/**"
       - "!**/vendor/**"
+      - "test/e2e/**"
 env:
   IMAGE_NAME: caphv-staging
   REGISTRY: ghcr.io/hivelocity
@@ -47,10 +49,9 @@ jobs:
         with:
           ref: ${{ github.event.pull_request.head.sha }}
 
-          ## enable later
-          # - name: Test Release
-          #   id: manager-image
-          #   uses: ./.github/actions/test-release
+      - name: Test Release
+        id: manager-image
+        uses: ./.github/actions/test-release
 
   e2e-basic:
     name: End-to-End Test Basic
@@ -73,3 +74,5 @@ jobs:
           e2e_make_target: test-e2e
           e2e_hivelocity_api_key: ${{ secrets.HIVELOCITY_API_KEY }}
           e2e_ssh_pub: ${{ secrets.HIVELOCITY_SSH_PUB }}
+        env:
+          HIVELOCITY_API_KEY: ${{ secrets.HIVELOCITY_API_KEY }}

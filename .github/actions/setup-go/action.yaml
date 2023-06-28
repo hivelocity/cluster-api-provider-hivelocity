@@ -12,19 +12,19 @@ runs:
     - id: go-cache-paths
       shell: bash
       run: |
-        echo "{go-build}={$(go env GOCACHE)}" >> $GITHUB_OUTPUT
-        echo "{go-mod}={$(go env GOMODCACHE)}" >> $GITHUB_OUTPUT
+        echo "gobuild=$(go env GOCACHE)" >> $GITHUB_OUTPUT
+        echo "gomod=$(go env GOMODCACHE)" >> $GITHUB_OUTPUT
     - name: Go Mod Cache
       uses: actions/cache@88522ab9f39a2ea568f7027eddc7d8d8bc9d59c8 # v3
       with:
-        path: ${{ steps.go-cache-paths.outputs.go-mod }}
+        path: ${{ steps.go-cache-paths.outputs.gomod }}
         key: ${{ runner.os }}-go-mod-${{ hashFiles('**/go.sum') }}
         restore-keys: |
           ${{ runner.os }}-go-mod-
     - name: Go Build Cache
       uses: actions/cache@88522ab9f39a2ea568f7027eddc7d8d8bc9d59c8 # v3
       with:
-        path: ${{ steps.go-cache-paths.outputs.go-build }}
+        path: ${{ steps.go-cache-paths.outputs.gobuild }}
         key: ${{ runner.os }}-go-build-${{ hashFiles('**/go.sum') }}
         restore-keys: |
           ${{ runner.os }}-go-build-

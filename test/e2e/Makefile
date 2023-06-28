@@ -86,7 +86,7 @@ KUBETEST_CONF_PATH ?= $(abspath $(E2E_DIR)/data/kubetest/conformance.yaml)
 .PHONY: run
 run: $(GINKGO)  cluster-templates  ## Run the end-to-end tests
 	time $(GINKGO) -v --trace --show-node-events --tags=e2e \
-		--timeout=3h \
+		--timeout=1h \
 		--randomize-all -race $(GINKGO_ADDITIONAL_ARGS) \
 		--output-dir="$(ARTIFACTS)" \
 		--junit-report="junit.e2e_suite.1.xml" \
