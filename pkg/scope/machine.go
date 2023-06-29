@@ -114,7 +114,7 @@ func (m *MachineScope) DeviceTagMachineType() hvtag.DeviceTag {
 		value = "worker"
 	}
 	return hvtag.DeviceTag{
-		Key:   hvtag.DeviceTagKeyCluster,
+		Key:   hvtag.DeviceTagKeyMachineType,
 		Value: value,
 	}
 }

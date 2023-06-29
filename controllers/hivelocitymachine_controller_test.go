@@ -224,6 +224,11 @@ var _ = Describe("HivelocityMachineReconciler", func() {
 					testEnv.GetLogger().Info("Machine has wrong providerID")
 					return false
 				}
+				if hvMachine.Spec.Status.ProvisioningState != infrav1.StateDeviceProvisioned {
+					testEnv.GetLogger().Info("hvMachine.Spec.Status.ProvisioningState != infrav1.StateDeviceProvisioned.",
+						"ProvisioningState", hvMachine.Spec.Status.ProvisioningState)
+					return false
+				}
 				return true
 			}, timeout, time.Second).Should(BeTrue())
 			hvClient := testEnv.HVClientFactory.NewClient("dummy-key")
@@ -231,9 +236,10 @@ var _ = Describe("HivelocityMachineReconciler", func() {
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(device.Tags).Should(BeEquivalentTo([]string{
 				"caphv-device-type=hvCustom",
-				"caphv-cluster-name=hv-test1",
 				"caphv-cluster-hv-test1=owned",
+				"caphv-cluster-name=hv-test1",
 				fmt.Sprintf("caphv-machine-name=%s", hvMachine.Name),
+				"caphv-machine-type=worker",
 			}))
 		})
 	})
