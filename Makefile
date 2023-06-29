@@ -85,7 +85,7 @@ check-go: ## Checks go version
 
 CONTROLLER_GEN := $(abspath $(TOOLS_BIN_DIR)/controller-gen)
 controller-gen: $(CONTROLLER_GEN) ## Build a local copy of controller-gen
-$(CONTROLLER_GEN): $(TOOLS_DIR)/go.mod # Build controller-gen from tools folder.
+$(CONTROLLER_GEN): # Build controller-gen from tools folder.
 	go install sigs.k8s.io/controller-tools/cmd/controller-gen@v0.12.0
 
 KUSTOMIZE := $(abspath $(TOOLS_BIN_DIR)/kustomize)
@@ -101,12 +101,12 @@ $(TILT):
 
 ENVSUBST := $(abspath $(TOOLS_BIN_DIR)/envsubst)
 envsubst: $(ENVSUBST) ## Build a local copy of envsubst
-$(ENVSUBST): $(TOOLS_DIR)/go.mod # Build envsubst from tools folder.
+$(ENVSUBST): # Build envsubst from tools folder.
 	go install github.com/drone/envsubst/v2/cmd/envsubst@latest
 
 SETUP_ENVTEST := $(abspath $(TOOLS_BIN_DIR)/setup-envtest)
 setup-envtest: $(SETUP_ENVTEST) ## Build a local copy of setup-envtest
-$(SETUP_ENVTEST): $(TOOLS_DIR)/go.mod # Build setup-envtest from tools folder.
+$(SETUP_ENVTEST): # Build setup-envtest from tools folder.
 	go install sigs.k8s.io/controller-runtime/tools/setup-envtest@v0.0.0-20230620070423-a784ee78d04b
 
 CTLPTL := $(abspath $(TOOLS_BIN_DIR)/ctlptl)
@@ -117,18 +117,18 @@ $(CTLPTL):
 CLUSTERCTL := $(abspath $(TOOLS_BIN_DIR)/clusterctl)
 clusterctl: $(CLUSTERCTL) ## Build a local copy of clusterctl
 $(CLUSTERCTL):
-	curl -sSLf https://github.com/kubernetes-sigs/cluster-api/releases/download/v1.4.3/clusterctl-linux-amd64 -o $(CLUSTERCTL)
+	curl -sSLf https://github.com/kubernetes-sigs/cluster-api/releases/download/v1.4.3/clusterctl-$$(go env GOOS)-$$(go env GOARCH) -o $(CLUSTERCTL)
 	chmod a+rx $(CLUSTERCTL)
 
 KIND := $(abspath $(TOOLS_BIN_DIR)/kind)
 kind: $(KIND) ## Build a local copy of kind
-$(KIND): $(TOOLS_DIR)/go.mod
+$(KIND):
 	go install sigs.k8s.io/kind@v0.20.0
 
 KUBECTL := $(abspath $(TOOLS_BIN_DIR)/kubectl)
 kubectl: $(KUBECTL) ## Build a local copy of kubectl
-$(KUBECTL): $(TOOLS_DIR)/go.mod
-	curl -fsSL "https://dl.k8s.io/release/v1.27.3/bin/linux/amd64/kubectl" -o $(KUBECTL)
+$(KUBECTL):
+	curl -fsSL "https://dl.k8s.io/release/v1.27.3/bin/$$(go env GOOS)/$$(go env GOARCH)/kubectl" -o $(KUBECTL)
 	chmod a+rx $(KUBECTL)
 
 GOTESTSUM := $(abspath $(TOOLS_BIN_DIR)/gotestsum)
@@ -324,7 +324,6 @@ test-e2e: $(E2E_CONF_FILE) $(if $(SKIP_IMAGE_BUILD),,e2e-image) $(ARTIFACTS)
 .PHONY: modules
 modules: ## Runs go mod to ensure modules are up to date.
 	go mod tidy
-	cd $(TOOLS_DIR); go mod tidy
 
 golangci-lint: $(GOLANGCI_LINT) ## Build a local copy of golangci-lint
 $(GOLANGCI_LINT): .github/workflows/pr-golangci-lint.yml # Download golanci-lint using hack script into tools folder.
@@ -355,7 +354,7 @@ verify: lint yamllint $(addprefix verify-,$(ALL_VERIFY_CHECKS)) ## Run all verif
 
 .PHONY: verify-modules
 verify-modules: modules  ## Verify go modules are up to date
-	@if !(git diff --quiet HEAD -- go.sum go.mod $(TOOLS_DIR)/go.mod $(TOOLS_DIR)/go.sum $(TEST_DIR)/go.mod $(TEST_DIR)/go.sum); then \
+	@if !(git diff --quiet HEAD -- go.sum go.mod); then \
 		git diff; \
 		echo "go module files are out of date"; exit 1; \
 	fi
