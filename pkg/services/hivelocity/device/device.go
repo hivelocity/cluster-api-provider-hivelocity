@@ -116,9 +116,10 @@ func (s *Service) actionAssociateDevice(ctx context.Context) actionResult {
 
 	// associate this device with the machine object by setting tags
 	device.Tags = append(device.Tags,
-		s.scope.HivelocityCluster.DeviceTag().ToString(),
 		s.scope.HivelocityCluster.DeviceTagOwned().ToString(),
+		s.scope.HivelocityCluster.DeviceTag().ToString(),
 		s.scope.HivelocityMachine.DeviceTag().ToString(),
+		s.scope.DeviceTagMachineType().ToString(),
 	)
 
 	if err := s.scope.HVClient.SetDeviceTags(ctx, device.DeviceId, device.Tags); err != nil {
@@ -298,14 +299,6 @@ func (s *Service) actionProvisionDevice(ctx context.Context) actionResult {
 	if err != nil {
 		return actionError{err: fmt.Errorf("failed to get device image: %w", err)}
 	}
-
-	tags := []string{
-		s.scope.HivelocityCluster.DeviceTag().ToString(),
-		s.scope.HivelocityMachine.DeviceTag().ToString(),
-		s.scope.DeviceTagMachineType().ToString(),
-	}
-
-	device.Tags = append(device.Tags, tags...)
 
 	opts := hv.BareMetalDeviceUpdate{
 		Hostname:    fmt.Sprintf("%s.example.com", s.scope.Name()), // TODO: HV API requires a FQDN.

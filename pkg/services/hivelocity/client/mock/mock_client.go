@@ -175,6 +175,8 @@ func (c *mockedHVClient) ProvisionDevice(ctx context.Context, deviceID int32, op
 	if !ok {
 		return hv.BareMetalDevice{}, fmt.Errorf("[ProvisionDevice] deviceID %d unknown", deviceID)
 	}
+	device.Tags = opts.Tags
+	c.store.idMap[deviceID] = device
 	return device, nil
 }
 
