@@ -33,7 +33,7 @@ export PATH := $(TOOLS_BIN_DIR):$(PATH)
 # Binaries.
 MDBOOK_TABULATE := $(TOOLS_BIN_DIR)/mdbook-tabulate
 $(MDBOOK_TABULATE): $(TOOLS_DIR)/go.mod
-	cd $(TOOLS_DIR); go build -tags=tools -o $(BIN_DIR)/mdbook-tabulate  sigs.k8s.io/cluster-api/hack/tools/mdbook/tabulate
+	cd $(TOOLS_DIR); go build -tags=tools -o $(BIN_DIR)/mdbook-tabulate sigs.k8s.io/cluster-api/hack/tools/mdbook/tabulate
 
 MDBOOK_EMBED := $(TOOLS_BIN_DIR)/mdbook-embed
 $(MDBOOK_EMBED): $(TOOLS_DIR)/go.mod
