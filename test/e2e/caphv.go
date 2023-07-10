@@ -62,6 +62,7 @@ func CaphvClusterDeploymentSpec(ctx context.Context, inputGetter func() CaphvClu
 		gomega.Expect(input.BootstrapClusterProxy).ToNot(gomega.BeNil(), "Invalid argument. input.BootstrapClusterProxy can't be nil when calling %s spec", specName)
 		gomega.Expect(os.MkdirAll(input.ArtifactFolder, 0750)).To(gomega.Succeed(), "Invalid argument. input.ArtifactFolder can't be created for %s spec", specName)
 		gomega.Expect(input.E2EConfig.Variables).To(gomega.HaveKey(KubernetesVersion))
+		gomega.Expect(input.E2EConfig.Variables).To(gomega.HaveKey(HivelocityRegion))
 		gomega.Expect(input.E2EConfig.Variables).To(HaveValidVersion(input.E2EConfig.GetVariable(KubernetesVersion)))
 		gomega.Expect(input.ControlPlaneMachineCount).To(gomega.BeNumerically(">", 0))
 		gomega.Expect(input.WorkerMachineCount).To(gomega.BeNumerically(">", 0))
