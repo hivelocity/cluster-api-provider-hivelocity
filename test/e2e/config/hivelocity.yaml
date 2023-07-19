@@ -130,7 +130,7 @@ variables:
   REDACT_LOG_SCRIPT: "../../hack/log/redact.sh"
 
 intervals:
-  defaults/wait-controllers: ["8m", "10s"] ## wait until initBootstrapCluster has finished.
+  default/wait-controllers: ["8m", "10s"] ## wait until initBootstrapCluster has finished.
   default/wait-cluster: ["5m", "10s"] ## wait until Infrastructure == ready and ControlPlaneEndpoint is valid
   default/wait-control-plane: ["90m", "10s"] ## wait until first control plane is ready
   default/wait-worker-nodes: ["90m", "10s"] ## wait until all workers are ready from the moment when the control plane is ready
