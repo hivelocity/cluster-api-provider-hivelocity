@@ -1,7 +1,12 @@
 {
   "ignorePatterns": [{
       "pattern": "^http://localhost"
-  }],
+  },
+  {
+    "pattern": "^#infrastructure.cluster.x-k8s.io.*",
+    "comment": "docs/book/src/crd/index.md contains internal links in html format, but the markdown-checker does not recognize them."
+  }
+],
   "httpHeaders": [{
       "comment": "Workaround as suggested here: https://github.com/tcort/markdown-link-check/issues/201",
       "urls": ["https://docs.github.com/"],

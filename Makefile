@@ -493,7 +493,7 @@ generate-boilerplate: ## Generates missing boilerplates
 # support go modules
 generate-modules: ## Generates missing go modules
 ifeq ($(BUILD_IN_CONTAINER),true)
-	docker run  --rm -t -i \
+	docker run  --rm \
 		-v $(shell go env GOPATH)/pkg:/go/pkg \
 		-v $(shell pwd):/src \
 		$(BUILDER_IMAGE):$(BUILDER_IMAGE_VERSION) $@;
