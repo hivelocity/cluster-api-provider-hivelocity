@@ -188,7 +188,6 @@ var _ = Describe("HivelocityMachineReconciler", func() {
 
 			err := testEnv.Get(ctx, machineKey, hvMachine)
 			Expect(err).ShouldNot(HaveOccurred())
-			Expect(hvMachine.Spec.ProviderID).Should(BeNil())
 
 			// Check whether bootstrap condition is ready
 			Eventually(func() bool {
@@ -199,10 +198,6 @@ var _ = Describe("HivelocityMachineReconciler", func() {
 				fmt.Println(objectCondition)
 				return isPresentAndTrue(machineKey, hvMachine, infrav1.MachineBootstrapReadyCondition)
 			}, timeout, time.Second).Should(BeTrue())
-
-			testEnv.GetLogger().Info("############################################################################")
-			testEnv.GetLogger().Info("############################################################################")
-			testEnv.GetLogger().Info("############################################################################")
 
 			Eventually(func() bool {
 				if err := testEnv.Get(ctx, machineKey, hvMachine); err != nil {

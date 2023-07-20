@@ -62,7 +62,7 @@ mkdir -p "$ARTIFACTS"
 echo "+ run tests!"
 
 if [[ "${CI:-""}" == "true" ]]; then
-    make set-manifest-image "MANIFEST_IMG=${IMAGE_PREFIX}/caphv-staging" "MANIFEST_TAG=${TAG}"
+    make set-manifest-image "MANIFEST_IMG=ghcr.io/hivelocity/caphv-staging" "MANIFEST_TAG=${TAG}"
     make set-manifest-pull-policy PULL_POLICY=IfNotPresent
 fi
 

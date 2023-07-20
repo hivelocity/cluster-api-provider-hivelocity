@@ -62,7 +62,10 @@ func main() {
 
 	for i := 1; i < len(os.Args); i++ {
 		deviceType := os.Args[i]
-		releaseOldMachines(ctx, apiClient, deviceType, allDevices)
+		err := releaseOldMachines(ctx, apiClient, deviceType, allDevices)
+		if err != nil {
+			log.Fatalln(err)
+		}
 	}
 }
 
@@ -76,6 +79,9 @@ func releaseOldMachines(ctx context.Context, apiClient *hv.APIClient, deviceType
 			continue
 		}
 		devicesWithTag = append(devicesWithTag, device)
+	}
+	if len(devicesWithTag) == 0 {
+		return fmt.Errorf("no device found with %s=%s", hvtag.DeviceTagKeyDeviceType, deviceType)
 	}
 	fmt.Printf("resetting labels of all devices which have %s=%s. Found %d devices\n",
 		hvtag.DeviceTagKeyDeviceType, deviceType, len(devicesWithTag))

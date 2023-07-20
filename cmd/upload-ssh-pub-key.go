@@ -32,7 +32,7 @@ var uploadSSHKey = &cobra.Command{
 	Args:  cobra.ExactArgs(2),
 }
 
-func runUploadSSHKey(cmd *cobra.Command, args []string) {
+func runUploadSSHKey(_ *cobra.Command, args []string) {
 	sshPubKeyName := args[0]
 	sshPubKeyContent, err := os.ReadFile(args[1])
 	if err != nil {

@@ -42,7 +42,7 @@ kubectl get events -A --sort-by=metadata.creationTimestamp | tail -8
 
 print_heading logs
 
-./hack/tail-caphv-controller-logs.sh
+./hack/tail-controller-logs.sh
 
 echo
 
@@ -83,9 +83,9 @@ print_heading "workload-cluster nodes"
 KUBECONFIG=$kubeconfig_wl kubectl get nodes
 
 if [ "$(kubectl get hivelocitymachine | wc -l)" -ne "$(KUBECONFIG="$kubeconfig_wl" kubectl get nodes | wc -l)" ]; then
-    echo "❌ Number of nodes in wl-cluster does not match number of HivelocityMachines in mgt-cluster"
+    echo "❌ Number of nodes in wl-cluster does not match number of machines in mgt-cluster"
 else
-    echo "👌 number of nodes in wl-cluster is equal to number of HivelocityMachines in mgt-cluster"
+    echo "👌 number of nodes in wl-cluster is equal to number of machines in mgt-cluster"
 fi
 
 not_approved=$(KUBECONFIG=$kubeconfig_wl kubectl get csr --no-headers | grep -v Approved)

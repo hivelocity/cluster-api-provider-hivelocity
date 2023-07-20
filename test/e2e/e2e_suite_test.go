@@ -131,7 +131,14 @@ var _ = SynchronizedBeforeSuite(func() []byte {
 	bootstrapClusterProvider, bootstrapClusterProxy = setupBootstrapCluster(e2eConfig, scheme, useExistingCluster)
 
 	By("Initializing the bootstrap cluster")
-	initBootstrapCluster(ctx, bootstrapClusterProxy, e2eConfig, clusterctlConfigPath, artifactFolder)
+
+	result := make(chan bool, 1)
+	go func() {
+		initBootstrapCluster(ctx, bootstrapClusterProxy, e2eConfig, clusterctlConfigPath, artifactFolder)
+		result <- true
+	}()
+	Eventually(result, "4m").Should(Receive(Equal(true)), "initBootstrapCluster() should complete within few minutes")
+
 	return []byte(
 		strings.Join([]string{
 			artifactFolder,

@@ -5,7 +5,7 @@ on:
       tag:
         type: string
         default: manual
-  pull_request_target:
+  pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
     branches:
       - main
@@ -29,8 +29,8 @@ env:
   registry_password: ${{ secrets.GITHUB_TOKEN }}
 jobs:
   manager-image:
-    name: Build and push manager image
-    if: github.event_name != 'pull_request_target' || !github.event.pull_request.draft
+    name: Build and push manager image (PR e2e)
+    if: github.event_name == 'pull_request' && !github.event.pull_request.draft
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -39,13 +39,13 @@ jobs:
           ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0
 
-      - name: Build and push manager image
+      - name: Build and push manager image (PR e2e Step)
         id: manager-image
         uses: ./.github/actions/manager-image
 
   test-release:
     name: Create a Test Release
-    if: github.event_name != 'pull_request_target' || !github.event.pull_request.draft
+    if: github.event_name == 'pull_request' && !github.event.pull_request.draft
     runs-on: ubuntu-latest
     steps:
       - name: checkout
@@ -59,7 +59,7 @@ jobs:
 
   e2e-basic:
     name: End-to-End Test Basic
-    if: github.event_name != 'pull_request_target' || !github.event.pull_request.draft
+    if: github.event_name == 'pull_request' && !github.event.pull_request.draft
     concurrency: ci-${{ github.ref }}-e2e-basic
     runs-on: ubuntu-latest
     needs:
