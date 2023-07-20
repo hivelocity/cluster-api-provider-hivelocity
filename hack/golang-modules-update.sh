@@ -21,7 +21,7 @@ set -o pipefail
 REPO_ROOT=$(realpath $(dirname "${BASH_SOURCE[0]}")/..)
 cd "${REPO_ROOT}" || exit 1
 
-DIRS="./ ./hack/tools"
+DIRS="./"
 for DIR in ${DIRS}; do
 	cd ${REPO_ROOT}/${DIR} && go mod download
 	cd ${REPO_ROOT}/${DIR} && go mod verify
