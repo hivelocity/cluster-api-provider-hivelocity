@@ -1,0 +1,33 @@
+name: Report Binsize Treemap
+# yamllint disable rule:line-length
+on: # yamllint disable-line rule:truthy
+  workflow_dispatch:
+jobs:
+  report-binsize-treemap:
+    name: Report Binsize Treemap
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.5.2
+      - name: Fixup git permissions
+        # https://github.com/actions/checkout/issues/766
+        shell: bash
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+      - name: Install go
+        uses: actions/setup-go@fac708d6674e30b6ba41289acaab6d4b75aa0753 # v4.0.1
+        with:
+          go-version-file: "go.mod"
+          cache: true
+          cache-dependency-path: go.sum
+
+      - name: Create Binsize Report
+        run: make caphv report-binsize-treemap-all
+
+      - name: Upload Report
+        uses: actions/upload-artifact@0b7f8abb1508181956e8e162db84b466c27e18ce # v3.1.2
+        with:
+          name: reports-${{ github.sha }}
+          path: .reports
+          retention-days: 90

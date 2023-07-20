@@ -50,7 +50,7 @@ func (r *HivelocityCluster) ValidateCreate() error {
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type.
-func (r *HivelocityCluster) ValidateUpdate(old runtime.Object) error {
+func (r *HivelocityCluster) ValidateUpdate(_ runtime.Object) error {
 	hivelocityclusterlog.V(1).Info("validate update", "name", r.Name)
 	return nil
 }

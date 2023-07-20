@@ -54,6 +54,8 @@ version::get_version_vars() {
         if [[ "${GIT_VERSION}" =~ ^v([0-9]+)\.([0-9]+)(\.[0-9]+)?([-].*)?([+].*)?$ ]]; then
             GIT_MAJOR=${BASH_REMATCH[1]}
             GIT_MINOR=${BASH_REMATCH[2]}
+        else
+            echo "could not get GIT_MAJOR from $GIT_VERSION" >&2
         fi
 
         # If GIT_VERSION is not a valid Semantic Version, then refuse to build.
@@ -64,7 +66,7 @@ version::get_version_vars() {
         fi
     fi
 
-    GIT_RELEASE_TAG=$(git describe --abbrev=0 --tags)
+   #GIT_RELEASE_TAG=$(git describe --abbrev=0 --tags)
 }
 
 # borrowed from k8s.io/hack/lib/version.sh and modified

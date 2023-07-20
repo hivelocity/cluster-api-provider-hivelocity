@@ -52,7 +52,7 @@ func (r *HivelocityRemediation) ValidateCreate() error {
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type.
-func (r *HivelocityRemediation) ValidateUpdate(old runtime.Object) error {
+func (r *HivelocityRemediation) ValidateUpdate(_ runtime.Object) error {
 	hivelocityremediationlog.V(1).Info("validate update", "name", r.Name)
 	return nil
 }

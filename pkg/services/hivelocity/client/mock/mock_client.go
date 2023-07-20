@@ -120,7 +120,7 @@ type mockedHVClient struct {
 var _ hvclient.Client = &mockedHVClient{}
 
 // NewClient gives reference to the mock client using the in memory store.
-func (f *mockedHVClientFactory) NewClient(hvAPIKey string) hvclient.Client {
+func (f *mockedHVClientFactory) NewClient(_ string) hvclient.Client {
 	return &mockedHVClient{
 		store: f.store,
 	}
@@ -166,11 +166,11 @@ var defaultSSHKey = hv.SshKeyResponse{
 
 var defaultImage = "Ubuntu 20.x"
 
-func (c *mockedHVClient) ListImages(ctx context.Context, productID int32) ([]string, error) {
+func (c *mockedHVClient) ListImages(_ context.Context, _ int32) ([]string, error) {
 	return []string{defaultImage}, nil
 }
 
-func (c *mockedHVClient) ProvisionDevice(ctx context.Context, deviceID int32, opts hv.BareMetalDeviceUpdate) (hv.BareMetalDevice, error) {
+func (c *mockedHVClient) ProvisionDevice(_ context.Context, deviceID int32, opts hv.BareMetalDeviceUpdate) (hv.BareMetalDevice, error) {
 	device, ok := c.store.idMap[deviceID]
 	if !ok {
 		return hv.BareMetalDevice{}, fmt.Errorf("[ProvisionDevice] deviceID %d unknown", deviceID)
@@ -180,11 +180,11 @@ func (c *mockedHVClient) ProvisionDevice(ctx context.Context, deviceID int32, op
 	return device, nil
 }
 
-func (c *mockedHVClient) ListDevices(ctx context.Context) ([]hv.BareMetalDevice, error) {
+func (c *mockedHVClient) ListDevices(_ context.Context) ([]hv.BareMetalDevice, error) {
 	return maps.Values(c.store.idMap), nil
 }
 
-func (c *mockedHVClient) ShutdownDevice(ctx context.Context, deviceID int32) error {
+func (c *mockedHVClient) ShutdownDevice(_ context.Context, deviceID int32) error {
 	device, found := c.store.idMap[deviceID]
 	if !found {
 		return fmt.Errorf("[ShutdownDevice] deviceID %d: %w", deviceID, hvclient.ErrDeviceNotFound)
@@ -198,7 +198,7 @@ func (c *mockedHVClient) ShutdownDevice(ctx context.Context, deviceID int32) err
 	return nil
 }
 
-func (c *mockedHVClient) PowerOnDevice(ctx context.Context, deviceID int32) error {
+func (c *mockedHVClient) PowerOnDevice(_ context.Context, deviceID int32) error {
 	device, found := c.store.idMap[deviceID]
 	if !found {
 		return fmt.Errorf("[PowerOnDevice] deviceID %d: %w", deviceID, hvclient.ErrDeviceNotFound)
@@ -212,18 +212,18 @@ func (c *mockedHVClient) PowerOnDevice(ctx context.Context, deviceID int32) erro
 	return nil
 }
 
-func (c *mockedHVClient) ListSSHKeys(ctx context.Context) ([]hv.SshKeyResponse, error) {
+func (c *mockedHVClient) ListSSHKeys(_ context.Context) ([]hv.SshKeyResponse, error) {
 	return []hv.SshKeyResponse{defaultSSHKey}, nil
 }
 
-func (c *mockedHVClient) SetDeviceTags(ctx context.Context, deviceID int32, tags []string) error {
+func (c *mockedHVClient) SetDeviceTags(_ context.Context, deviceID int32, tags []string) error {
 	device := c.store.idMap[deviceID]
 	device.Tags = append([]string(nil), tags...)
 	c.store.idMap[deviceID] = device
 	return nil
 }
 
-func (c *mockedHVClient) GetDevice(ctx context.Context, deviceID int32) (hv.BareMetalDevice, error) {
+func (c *mockedHVClient) GetDevice(_ context.Context, deviceID int32) (hv.BareMetalDevice, error) {
 	device, ok := c.store.idMap[deviceID]
 	if !ok {
 		return hv.BareMetalDevice{}, hvclient.ErrDeviceNotFound

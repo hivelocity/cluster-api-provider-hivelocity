@@ -1,0 +1,48 @@
+name: "Schedule - Check links"
+on: # yamllint disable-line rule:truthy
+  workflow_dispatch:
+  schedule:
+    - cron: "0 0 1 * *"
+# yamllint disable rule:line-length
+jobs:
+  link-checker:
+    name: Link Checker
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab # v3.5.2
+
+      - name: Generate Token
+        uses: tibdex/github-app-token@b62528385c34dbc9f38e5f4225ac829252d1ea92 # v1
+        id: generate-token
+        with:
+          app_id: ${{ secrets.HIVELOCITY_APP_ID }}
+          private_key: ${{ secrets.HIVELOCITY_APP_PRIVATE_KEY }}
+
+      - name: Link Checker
+        uses: lycheeverse/lychee-action@ec3ed119d4f44ad2673a7232460dc7dff59d2421 # v1.8.0
+        id: lychee
+        env:
+          GITHUB_TOKEN: "${{ steps.generate-token.outputs.token }}"
+        with:
+          args: --config .lychee.toml ./*.md  ./docs/**/*.md
+          output: ./lychee.md
+          format: markdown
+
+      - name: Find Link Checker Issue
+        id: link-checker-issue
+        uses: micalevisk/last-issue-action@305829d9728f47beb0029417167a0af890edfd6e # v2
+        with:
+          state: open
+          labels: |
+            link-checker
+
+      - name: Update Issue
+        uses: peter-evans/create-issue-from-file@433e51abf769039ee20ba1293a088ca19d573b7f # v4
+        with:
+          title: Link Checker Dashboard
+          issue-number: "${{ steps.link-checker-issue.outputs.issue_number }}"
+          content-filepath: ./lychee.md
+          token: "${{ steps.generate-token.outputs.token }}"
+          labels: |
+            link-checker

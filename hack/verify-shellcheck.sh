@@ -95,7 +95,7 @@ echo "Running shellcheck..."
 cd "${ROOT_PATH}" || exit
 IGNORE_FILES=$(find . -name "*.sh" | grep "third_party\|tilt_modules|node_modules")
 echo "Ignoring shellcheck on ${IGNORE_FILES}"
-FILES=$(find . -name "*.sh" -not -path "./tilt_modules/*" -not -path "*third_party*" -not -path "*node_modules*" -not -path "*vendor/*" -not -path ./hack/version.sh -not -path ./hack/ensure-helm.sh -not -path "./hack/boilerplate/*")
+FILES=$(find . -name "*.sh" -not -path "./tilt_modules/*" -not -path "*third_party*" -not -path "*node_modules*" -not -path "*vendor/*" -not -path ./hack/version.sh -not -path "./hack/boilerplate/*")
 while read -r file; do
     "$SHELLCHECK" -x  "--exclude=${SHELLCHECK_DISABLED}" "--color=auto" "$file" >> "${OUT}" 2>&1
 done <<< "$FILES"

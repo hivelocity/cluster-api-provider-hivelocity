@@ -14,7 +14,8 @@ tmp
 *.test
 
 # E2E test templates
-test/e2e/data/infrastructure-hivelocity/v1alpha1/cluster-template.yaml
+test/e2e/data/*/*/cluster-template*.yaml
+test/e2e/data/*/*/env*
 
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out
@@ -70,6 +71,7 @@ __pycache__/
 *$py.class
 /_output
 tmp_*
+.cache
 
 # generated kube-configs
 .workload-cluster-kubeconfig.yaml

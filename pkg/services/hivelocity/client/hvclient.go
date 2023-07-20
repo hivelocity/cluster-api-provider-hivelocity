@@ -122,7 +122,7 @@ func (c *realClient) SetDeviceTags(ctx context.Context, deviceID int32, tags []s
 	return checkRateLimit(err)
 }
 
-func (c *realClient) PowerOnDevice(ctx context.Context, deviceID int32) error {
+func (c *realClient) PowerOnDevice(_ context.Context, _ int32) error {
 	return nil // todo
 }
 

@@ -128,7 +128,7 @@ func (m *MachineScope) SetError(message string, reason capierrors.MachineStatusE
 }
 
 // IsBootstrapDataReady checks the readiness of a capi machine's bootstrap data.
-func (m *MachineScope) IsBootstrapDataReady(ctx context.Context) bool {
+func (m *MachineScope) IsBootstrapDataReady(_ context.Context) bool {
 	return m.Machine.Spec.Bootstrap.DataSecretName != nil
 }
 

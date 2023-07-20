@@ -355,7 +355,7 @@ func findSSHKey(sshKeysInAPI []hv.SshKeyResponse, sshKeyName string) (int32, err
 }
 
 // TODO: Implement logic to add multiple images.
-func (s *Service) getDeviceImage(ctx context.Context) (string, error) {
+func (s *Service) getDeviceImage(_ context.Context) (string, error) {
 	return defaultImageName, nil
 }
 
