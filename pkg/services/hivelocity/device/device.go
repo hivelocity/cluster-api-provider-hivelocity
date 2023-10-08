@@ -322,11 +322,14 @@ func (s *Service) actionProvisionDevice(ctx context.Context) actionResult {
 				// do not return an error in the reconcile loop as we cannot do anything about this without the intervention
 				// of the user. Only after the SSH key has been uploaded correctly, the provisioning can continue.
 				// This is why we wait for 5m and then reconcile again to see whether the SSH key exists then.
-				record.Warnf(s.scope.HivelocityCluster, "SSHKeyNotFound", "ssh key %s could not be found", sshKeyName)
+				msg := fmt.Sprintf("ssh key %q could not be found", sshKeyName)
+				conditions.MarkFalse(s.scope.HivelocityCluster, infrav1.CredentialsAvailableCondition, infrav1.HivelocitySSHKeyNotFoundReason, clusterv1.ConditionSeverityWarning, msg)
+				record.Warnf(s.scope.HivelocityCluster, "SSHKeyNotFound", msg)
 				return actionFailed{}
 			}
 			return actionError{err: fmt.Errorf("error with ssh keys: %w", err)}
 		}
+		conditions.MarkTrue(s.scope.HivelocityCluster, infrav1.CredentialsAvailableCondition)
 		opts.PublicSshKeyId = sshKeyID
 	}
 
@@ -519,7 +522,14 @@ func (s *Service) actionDeleteDeviceDissociate(ctx context.Context) actionResult
 
 func (s *Service) handleRateLimitExceeded(err error, functionName string) {
 	if errors.Is(err, hvclient.ErrRateLimitExceeded) {
-		conditions.MarkTrue(s.scope.HivelocityMachine, infrav1.RateLimitExceeded)
-		record.Warnf(s.scope.HivelocityMachine, "RateLimitExceeded", "exceeded rate limit with calling Hivelocity function %q", functionName)
+		msg := fmt.Sprintf("exceeded hivelocity rate limit with calling function: %q", functionName)
+		conditions.MarkFalse(
+			s.scope.HivelocityMachine,
+			infrav1.HivelocityAPIReachableCondition,
+			infrav1.RateLimitExceededReason,
+			clusterv1.ConditionSeverityWarning,
+			msg,
+		)
+		record.Warnf(s.scope.HivelocityMachine, "RateLimitExceeded", msg)
 	}
 }
