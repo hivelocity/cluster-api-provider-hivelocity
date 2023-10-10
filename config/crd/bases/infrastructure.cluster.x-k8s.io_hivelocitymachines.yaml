@@ -47,6 +47,12 @@ spec:
       jsonPath: .metadata.ownerReferences[?(@.kind=="Machine")].name
       name: Machine
       type: string
+    - jsonPath: .status.conditions[?(@.type=='Ready')].reason
+      name: Reason
+      type: string
+    - jsonPath: .status.conditions[?(@.type=='Ready')].message
+      name: Message
+      type: string
     name: v1alpha1
     schema:
       openAPIV3Schema:

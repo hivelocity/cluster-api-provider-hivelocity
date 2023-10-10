@@ -19,7 +19,6 @@ package controllers
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -47,6 +46,7 @@ import (
 	"sigs.k8s.io/cluster-api/util/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/apiutil"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -196,7 +196,7 @@ func (r *HivelocityClusterReconciler) reconcileNormal(ctx context.Context, clust
 		if machineType == "" {
 			return ctrl.Result{}, fmt.Errorf("Spec.Template.Spec.Type of HivelocityMachineTemplate %q is empty", name)
 		}
-		hvDevice, err := device.GetFirstDevice(ctx, clusterScope.HVClient, machineType, hvCluster.Name, "")
+		hvDevice, err := device.GetFirstDevice(ctx, clusterScope.HVClient, machineType, hvCluster, "")
 		if err != nil {
 			return ctrl.Result{}, fmt.Errorf("device.GetFirstDevice() failed: %w", err)
 		}
@@ -206,26 +206,34 @@ func (r *HivelocityClusterReconciler) reconcileNormal(ctx context.Context, clust
 		hvCluster.Spec.ControlPlaneEndpoint.Port = 6443
 	}
 
+	emptyResult := reconcile.Result{}
+
 	hvCluster.Status.Ready = true
 
 	result, err := r.reconcileTargetClusterManager(ctx, clusterScope)
-
 	if err != nil {
 		return reconcile.Result{}, fmt.Errorf("failed to reconcile target cluster manager: %w", err)
 	}
-
-	emptyResult := reconcile.Result{}
 	if result != emptyResult {
 		return result, nil
 	}
 
-	if err := reconcileTargetSecret(ctx, clusterScope); err != nil {
-		if errors.Is(err, scope.ErrWorkloadControlPlaneNotReady) {
-			log.V(1).Info(err.Error())
-			return reconcile.Result{RequeueAfter: 30 * time.Second}, nil
-		}
-		return reconcile.Result{RequeueAfter: 5 * time.Second}, err
+	conditions.MarkTrue(hvCluster, infrav1.TargetClusterReadyCondition)
+
+	if err = reconcileTargetSecret(ctx, clusterScope); err != nil {
+		reterr := fmt.Errorf("failed to reconcile target secret: %w", err)
+		conditions.MarkFalse(
+			clusterScope.HivelocityCluster,
+			infrav1.TargetClusterSecretReadyCondition,
+			infrav1.TargetSecretSyncFailedReason,
+			clusterv1.ConditionSeverityError,
+			reterr.Error(),
+		)
+		return reconcile.Result{}, reterr
 	}
+
+	// target cluster secret is ready
+	conditions.MarkTrue(hvCluster, infrav1.TargetClusterSecretReadyCondition)
 
 	log.V(1).Info("Reconciling finished")
 	return reconcile.Result{}, nil
@@ -378,7 +386,14 @@ func reconcileTargetSecret(ctx context.Context, clusterScope *scope.ClusterScope
 	}
 
 	if err := scope.IsControlPlaneReady(ctx, clientConfig); err != nil {
-		return err
+		conditions.MarkFalse(
+			clusterScope.HivelocityCluster,
+			infrav1.TargetClusterSecretReadyCondition,
+			infrav1.TargetClusterControlPlaneNotReadyReason,
+			clusterv1.ConditionSeverityInfo,
+			"target cluster not ready",
+		)
+		return nil //nolint:nilerr
 	}
 
 	// Workload Control plane ready, so we can check if the secret exists already
@@ -474,6 +489,13 @@ func (r *HivelocityClusterReconciler) reconcileTargetClusterManager(ctx context.
 		// create a new cluster manager
 		m, err := r.newTargetClusterManager(ctx, clusterScope)
 		if err != nil {
+			conditions.MarkFalse(
+				clusterScope.HivelocityCluster,
+				infrav1.TargetClusterReadyCondition,
+				infrav1.TargetClusterCreateFailedReason,
+				clusterv1.ConditionSeverityError,
+				err.Error(),
+			)
 			return res, fmt.Errorf("failed to create a clusterManager for HivelocityCluster %s/%s: %w",
 				clusterScope.HivelocityCluster.Namespace,
 				clusterScope.HivelocityCluster.Name,
@@ -498,6 +520,13 @@ func (r *HivelocityClusterReconciler) reconcileTargetClusterManager(ctx context.
 
 			if err := m.Start(ctx); err != nil {
 				clusterScope.Error(err, "failed to start a targetClusterManager")
+				conditions.MarkFalse(
+					clusterScope.HivelocityCluster,
+					infrav1.TargetClusterReadyCondition,
+					infrav1.TargetClusterCreateFailedReason,
+					clusterv1.ConditionSeverityError,
+					"failed to start a targetClusterManager: %s", err.Error(),
+				)
 			} else {
 				clusterScope.Info("stop targetClusterManager")
 			}
@@ -531,8 +560,30 @@ func (r *HivelocityClusterReconciler) newTargetClusterManager(ctx context.Contex
 
 	clientConfig, err := clusterScope.ClientConfig(ctx)
 	if err != nil {
+		if apierrors.IsNotFound(err) {
+			conditions.MarkFalse(
+				hvCluster,
+				infrav1.TargetClusterReadyCondition,
+				infrav1.KubeConfigNotFoundReason,
+				clusterv1.ConditionSeverityInfo,
+				"kubeconfig not found (yet)",
+			)
+			return nil, nil
+		}
 		return nil, fmt.Errorf("failed to get a clientConfig for the API of HivelocityCluster %s/%s: %w", hvCluster.Namespace, hvCluster.Name, err)
 	}
+
+	if err := scope.IsControlPlaneReady(ctx, clientConfig); err != nil {
+		conditions.MarkFalse(
+			hvCluster,
+			infrav1.TargetClusterReadyCondition,
+			infrav1.TargetClusterControlPlaneNotReadyReason,
+			clusterv1.ConditionSeverityInfo,
+			"target cluster not ready",
+		)
+		return nil, nil //nolint:nilerr
+	}
+
 	restConfig, err := clientConfig.ClientConfig()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get a restConfig for the API of HivelocityCluster %s/%s: %w", hvCluster.Namespace, hvCluster.Name, err)
@@ -546,6 +597,18 @@ func (r *HivelocityClusterReconciler) newTargetClusterManager(ctx context.Contex
 	scheme := runtime.NewScheme()
 	_ = certificatesv1.AddToScheme(scheme)
 	_ = infrav1.AddToScheme(scheme)
+
+	// Check whether kubeapi server responds
+	if _, err := apiutil.NewDynamicRESTMapper(restConfig); err != nil {
+		conditions.MarkFalse(
+			hvCluster,
+			infrav1.TargetClusterReadyCondition,
+			infrav1.KubeAPIServerNotRespondingReason,
+			clusterv1.ConditionSeverityInfo,
+			"kubeapi server not responding (yet)",
+		)
+		return nil, nil //nolint:nilerr
+	}
 
 	clusterMgr, err := ctrl.NewManager(
 		restConfig,

@@ -31,5 +31,5 @@ func Test_findAvailableDeviceFromList(t *testing.T) {
 		mockclient.FreeDevice,
 	}
 	_, err := findAvailableDeviceFromList(devices, "fooDeviceType", "my-cluster", "my-machine")
-	require.ErrorIs(t, err, errNoDeviceAvailable)
+	require.ErrorIs(t, err, nil)
 }

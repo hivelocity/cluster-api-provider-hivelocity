@@ -36,6 +36,12 @@ spec:
       jsonPath: .spec.controlPlaneRegion
       name: Region
       type: string
+    - jsonPath: .status.conditions[?(@.type=='Ready')].reason
+      name: Reason
+      type: string
+    - jsonPath: .status.conditions[?(@.type=='Ready')].message
+      name: Message
+      type: string
     name: v1alpha1
     schema:
       openAPIV3Schema:
