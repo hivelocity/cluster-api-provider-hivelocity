@@ -240,7 +240,8 @@ typo in the docs, please tell us how we can improve the project!</p>
 <h2 id="setup"><a class="header" href="#setup">Setup</a></h2>
 <p>At this moment we only support cluster management with tilt. So follow below instructions to create management and workload cluster.</p>
 <h3 id="create-a-management-cluster"><a class="header" href="#create-a-management-cluster">Create a management cluster</a></h3>
-<p>Please run below command and this will use <code>tilt-provider.yaml</code> to create the provider and <code>tilt-settings.yaml</code> to get all the environment variable -</p>
+<p>Please run below command and this will use <code>tilt-provider.yaml</code> to create the provider and
+<code>.envrc</code> to get all the environment variables.</p>
 <pre><code class="language-shell"># Please run the command from root of this repository
 make tilt-up
 </code></pre>
@@ -386,12 +387,12 @@ the user or a third party controller.</p>
 |                         # present in CAPHV.
 |                         # The API folder has subfolders for each supported API version.
 |
-├── _artifacts            # This directory is created during e2e tests. 
+├── _artifacts            # This directory is created during e2e tests.
 |                         # It contains yaml files and logs.
 |
 ├── bin                   # Binaries, mostly for envtests.
 |
-├── config                # This is a Kubernetes manifest folder containing application 
+├── config                # This is a Kubernetes manifest folder containing application
 |                         # resource configurations as
 |                         # kustomize YAML definitions. These are generated from other folders in the
 |                         # repo using`make generate-manifests`.
@@ -418,8 +419,7 @@ the user or a third party controller.</p>
 ├── test                  # Config and code for e2e tests.
 |
 ├── Tiltfile              # Configuration for https://tilt.dev/.
-├── tilt-provider.yaml
-└── tilt-settings.yaml
+└── tilt-provider.yaml
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><p> # Setup a Development Environment</p>
 <h2 id="tagging-machines"><a class="header" href="#tagging-machines">Tagging Machines</a></h2>
@@ -447,7 +447,7 @@ binaries (<code>envsubst</code> and <code>kustomize</code>) which are needed to 
 <div style="break-before: page; page-break-before: always;"></div><h1 id="using-tilt-for-cluster-api-provider-hivelocity"><a class="header" href="#using-tilt-for-cluster-api-provider-hivelocity">Using Tilt for Cluster API Provider Hivelocity</a></h1>
 <p>We use <a href="https://tilt.dev/">Tilt</a> to start a development cluster.</p>
 <h2 id="setting-tilt-up"><a class="header" href="#setting-tilt-up">Setting Tilt up</a></h2>
-<p>You need to create a <code>tilt-settings.yaml</code> file and specify the values you need. In the git repo is already a file. You can adapt it to your needs.</p>
+<p>You need to create a <code>.envrc</code> file and specify the values you need. In the git repo is already a file. You can adapt it to your needs.</p>
 <p>Machines with the corresponding <code>caphv-device-type</code> tag will get conditionless provisioned. Be sure that you don’t provision machines which run valuable workload!</p>
 <p>We recommend to use custom device tags for testing.</p>
 <p>More about this topic: <a href="developer/../topics/provisioning-machines.html">Provisioning Machines</a></p>
@@ -468,7 +468,7 @@ binaries (<code>envsubst</code> and <code>kustomize</code>) which are needed to 
 to create a new workload cluster.</p>
 <p>Open a terminal and execute <a href="developer/../topics/make-watch.html">make watch</a></p>
 <p><img src="developer/../topics/make-watch.jpg" alt="make watch" /></p>
-<p>The output of <a href="developer/../topics/make-watch.html">make watch</a> updates itself. You can monitor the progress of the CAPH controller.</p>
+<p>The output of <a href="developer/../topics/make-watch.html">make watch</a> updates itself. You can monitor the progress of the CAPHV controller.</p>
 <p>Working with baremetal servers takes time. It takes roughly 20 minutes
 until the ssh port of the first control plane is reachable.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="developing-cluster-api-provider-hivelocity"><a class="header" href="#developing-cluster-api-provider-hivelocity">Developing Cluster API Provider Hivelocity</a></h1>
@@ -2260,6 +2260,10 @@ Bootstrap provider’s interaction with Cluster API is based on what is defined 
 <p>Cluster API Provider AWS</p>
 <h3 id="cabpk"><a class="header" href="#cabpk">CABPK</a></h3>
 <p>Cluster API Bootstrap Provider Kubeadm</p>
+<h3 id="cabpocne"><a class="header" href="#cabpocne">CABPOCNE</a></h3>
+<p>Cluster API Bootstrap Provider Oracle Cloud Native Environment (OCNE)</p>
+<h3 id="cacpocne"><a class="header" href="#cacpocne">CACPOCNE</a></h3>
+<p>Cluster API Control Plane Provider Oracle Cloud Native Environment (OCNE)</p>
 <h3 id="capc"><a class="header" href="#capc">CAPC</a></h3>
 <p>Cluster API Provider CloudStack</p>
 <h3 id="capd"><a class="header" href="#capd">CAPD</a></h3>
