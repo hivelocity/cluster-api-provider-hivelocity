@@ -210,7 +210,7 @@ env-vars-for-wl-cluster:
 	HIVELOCITY_API_KEY HIVELOCITY_SSH_KEY HIVELOCITY_WORKER_MACHINE_TYPE KUBERNETES_VERSION WORKER_MACHINE_COUNT \
 	HIVELOCITY_IMAGE_NAME HIVELOCITY_REGION
 
-create-workload-cluster: env-vars-for-wl-cluster $(HOME)/.ssh/$(INFRA_PROVIDER).pub $(CLUSTERCTL) $(KUSTOMIZE) $(ENVSUBST) install-crds ## Creates a workload-cluster. ENV Variables need to be exported or defined in the tilt-settings.yaml
+create-workload-cluster: env-vars-for-wl-cluster $(HOME)/.ssh/$(INFRA_PROVIDER).pub $(CLUSTERCTL) $(KUSTOMIZE) $(ENVSUBST) install-crds ## Creates a workload-cluster.
 	# Create workload Cluster.
 	rm -f $(WORKER_CLUSTER_KUBECONFIG)
 	go run ./cmd upload-ssh-pub-key $$HIVELOCITY_SSH_KEY $(HOME)/.ssh/$(INFRA_PROVIDER).pub

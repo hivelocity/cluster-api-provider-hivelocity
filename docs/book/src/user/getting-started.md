@@ -43,7 +43,8 @@ At this moment we only support cluster management with tilt. So follow below ins
 
 ### Create a management cluster
 
-Please run below command and this will use `tilt-provider.yaml` to create the provider and `tilt-settings.yaml` to get all the environment variable -
+Please run below command and this will use `tilt-provider.yaml` to create the provider and
+`.envrc` to get all the environment variables.
 ```shell
 # Please run the command from root of this repository
 make tilt-up
