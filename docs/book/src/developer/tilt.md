@@ -6,7 +6,7 @@ We use [Tilt](https://tilt.dev/) to start a development cluster.
 
 ## Setting Tilt up
 
-You need to create a `tilt-settings.yaml` file and specify the values you need. In the git repo is already a file. You can adapt it to your needs.
+You need to create a `.envrc` file and specify the values you need. In the git repo is already a file. You can adapt it to your needs.
 
 Machines with the corresponding `caphv-device-type` tag will get conditionless provisioned. Be sure that you don't provision machines which run valuable workload!
 
@@ -40,7 +40,7 @@ Open a terminal and execute [make watch](../topics/make-watch.md)
 
 ![make watch](../topics/make-watch.jpg)
 
-The output of [make watch](../topics/make-watch.md) updates itself. You can monitor the progress of the CAPH controller.
+The output of [make watch](../topics/make-watch.md) updates itself. You can monitor the progress of the CAPHV controller.
 
 Working with baremetal servers takes time. It takes roughly 20 minutes
 until the ssh port of the first control plane is reachable.
