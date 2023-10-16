@@ -27,6 +27,7 @@ import (
 	"github.com/hivelocity/cluster-api-provider-hivelocity/controllers"
 	hvclient "github.com/hivelocity/cluster-api-provider-hivelocity/pkg/services/hivelocity/client"
 	"github.com/hivelocity/cluster-api-provider-hivelocity/pkg/utils"
+	caphvversion "github.com/hivelocity/cluster-api-provider-hivelocity/pkg/version"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -181,7 +182,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	setupLog.Info("starting manager")
+	setupLog.Info("starting manager", "version", caphvversion.Get().String())
 	if err := mgr.Start(ctx); err != nil {
 		setupLog.Error(err, "problem running manager")
 		os.Exit(1)
