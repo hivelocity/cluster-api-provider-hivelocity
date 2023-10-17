@@ -33,8 +33,8 @@ ctlptl_kind-cluster-with-registry () {
   cat <<EOF | ctlptl apply -f -
 apiVersion: ctlptl.dev/v1alpha1
 kind: Registry
-name: ${CLUSTER_NAME}-registry
-port: 5001
+name: kind-registry
+port: 5000
 ---
 apiVersion: ctlptl.dev/v1alpha1
 kind: Cluster

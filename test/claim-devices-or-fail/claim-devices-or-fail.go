@@ -22,26 +22,12 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 
 	"github.com/hivelocity/cluster-api-provider-hivelocity/pkg/services/hivelocity/hvtag"
 	hv "github.com/hivelocity/hivelocity-client-go/client"
 	"golang.org/x/exp/slices"
 )
-
-type controlPlaneDeviceID struct {
-	ip string
-}
-
-var controlPlaneIDs = []int32{
-	14730, // 66.165.243.74
-	15335, // 66.206.8.178
-	15336, // 66.206.8.186
-}
-
-var workerNodeIDs = []int32{
-	15337, // 66.206.8.194
-	// 15338 is used for test/hvapi/main.go
-}
 
 func main() {
 	apiKey := os.Getenv("HIVELOCITY_API_KEY")
@@ -78,6 +64,17 @@ func releaseOldMachines(ctx context.Context, apiClient *hv.APIClient, deviceType
 		if !slices.Contains(device.Tags, tag) {
 			continue
 		}
+		skip := false
+		for _, tag := range device.Tags {
+			if strings.HasPrefix(tag, string(hvtag.DeviceTagKeyPermanentError)) {
+				fmt.Printf("skipping device %d because %s\n", device.DeviceId, tag)
+				skip = true
+				break
+			}
+		}
+		if skip {
+			continue
+		}
 		devicesWithTag = append(devicesWithTag, device)
 	}
 	if len(devicesWithTag) == 0 {
@@ -86,13 +83,46 @@ func releaseOldMachines(ctx context.Context, apiClient *hv.APIClient, deviceType
 	fmt.Printf("resetting labels of all devices which have %s=%s. Found %d devices\n",
 		hvtag.DeviceTagKeyDeviceType, deviceType, len(devicesWithTag))
 	for _, device := range devicesWithTag {
-		fmt.Printf("    resetting labels of device %d\n", device.DeviceId)
-		_, _, err := apiClient.DeviceApi.PutDeviceTagIdResource(ctx, device.DeviceId, hv.DeviceTag{
-			Tags: []string{tag}}, nil)
+		err := resetTags(ctx, device, apiClient)
 		if err != nil {
 			return err
 		}
 	}
 
 	return nil
+}
+
+// resetTags: Remove our labels, but keep DeviceTagKeyPermanentError and DeviceTagKeyDeviceType.
+// And keep other labels.
+func resetTags(ctx context.Context, device hv.BareMetalDevice, apiClient *hv.APIClient) error {
+	fmt.Printf("    resetting labels of device %d\n", device.DeviceId)
+	var newTags []string
+	for _, tag := range device.Tags {
+		if removeTag(tag) {
+			continue
+		}
+		newTags = append(newTags, tag)
+	}
+	_, _, err := apiClient.DeviceApi.PutDeviceTagIdResource(ctx, device.DeviceId, hv.DeviceTag{
+		Tags: newTags}, nil)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// tag: Something like caphv-cluster-name=hv-guettli
+func removeTag(tag string) bool {
+	if !strings.HasPrefix(tag, "caphv-") {
+		return false
+	}
+	for _, keepPrefix := range []string{
+		string(hvtag.DeviceTagKeyPermanentError),
+		string(hvtag.DeviceTagKeyDeviceType),
+	} {
+		if strings.HasPrefix(tag, keepPrefix) {
+			return false
+		}
+	}
+	return true
 }

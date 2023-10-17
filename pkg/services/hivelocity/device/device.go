@@ -46,16 +46,14 @@ type Service struct {
 
 const (
 	defaultImageName = "Ubuntu 20.x"
-
-	// requeueAfter gives the duration of time until the next reconciliation should be performed.
-	requeueAfter = time.Second * 30
 )
 
 var (
-	errMachineTagNotFound = fmt.Errorf("machine tag not found")
-	errClusterTagNotFound = fmt.Errorf("cluster tag not found")
-
 	errSSHKeyNotFound = fmt.Errorf("ssh key not found")
+
+	errWrongMachineTag = fmt.Errorf("machine has wrong machine tag")
+
+	errWrongClusterTag = fmt.Errorf("machine has wrong cluster tag")
 )
 
 // NewService outs a new service with machine scope.
@@ -154,7 +152,7 @@ func GetFirstDevice(ctx context.Context, hvclient hvclient.Client, machineType i
 		return devices[i].DeviceId < devices[j].DeviceId
 	})
 
-	hvDevices, err := findAvailableDeviceFromList(devices, machineType, hvCluster.Name, machineName)
+	hvDevices := findAvailableDeviceFromList(devices, machineType, hvCluster.Name, machineName)
 	if hvDevices == nil {
 		conditions.MarkFalse(
 			hvCluster,
@@ -165,16 +163,21 @@ func GetFirstDevice(ctx context.Context, hvclient hvclient.Client, machineType i
 		)
 		return nil, nil
 	}
-	if err != nil {
-		return nil, fmt.Errorf("failed to find available device: %w", err)
-	}
 
 	conditions.MarkTrue(hvCluster, infrav1.DeviceAssociateSucceededCondition)
 	return hvDevices, nil
 }
 
-func findAvailableDeviceFromList(devices []hv.BareMetalDevice, deviceType infrav1.HivelocityDeviceType, clusterName, machineName string) (*hv.BareMetalDevice, error) {
+func findAvailableDeviceFromList(devices []hv.BareMetalDevice, deviceType infrav1.HivelocityDeviceType, clusterName, machineName string) *hv.BareMetalDevice {
 	for _, device := range devices {
+
+		// Skip if caphv-permanent-error exists
+		_, err := hvtag.PermanentErrorTagFromList(device.Tags)
+		if err == nil {
+			// The tag exists. Skip this Device
+			continue
+		}
+
 		// Ignore if associated already
 		machineTag, err := hvtag.MachineTagFromList(device.Tags)
 		if err != nil && !errors.Is(err, hvtag.ErrDeviceTagNotFound) {
@@ -183,7 +186,7 @@ func findAvailableDeviceFromList(devices []hv.BareMetalDevice, deviceType infrav
 		}
 		if machineName != "" && machineTag.Value == machineName {
 			// associated to this machine - return
-			return &device, nil
+			return &device
 		}
 		if machineTag.Value != "" {
 			// associated to other machine - continue
@@ -212,9 +215,9 @@ func findAvailableDeviceFromList(devices []hv.BareMetalDevice, deviceType infrav
 			continue
 		}
 
-		return &device, nil
+		return &device
 	}
-	return nil, nil
+	return nil
 }
 
 // actionVerifyAssociate verifies that the HV device has actually been associated to this machine and only this.
@@ -411,14 +414,15 @@ func (s *Service) actionDeviceProvisioned(ctx context.Context) actionResult {
 	// verify device
 	if err := s.verifyAssociatedDevice(&device); err != nil {
 		// fatal error when device could not be verified
+		msg := fmt.Sprintf("verifyAssociatedDevice failed for device %d: %s", device.DeviceId, err.Error())
 		conditions.MarkFalse(
 			s.scope.HivelocityMachine,
 			infrav1.DeviceReadyCondition,
 			infrav1.DeviceTagsInvalidReason,
 			clusterv1.ConditionSeverityError,
-			fmt.Sprintf("device %d has invalid tags", device.DeviceId),
+			msg,
 		)
-		record.Warnf(s.scope.HivelocityMachine, "DeviceTagsInvalid", "Hivelocity device not found.")
+		record.Warnf(s.scope.HivelocityMachine, "DeviceTagsInvalid", msg)
 		s.scope.HivelocityMachine.SetFailure(capierrors.UpdateMachineError, infrav1.FailureMessageDeviceTagsInvalid)
 		return actionComplete{}
 	}
@@ -446,11 +450,20 @@ func (s *Service) actionDeviceProvisioned(ctx context.Context) actionResult {
 }
 
 func (s *Service) verifyAssociatedDevice(device *hv.BareMetalDevice) error {
-	if !s.scope.HivelocityCluster.DeviceTag().IsInStringList(device.Tags) {
-		return errClusterTagNotFound
+	deviceTag, err := hvtag.ClusterTagFromList(device.Tags)
+	if err != nil {
+		return err
 	}
-	if !s.scope.HivelocityMachine.DeviceTag().IsInStringList(device.Tags) {
-		return errMachineTagNotFound
+	if s.scope.HivelocityCluster.Name != deviceTag.Value {
+		return fmt.Errorf("expected %q got %q: %w", s.scope.HivelocityCluster.Name, deviceTag.Value, errWrongClusterTag)
+	}
+
+	machineTag, err := hvtag.MachineTagFromList(device.Tags)
+	if err != nil {
+		return err
+	}
+	if s.scope.HivelocityMachine.Name != machineTag.Value {
+		return fmt.Errorf("expected %q got %q: %w", s.scope.HivelocityMachine.Name, machineTag.Value, errWrongMachineTag)
 	}
 	return nil
 }

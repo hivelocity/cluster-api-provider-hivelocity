@@ -150,6 +150,11 @@ gotestsum: $(GOTESTSUM) # Build gotestsum from tools folder.
 $(GOTESTSUM):
 	go install gotest.tools/gotestsum@v1.10.0
 
+VIDDY := $(abspath $(TOOLS_BIN_DIR)/viddy)
+viddy: $(VIDDY)
+$(VIDDY):
+	go install github.com/sachaos/viddy@latest
+
 all-tools: $(GOTESTSUM) $(go-cover-treemap) $(go-binsize-treemap) $(KIND) $(KUBECTL) $(CLUSTERCTL) $(CTLPTL) $(SETUP_ENVTEST) $(ENVSUBST) $(KUSTOMIZE) $(CONTROLLER_GEN)
 	echo 'done'
 
@@ -171,17 +176,17 @@ deploy-controller: generate-manifests $(KUSTOMIZE) ## Deploy controller to the K
 undeploy-controller: ## Undeploy controller from the K8s cluster specified in ~/.kube/config.
 	$(KUSTOMIZE) build config/default | $(KUBECTL) delete -f -
 
-install-essentials: ## This gets the secret and installs a CNI and the CCM. Usage: MAKE install-essentials NAME=<cluster-name>
-	$(MAKE) wait-and-get-secret CLUSTER_NAME=$(NAME)
+install-essentials: ## This gets the secret and installs a CNI and the CCM. Usage: MAKE install-essentials
+	$(MAKE) wait-and-get-secret
 	$(MAKE) install-cilium-in-wl-cluster
 	$(MAKE) install-ccm-in-wl-cluster
 
 wait-and-get-secret:
 	# Wait for the kubeconfig to become available.
-	${TIMEOUT} 5m bash -c "while ! $(KUBECTL) get secrets | grep $(CLUSTER_NAME)-kubeconfig; do sleep 1; done"
+	${TIMEOUT} --foreground 5m bash -c "while ! $(KUBECTL) get secrets | grep $(CLUSTER_NAME)-kubeconfig; do sleep 1; done"
 	# Get kubeconfig and store it locally.
 	$(KUBECTL) get secrets $(CLUSTER_NAME)-kubeconfig -o json | jq -r .data.value | base64 --decode > $(WORKER_CLUSTER_KUBECONFIG)
-	${TIMEOUT} 15m bash -c "while ! $(KUBECTL) --kubeconfig=$(WORKER_CLUSTER_KUBECONFIG) get nodes | grep control-plane; do sleep 1; done"
+	${TIMEOUT} --foreground 15m bash -c "while ! $(KUBECTL) --kubeconfig=$(WORKER_CLUSTER_KUBECONFIG) get nodes | grep control-plane; do sleep 1; done"
 
 install-cilium-in-wl-cluster:
 	# Deploy cilium
@@ -234,7 +239,7 @@ delete-workload-cluster: ## Deletes the example workload Kubernetes cluster
 	@echo 'Your workload cluster will now be deleted, this can take up to 20 minutes'
 	$(KUBECTL) patch cluster $(CLUSTER_NAME) --type=merge -p '{"spec":{"paused": false}}'
 	$(KUBECTL) delete cluster $(CLUSTER_NAME)
-	${TIMEOUT} 15m bash -c "while $(KUBECTL) get cluster | grep $(NAME); do sleep 1; done"
+	${TIMEOUT} --foreground 15m bash -c "while $(KUBECTL) get cluster | grep $(NAME); do sleep 1; done"
 	@echo 'Cluster deleted'
 
 create-mgt-cluster: $(CLUSTERCTL) $(KUBECTL) cluster ## Start a mgt-cluster with the latest version of all capi components and the infra provider.
@@ -686,5 +691,5 @@ tilt-up: env-vars-for-wl-cluster $(ENVSUBST) $(KUBECTL) $(KUSTOMIZE) $(TILT) clu
 	EXP_CLUSTER_RESOURCE_SET=true $(TILT) up --port=10352
 
 .PHONY: watch
-watch: ## Watch CRDs cluster, machines and Events.
-	watch -c -n 2 hack/output-for-watch.sh
+watch: $(VIDDY) ## Watch CRDs cluster, machines and Events.
+	$(VIDDY) -n 3 hack/output-for-watch.sh

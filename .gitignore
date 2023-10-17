@@ -76,3 +76,6 @@ tmp_*
 # generated kube-configs
 .workload-cluster-kubeconfig.yaml
 .mgt-cluster-kubeconfig.yaml
+
+# directories created by hack/dump-machine-state.sh
+machine-state-*

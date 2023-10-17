@@ -24,13 +24,17 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"regexp"
+	"runtime/debug"
 	"strings"
 	"time"
 
 	"github.com/antihax/optional"
+	"github.com/go-logr/logr"
 	"github.com/hivelocity/cluster-api-provider-hivelocity/pkg/utils"
 	caphvversion "github.com/hivelocity/cluster-api-provider-hivelocity/pkg/version"
 	hv "github.com/hivelocity/hivelocity-client-go/client"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 )
 
@@ -80,11 +84,38 @@ var (
 
 var _ Factory = &HivelocityFactory{}
 
+// LoggingTransport is a struct for creating new logger for Hivelocity API.
+type LoggingTransport struct {
+	roundTripper http.RoundTripper
+	log          logr.Logger
+}
+
+var replaceHex = regexp.MustCompile(`0x[0123456789abcdef]+`)
+
+// RoundTrip is used for logging api calls to Hivelocity API.
+func (lt *LoggingTransport) RoundTrip(req *http.Request) (resp *http.Response, err error) {
+	stack := replaceHex.ReplaceAllString(string(debug.Stack()), "0xX")
+
+	resp, err = lt.roundTripper.RoundTrip(req)
+	if err != nil {
+		lt.log.V(1).Info("hivelocity API. Error.", "err", err, "method", req.Method, "url", req.URL, "stack", stack)
+		return resp, err
+	}
+	lt.log.V(1).Info("hivelocity API called.", "statusCode", resp.StatusCode, "method", req.Method, "url", req.URL, "stack", stack)
+	return resp, nil
+}
+
 // NewClient creates new Hivelocity clients.
 func (f *HivelocityFactory) NewClient(hvAPIKey string) Client {
 	config := hv.NewConfiguration()
 	config.AddDefaultHeader("X-API-KEY", hvAPIKey)
 	config.AddDefaultHeader("CAPHV-VERSION", caphvversion.Get().String())
+	config.HTTPClient = &http.Client{
+		Transport: &LoggingTransport{
+			roundTripper: http.DefaultTransport,
+			log:          ctrl.Log.WithName("hivelocity-api"),
+		},
+	}
 	apiClient := hv.NewAPIClient(config)
 	return &realClient{
 		client: apiClient,

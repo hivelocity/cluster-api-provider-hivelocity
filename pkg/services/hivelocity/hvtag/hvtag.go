@@ -39,6 +39,9 @@ const (
 
 	// DeviceTagKeyMachineType is the key for the machine type, i.e. worker, control_plane.
 	DeviceTagKeyMachineType DeviceTagKey = "caphv-machine-type"
+
+	// DeviceTagKeyPermanentError is the key for machines which need a manual reset by a Hivelocity admin.
+	DeviceTagKeyPermanentError DeviceTagKey = "caphv-permanent-error"
 )
 
 // Prefix returns the prefix based on this DeviceTagKey used in Hivelocity tag strings.
@@ -117,14 +120,19 @@ func MachineTagFromList(tagList []string) (DeviceTag, error) {
 	return DeviceTagFromList(DeviceTagKeyMachine, tagList)
 }
 
-// ClusterTagFromList returns the machine tag from a list of tag strings.
+// ClusterTagFromList returns the cluster tag from a list of tag strings.
 func ClusterTagFromList(tagList []string) (DeviceTag, error) {
 	return DeviceTagFromList(DeviceTagKeyCluster, tagList)
 }
 
-// DeviceTypeTagFromList returns the machine tag from a list of tag strings.
+// DeviceTypeTagFromList returns the device type tag from a list of tag strings.
 func DeviceTypeTagFromList(tagList []string) (DeviceTag, error) {
 	return DeviceTagFromList(DeviceTagKeyDeviceType, tagList)
+}
+
+// PermanentErrorTagFromList returns the permanent error tag from a list of tag strings.
+func PermanentErrorTagFromList(tagList []string) (DeviceTag, error) {
+	return DeviceTagFromList(DeviceTagKeyPermanentError, tagList)
 }
 
 // deviceTagFromString takes the tag of a HV device and returns a DeviceTag or an error if it is invalid.
