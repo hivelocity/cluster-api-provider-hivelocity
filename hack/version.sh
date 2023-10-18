@@ -79,7 +79,7 @@ version::ldflags() {
         local key=${1}
         local val=${2}
         ldflags+=(
-            "-X 'github.com/hivelocity/cluster-api-provider-hivelocity/version.${key}=${val}'"
+            "-X 'github.com/hivelocity/cluster-api-provider-hivelocity/pkg/version.${key}=${val}'"
         )
     }
 

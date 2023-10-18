@@ -29,6 +29,7 @@ import (
 
 	"github.com/antihax/optional"
 	"github.com/hivelocity/cluster-api-provider-hivelocity/pkg/utils"
+	caphvversion "github.com/hivelocity/cluster-api-provider-hivelocity/pkg/version"
 	hv "github.com/hivelocity/hivelocity-client-go/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 )
@@ -83,6 +84,7 @@ var _ Factory = &HivelocityFactory{}
 func (f *HivelocityFactory) NewClient(hvAPIKey string) Client {
 	config := hv.NewConfiguration()
 	config.AddDefaultHeader("X-API-KEY", hvAPIKey)
+	config.AddDefaultHeader("CAPHV-VERSION", caphvversion.Get().String())
 	apiClient := hv.NewAPIClient(config)
 	return &realClient{
 		client: apiClient,
