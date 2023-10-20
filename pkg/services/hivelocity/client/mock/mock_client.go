@@ -176,6 +176,7 @@ func (c *mockedHVClient) ProvisionDevice(_ context.Context, deviceID int32, opts
 		return hv.BareMetalDevice{}, fmt.Errorf("[ProvisionDevice] deviceID %d unknown", deviceID)
 	}
 	device.Tags = opts.Tags
+	device.PowerStatus = hvclient.PowerStatusOn
 	c.store.idMap[deviceID] = device
 	return device, nil
 }
@@ -229,4 +230,38 @@ func (c *mockedHVClient) GetDevice(_ context.Context, deviceID int32) (hv.BareMe
 		return hv.BareMetalDevice{}, hvclient.ErrDeviceNotFound
 	}
 	return device, nil
+}
+
+func (c *mockedHVClient) GetDeviceDump(ctx context.Context, deviceID int32) (hv.DeviceDump, error) {
+	device, _ := c.GetDevice(ctx, deviceID)
+	return hv.DeviceDump{
+		DeviceId:           deviceID,
+		Name:               "",
+		Status:             "",
+		DeviceType:         "",
+		DeviceTypeGroup:    "",
+		PowerStatus:        device.PowerStatus,
+		HasCancellation:    false,
+		IsManaged:          false,
+		IsReload:           false,
+		MonitorsUp:         0,
+		MonitorsTotal:      0,
+		ManagedAlertsTotal: 0,
+		Ports:              []interface{}{},
+		Hostname:           "",
+		IpmiEnabled:        false,
+		DisplayedTags:      []interface{}{},
+		Tags:               []string{},
+		Location:           nil,
+		NetworkAutomation:  nil,
+		PrimaryIp:          "",
+		IpmiAddress:        nil,
+		ServiceMonitors:    []string{},
+		BillingInfo:        nil,
+		ServicePlan:        0,
+		LastInvoiceId:      0,
+		SelfProvisioning:   false,
+		Metadata:           nil,
+		SpsStatus:          "",
+	}, nil
 }

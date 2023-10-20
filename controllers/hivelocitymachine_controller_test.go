@@ -201,6 +201,7 @@ var _ = Describe("HivelocityMachineReconciler", func() {
 
 			Eventually(func() bool {
 				if err := testEnv.Get(ctx, machineKey, hvMachine); err != nil {
+					testEnv.GetLogger().Info("machine resource does not exist yet")
 					return false
 				}
 				if hvMachine.Spec.ProviderID == nil {

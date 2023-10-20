@@ -42,6 +42,8 @@ const (
 
 	// DeviceTagKeyPermanentError is the key for machines which need a manual reset by a Hivelocity admin.
 	DeviceTagKeyPermanentError DeviceTagKey = "caphv-permanent-error"
+
+	// Attention: If you add a new DeviceTagKey, then extend the method IsValid()!
 )
 
 // Prefix returns the prefix based on this DeviceTagKey used in Hivelocity tag strings.
@@ -69,7 +71,8 @@ func (key DeviceTagKey) IsValid() bool {
 	return key == DeviceTagKeyMachine ||
 		key == DeviceTagKeyCluster ||
 		key == DeviceTagKeyDeviceType ||
-		key == DeviceTagKeyMachineType
+		key == DeviceTagKeyMachineType ||
+		key == DeviceTagKeyPermanentError
 }
 
 // DeviceTag defines the object that represents a key-value pair that is stored as tag of Hivelocity devices.
@@ -79,6 +82,8 @@ type DeviceTag struct {
 }
 
 // DeviceTagFromList takes the tag of a HV device and returns a DeviceTag or an error if it is invalid.
+// returns ErrDeviceTagNotFound if no tag with the given key exist.
+// returns ErrMultipleDeviceTagsFound if the key exists twice.
 func DeviceTagFromList(key DeviceTagKey, tagList []string) (DeviceTag, error) {
 	var found bool
 	var deviceTag DeviceTag
@@ -181,4 +186,41 @@ func (deviceTag DeviceTag) RemoveFromList(tagList []string) (newTagList []string
 		}
 	}
 	return newTagList, updated
+}
+
+// isEphemeralTag returns False if a tag should not get removed
+// if a machine leaves a cluster.
+// tag: Something like "caphv-cluster-name=mycluster"
+func isEphemeralTag(tag string) bool {
+	// ignore tags that are not set by this controller
+	if !strings.HasPrefix(tag, "caphv-") {
+		return false
+	}
+
+	// ignore tags that are only allowed to be changed or removed by the user
+	for _, keepPrefix := range []string{
+		string(DeviceTagKeyPermanentError),
+		string(DeviceTagKeyDeviceType),
+	} {
+		if strings.HasPrefix(tag, keepPrefix+"=") {
+			return false
+		}
+	}
+
+	return true
+}
+
+// RemoveEphemeralTags removes ephemeral tags. Tags which are not
+// from caphv will remain in the list.
+// Creates a new slice of tags.
+// Usually called like this: newTags := RemoveEphemeralTags(device.Tags).
+func RemoveEphemeralTags(tags []string) []string {
+	newTags := make([]string, 0, len(tags))
+	for _, tag := range tags {
+		if isEphemeralTag(tag) {
+			continue
+		}
+		newTags = append(newTags, tag)
+	}
+	return newTags
 }

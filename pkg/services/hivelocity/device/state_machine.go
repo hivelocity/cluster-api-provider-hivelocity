@@ -53,6 +53,7 @@ func (sm *stateMachine) handlers() map[infrav1.ProvisioningState]stateHandler {
 	return map[infrav1.ProvisioningState]stateHandler{
 		infrav1.StateAssociateDevice:         sm.handleAssociateDevice,
 		infrav1.StateVerifyAssociate:         sm.handleVerifyAssociate,
+		infrav1.StateVerifyShutdown:          sm.handleVerifyShutdown,
 		infrav1.StateProvisionDevice:         sm.handleProvisionDevice,
 		infrav1.StateDeviceProvisioned:       sm.handleDeviceProvisioned,
 		infrav1.StateDeleteDeviceDeProvision: sm.handleDeleteDeviceDeProvision,
@@ -87,7 +88,7 @@ func (sm *stateMachine) ReconcileState(ctx context.Context) (actionRes actionRes
 	}
 
 	record.Warnf(sm.hvMachine, "NoHandlerFoundForState", "no handler found for state %q", initialState.ProvisioningState)
-	return actionError{fmt.Errorf("no handler found for state %q", initialState.ProvisioningState)}
+	return actionError{err: fmt.Errorf("no handler found for state %q", initialState.ProvisioningState)}
 }
 
 func (sm *stateMachine) handleAssociateDevice(ctx context.Context) actionResult {
@@ -100,6 +101,20 @@ func (sm *stateMachine) handleAssociateDevice(ctx context.Context) actionResult 
 
 func (sm *stateMachine) handleVerifyAssociate(ctx context.Context) actionResult {
 	actResult := sm.reconciler.actionVerifyAssociate(ctx)
+	if _, ok := actResult.(actionComplete); ok {
+		sm.nextState = infrav1.StateVerifyShutdown
+	}
+
+	// check whether we need to associate the machine to another device
+	actionGoBack, ok := actResult.(actionGoBack)
+	if ok {
+		sm.nextState = actionGoBack.nextState
+	}
+	return actResult
+}
+
+func (sm *stateMachine) handleVerifyShutdown(ctx context.Context) actionResult {
+	actResult := sm.reconciler.actionVerifyShutdown(ctx)
 	if _, ok := actResult.(actionComplete); ok {
 		sm.nextState = infrav1.StateProvisionDevice
 	}
@@ -127,18 +142,16 @@ func (sm *stateMachine) handleProvisionDevice(ctx context.Context) actionResult 
 }
 
 func (sm *stateMachine) handleDeviceProvisioned(ctx context.Context) actionResult {
-	actResult := sm.reconciler.actionDeviceProvisioned(ctx)
-	if _, ok := actResult.(actionComplete); ok {
-		sm.nextState = infrav1.StateDeviceProvisioned
-	}
-	return actResult
+	// This is the last state.
+	return sm.reconciler.actionDeviceProvisioned(ctx)
 }
 
 func (sm *stateMachine) handleDeleteDeviceDeProvision(ctx context.Context) actionResult {
 	actResult := sm.reconciler.actionDeleteDeviceDeProvision(ctx)
 	if _, ok := actResult.(actionComplete); ok {
-		sm.nextState = infrav1.StateDeleteDevice
+		sm.nextState = infrav1.StateDeleteDeviceDissociate
 	}
+
 	return actResult
 }
 

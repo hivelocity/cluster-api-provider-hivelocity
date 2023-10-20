@@ -47,6 +47,9 @@ spec:
       jsonPath: .metadata.ownerReferences[?(@.kind=="Machine")].name
       name: Machine
       type: string
+    - jsonPath: .spec.status.provisioningState
+      name: Prov.State
+      type: string
     - jsonPath: .status.conditions[?(@.type=='Ready')].reason
       name: Reason
       type: string

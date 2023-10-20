@@ -340,3 +340,39 @@ var _ = Describe("Test DeviceTag.RemoveFromList", func() {
 		}),
 	)
 })
+
+var _ = Describe("RemoveEphemeralTags", func() {
+	It("removes ephemeral tags, but keeps permanent tags", func() {
+		newTags := RemoveEphemeralTags([]string{
+			// non-ephemeral (keep)
+			DeviceTagKeyDeviceType.Prefix() + "my-device-type",
+			DeviceTagKeyPermanentError.Prefix() + "my-permantent-error",
+
+			// remove these:
+			DeviceTagKeyCluster.Prefix() + "my-cluster",
+			DeviceTagKeyMachine.Prefix() + "my-machine",
+			"some-other-tag",
+		})
+		Expect(newTags).To(Equal([]string{
+			"caphv-device-type=my-device-type",
+			"caphv-permanent-error=my-permantent-error",
+			"some-other-tag"}))
+	})
+})
+
+var _ = Describe("PermanentErrorTagFromList", func() {
+	It("return permantent error from list", func() {
+		tag, err := PermanentErrorTagFromList([]string{
+			DeviceTagKeyDeviceType.Prefix() + "my-device-type",
+			DeviceTagKeyPermanentError.Prefix() + "my-permantent-error",
+			DeviceTagKeyCluster.Prefix() + "my-cluster",
+			DeviceTagKeyMachine.Prefix() + "my-machine",
+			"some-other-tag",
+		})
+		Expect(err).To(BeNil())
+		Expect(tag).To(Equal(DeviceTag{
+			Key:   "caphv-permanent-error",
+			Value: "my-permantent-error",
+		}))
+	})
+})

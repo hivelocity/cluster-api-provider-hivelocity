@@ -80,6 +80,7 @@ func (r *HivelocityMachineReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	// Fetch the Machine.
 	machine, err := util.GetOwnerMachine(ctx, r.Client, hivelocityMachine.ObjectMeta)
 	if err != nil {
+		log.Error(err, "GetOwnerMachine failed")
 		return ctrl.Result{}, err
 	}
 	if machine == nil {
