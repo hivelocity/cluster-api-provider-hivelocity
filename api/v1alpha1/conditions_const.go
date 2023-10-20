@@ -36,17 +36,25 @@ const (
 )
 
 const (
-	// HivelocityClusterReady reports on whether the Hivelocity cluster is in ready state.
-	HivelocityClusterReady clusterv1.ConditionType = "HivelocityClusterReady"
-	// HivelocitySecretUnreachableReason indicates that Hivelocity secret is unreachable.
-	HivelocitySecretUnreachableReason = "HivelocitySecretUnreachable" // #nosec
-	// HivelocityCredentialsInvalidReason indicates that credentials for Hivelocity are invalid.
-	HivelocityCredentialsInvalidReason = "HivelocityCredentialsInvalid" // #nosec
+	// HivelocityAPIReachableCondition reports whether the Hivelocity APIs are reachable.
+	HivelocityAPIReachableCondition clusterv1.ConditionType = "RateLimitExceeded"
+	// RateLimitExceededReason indicates that a rate limit has been exceeded.
+	RateLimitExceededReason = "RateLimitExceeded"
 )
 
 const (
-	// RateLimitExceeded reports whether the rate limit has been reached.
-	RateLimitExceeded clusterv1.ConditionType = "RateLimitExceeded"
-	// RateLimitNotReachedReason indicates that the rate limit is not reached yet.
-	RateLimitNotReachedReason = "RateLimitNotReached"
+	// CredentialsAvailableCondition reports on whether the Hivelocity cluster is in ready state.
+	CredentialsAvailableCondition clusterv1.ConditionType = "CredentialsAvailable"
+
+	// HivelocitySSHKeyNotFoundReason indicates that ssh for Hivelocity not found.
+	HivelocitySSHKeyNotFoundReason = "HivelocitySSHKeyNotFound"
+
+	// HivelocityWrongAPIKeyReason indicates that API for Hivelocity is wrong.
+	HivelocityWrongAPIKeyReason = "HivelocityWrongAPIKey"
+
+	// HivelocitySecretUnreachableReason indicates that Hivelocity secret is unreachable.
+	HivelocitySecretUnreachableReason = "HivelocitySecretUnreachable" // #nosec
+
+	// HivelocityCredentialsInvalidReason indicates that credentials for Hivelocity are invalid.
+	HivelocityCredentialsInvalidReason = "HivelocityCredentialsInvalid" // #nosec
 )

@@ -127,7 +127,7 @@ func (r *HivelocityClusterReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	secretManager := secretutil.NewSecretManager(log, r.Client, r.APIReader)
 	apiKey, hvSecret, err := getAndValidateHivelocityAPIKey(ctx, req.Namespace, hvCluster, secretManager)
 	if err != nil {
-		return hvAPIKeyErrorResult(ctx, err, hvCluster, infrav1.HivelocityClusterReady, r.Client)
+		return hvAPIKeyErrorResult(ctx, err, hvCluster, infrav1.CredentialsAvailableCondition, r.Client)
 	}
 
 	hvClient := r.HVClientFactory.NewClient(apiKey)
@@ -145,6 +145,8 @@ func (r *HivelocityClusterReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	}
 	// Always close the scope when exiting this function so we can persist any HivelocityCluster changes.
 	defer func() {
+		conditions.SetSummary(hvCluster)
+
 		if err := clusterScope.Close(ctx); err != nil && reterr == nil {
 			reterr = err
 		}
@@ -284,8 +286,8 @@ func (r *HivelocityClusterReconciler) reconcileDelete(ctx context.Context, clust
 // reconcileRateLimit checks whether a rate limit has been reached and returns whether
 // the controller should wait a bit more.
 func reconcileRateLimit(setter conditions.Setter) bool {
-	condition := conditions.Get(setter, infrav1.RateLimitExceeded)
-	if condition != nil && condition.Status == corev1.ConditionTrue {
+	condition := conditions.Get(setter, infrav1.HivelocityAPIReachableCondition)
+	if condition != nil && condition.Status == corev1.ConditionFalse {
 		if time.Now().Before(condition.LastTransitionTime.Time.Add(rateLimitWaitTime)) {
 			// Not yet timed out, reconcile again after timeout
 			// Don't give a more precise requeueAfter value to not reconcile too many
@@ -293,13 +295,7 @@ func reconcileRateLimit(setter conditions.Setter) bool {
 			return true
 		}
 		// Wait time is over, we continue
-		conditions.MarkFalse(
-			setter,
-			infrav1.RateLimitExceeded,
-			infrav1.RateLimitNotReachedReason,
-			clusterv1.ConditionSeverityInfo,
-			"wait time is over. Try reconciling again",
-		)
+		conditions.MarkTrue(setter, infrav1.HivelocityAPIReachableCondition)
 	}
 	return false
 }

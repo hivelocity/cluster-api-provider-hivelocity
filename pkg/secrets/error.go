@@ -27,7 +27,7 @@ type ResolveSecretRefError struct {
 }
 
 func (e ResolveSecretRefError) Error() string {
-	return fmt.Sprintf("Secret doesn't exist %s",
+	return fmt.Sprintf("Secret doesn't exist: %s",
 		e.Message)
 }
 

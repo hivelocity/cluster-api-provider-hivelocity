@@ -347,19 +347,19 @@ var _ = Describe("reconcileRateLimit", func() {
 	})
 
 	It("returns wait== true if rate limit condition is set and time is not over", func() {
-		conditions.MarkTrue(hvCluster, infrav1.RateLimitExceeded)
+		conditions.MarkFalse(hvCluster, infrav1.HivelocityAPIReachableCondition, infrav1.RateLimitExceededReason, clusterv1.ConditionSeverityWarning, "")
 		Expect(reconcileRateLimit(hvCluster)).To(BeTrue())
 	})
 
 	It("returns wait== false if rate limit condition is set and time is over", func() {
-		conditions.MarkTrue(hvCluster, infrav1.RateLimitExceeded)
+		conditions.MarkFalse(hvCluster, infrav1.HivelocityAPIReachableCondition, infrav1.RateLimitExceededReason, clusterv1.ConditionSeverityWarning, "")
 		conditionList := hvCluster.GetConditions()
 		conditionList[0].LastTransitionTime = metav1.NewTime(time.Now().Add(-time.Hour))
 		Expect(reconcileRateLimit(hvCluster)).To(BeFalse())
 	})
 
 	It("returns wait== false if rate limit condition is set to false", func() {
-		conditions.MarkFalse(hvCluster, infrav1.RateLimitExceeded, "", clusterv1.ConditionSeverityInfo, "")
+		conditions.MarkTrue(hvCluster, infrav1.HivelocityAPIReachableCondition)
 		Expect(reconcileRateLimit(hvCluster)).To(BeFalse())
 	})
 
@@ -451,7 +451,7 @@ var _ = Describe("Hivelocity secret", func() {
 				if err := testEnv.Get(ctx, key, hivelocityCluster); err != nil {
 					return false
 				}
-				return isPresentAndFalseWithReason(key, hivelocityCluster, infrav1.HivelocityClusterReady, expectedReason)
+				return isPresentAndFalseWithReason(key, hivelocityCluster, infrav1.CredentialsAvailableCondition, expectedReason)
 			}, timeout, time.Second).Should(BeTrue())
 		},
 		Entry("no Hivelocity secret/wrong reference", corev1.Secret{

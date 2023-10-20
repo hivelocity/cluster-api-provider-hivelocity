@@ -33,6 +33,7 @@ import (
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/cluster-api/util"
 	"sigs.k8s.io/cluster-api/util/annotations"
+	"sigs.k8s.io/cluster-api/util/conditions"
 	"sigs.k8s.io/cluster-api/util/predicates"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -120,6 +121,7 @@ func (r *HivelocityMachineReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	secretManager := secretutil.NewSecretManager(log, r.Client, r.APIReader)
 	hvAPIKey, _, err := getAndValidateHivelocityAPIKey(ctx, req.Namespace, hvCluster, secretManager)
 	if err != nil {
+		conditions.MarkFalse(hvCluster, infrav1.CredentialsAvailableCondition, infrav1.HivelocityWrongAPIKeyReason, clusterv1.ConditionSeverityError, err.Error())
 		return hvAPIKeyErrorResult(ctx, err, hivelocityMachine, infrav1.DeviceReadyCondition, r.Client)
 	}
 
@@ -143,6 +145,8 @@ func (r *HivelocityMachineReconciler) Reconcile(ctx context.Context, req ctrl.Re
 
 	// Always close the scope when exiting this function so we can persist any HivelocityMachine changes.
 	defer func() {
+		conditions.SetSummary(hivelocityMachine)
+
 		if err := machineScope.Close(ctx); err != nil && reterr == nil {
 			reterr = err
 		}
