@@ -477,10 +477,6 @@ func reconcileTargetSecret(ctx context.Context, clusterScope *scope.ClusterScope
 }
 
 func (r *HivelocityClusterReconciler) reconcileTargetClusterManager(ctx context.Context, clusterScope *scope.ClusterScope) (res reconcile.Result, err error) {
-	if !conditions.IsTrue(clusterScope.Cluster, clusterv1.ControlPlaneInitializedCondition) {
-		return reconcile.Result{RequeueAfter: 30 * time.Second}, nil
-	}
-
 	r.targetClusterManagersLock.Lock()
 	defer r.targetClusterManagersLock.Unlock()
 
