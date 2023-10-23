@@ -21,3 +21,4 @@ jobs:
           config-file: .markdownlinkcheck.json
           check-modified-files-only: 'yes'
           base-branch: main
+          folder-path: docs/

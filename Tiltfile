@@ -25,15 +25,6 @@ settings = {
     "cabpt_version": "v0.5.6",
     "cacppt_version": "v0.4.11",
     "cert_manager_version": "v1.11.0",
-    "kustomize_substitutions": {
-        "HIVELOCITY_REGION": "LAX2",
-        "CONTROL_PLANE_MACHINE_COUNT": "3",
-        "WORKER_MACHINE_COUNT": "3",
-        "KUBERNETES_VERSION": "v1.25.2",
-        "HIVELOCITY_IMAGE_NAME": "test-image",
-        "HIVELOCITY_CONTROL_PLANE_MACHINE_TYPE": "hvCustom",
-        "HIVELOCITY_WORKER_MACHINE_TYPE": "hvCustom",
-    },
 }
 
 keys = ["HIVELOCITY_SSH_KEY"]
@@ -110,14 +101,6 @@ def append_arg_for_container_in_deployment(yaml_stream, name, namespace, contain
 def fixup_yaml_empty_arrays(yaml_str):
     yaml_str = yaml_str.replace("conditions: null", "conditions: []")
     return yaml_str.replace("storedVersions: null", "storedVersions: []")
-
-
-def set_env_variables():
-    substitutions = settings.get("kustomize_substitutions", {})
-    print(substitutions)
-    arr = [(key, val) for key, val in substitutions.items()]
-    for key, val in arr:
-        os.putenv(key, val)
 
 
 # This should have the same versions as the Dockerfile
@@ -280,8 +263,6 @@ if settings.get("deploy_observability"):
     deploy_observability()
 
 deploy_capi()
-
-set_env_variables()
 
 caphv()
 

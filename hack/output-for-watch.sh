@@ -38,7 +38,12 @@ kubectl get hivelocitymachine -A "-o=custom-columns=NAMESPACE:.metadata.namespac
 
 print_heading events
 
-kubectl get events -A --sort-by=metadata.creationTimestamp | tail -8
+kubectl get events -A -o=wide --sort-by=.lastTimestamp | grep -vP 'LeaderElection' | tail -8
+
+print_heading conditions
+
+go run github.com/guettli/check-conditions@latest all | grep -vP 'ScalingUp|WaitingForInfrastructure|WaitingForNodeRef|WaitingForAvailableMachines|^Checked.*Duration:'
+
 
 print_heading logs
 
@@ -46,7 +51,7 @@ print_heading logs
 
 echo
 
-ip=$(kubectl get machine -A -l cluster.x-k8s.io/control-plane -o jsonpath='{.items[0].status.addresses[?(@.type=="InternalIP")].address}' | head -1)
+ip=$(kubectl get cluster -A -o=jsonpath='{.items[*].spec.controlPlaneEndpoint.host}' | head -1)
 if [ -z "$ip" ]; then
     echo "❌ Could not get IP of control-plane"
     exit 1
@@ -65,7 +70,7 @@ echo
 kubeconfig_wl=".workload-cluster-kubeconfig.yaml"
 
 print_heading "KUBECONFIG=$kubeconfig_wl kubectl cluster-info"
-if KUBECONFIG=$kubeconfig_wl kubectl cluster-info >/dev/null 2>&1; then
+if KUBECONFIG=$kubeconfig_wl kubectl --request-timeout=2s cluster-info >/dev/null 2>&1; then
     echo "👌 cluster is reachable"
 else
     echo "❌ cluster is not reachable"
@@ -74,7 +79,7 @@ fi
 
 echo
 
-KUBECONFIG=$kubeconfig_wl kubectl get -n kube-system deployment cilium-operator || echo "❌ cilium-operator not installed?"
+KUBECONFIG=$kubeconfig_wl kubectl get -n kube-system deployment cilium-operator || echo "❌ cilium-operator not installed? To install CNI and CCM in wl-cluster: make install-essentials"
 
 KUBECONFIG=$kubeconfig_wl kubectl get -n kube-system deployment ccm-hivelocity || echo "❌ ccm not installed?"
 

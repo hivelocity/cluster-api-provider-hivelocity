@@ -22,7 +22,7 @@ import json
 
 keys_to_skip = ['controller', 'controllerGroup', 'controllerKind', 'reconcileID',
                 'HivelocityCluster', 'Cluster',
-                'namespace', 'name', 'Machine']
+                'namespace', 'name', 'Machine', 'stacktrace', 'stack', 'logger']
 
 rows_to_skip = [
     'Bootstrap not ready - requeuing',
@@ -38,10 +38,13 @@ rows_to_skip = [
     '"Adding request."',
     '"validate update" v1alpha1/hivelocitymachine_webhook',
     '"validate update" v1alpha1/hivelocitycluster_webhook',
+    'spec.status was updated',
 ]
 
 rows_to_skip_regex = [
     r'''DEBUG "Started function" device/device.go:\d+ {'HivelocityMachine': {'name': '\S+', 'namespace': '\S+'}, 'function': 'actionDeviceProvisioned'}''',
+    r'''DEBUG "wrote response" admission.*''',
+    r'''DEBUG "received request" admission.*''',
 ]
 
 def printHivelocityMachine(value):

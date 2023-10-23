@@ -689,7 +689,6 @@ func (r *HivelocityClusterReconciler) SetupWithManager(ctx context.Context, mgr 
 			key := types.NamespacedName{Namespace: c.Spec.InfrastructureRef.Namespace, Name: c.Spec.InfrastructureRef.Name}
 
 			if err := r.Get(ctx, key, hvCluster); err != nil {
-				log.V(1).Error(err, "Failed to get HivelocityCluster")
 				return nil
 			}
 
