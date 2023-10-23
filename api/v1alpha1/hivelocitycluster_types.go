@@ -82,6 +82,8 @@ type HivelocityClusterStatus struct {
 // +kubebuilder:printcolumn:name="Ready",type="string",JSONPath=".status.ready",description="Cluster infrastructure is ready for Nodes"
 // +kubebuilder:printcolumn:name="Endpoint",type="string",JSONPath=".spec.controlPlaneEndpoint",description="API Endpoint",priority=1
 // +kubebuilder:printcolumn:name="Region",type="string",JSONPath=".spec.controlPlaneRegion",description="Control plane region"
+// +kubebuilder:printcolumn:name="Reason",type="string",JSONPath=".status.conditions[?(@.type=='Ready')].reason"
+// +kubebuilder:printcolumn:name="Message",type="string",JSONPath=".status.conditions[?(@.type=='Ready')].message"
 // +k8s:defaulter-gen=true
 
 // HivelocityCluster is the Schema for the hivelocityclusters API.

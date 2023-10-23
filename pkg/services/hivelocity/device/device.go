@@ -46,6 +46,9 @@ type Service struct {
 
 const (
 	defaultImageName = "Ubuntu 20.x"
+
+	// requeueAfter gives the duration of time until the next reconciliation should be performed.
+	requeueAfter = time.Second * 30
 )
 
 var (
@@ -53,8 +56,6 @@ var (
 	errClusterTagNotFound = fmt.Errorf("cluster tag not found")
 
 	errSSHKeyNotFound = fmt.Errorf("ssh key not found")
-
-	errNoDeviceAvailable = fmt.Errorf("no available device found")
 )
 
 // NewService outs a new service with machine scope.
@@ -107,8 +108,7 @@ func (s *Service) actionAssociateDevice(ctx context.Context) actionResult {
 	log.V(1).Info("Started function")
 
 	device, err := GetFirstDevice(ctx, s.scope.HVClient, s.scope.HivelocityMachine.Spec.Type,
-		s.scope.HivelocityCluster.Name, s.scope.Name())
-
+		s.scope.HivelocityCluster, s.scope.Name())
 	if err != nil {
 		s.handleRateLimitExceeded(err, "ListDevices")
 		return actionError{err: fmt.Errorf("failed to find available device: %w", err)}
@@ -135,13 +135,13 @@ func (s *Service) actionAssociateDevice(ctx context.Context) actionResult {
 }
 
 // GetFirstDevice finds the first free matching device. The parameter machineName is optional.
-func GetFirstDevice(ctx context.Context, hvclient hvclient.Client, machineType infrav1.HivelocityDeviceType,
-	clusterName string, machineName string) (hv.BareMetalDevice, error) {
+func GetFirstDevice(ctx context.Context, hvclient hvclient.Client, machineType infrav1.HivelocityDeviceType, hvCluster *infrav1.HivelocityCluster,
+	machineName string) (*hv.BareMetalDevice, error) {
 	// list all devices
 	devices, err := hvclient.ListDevices(ctx)
 
 	if err != nil {
-		return hv.BareMetalDevice{}, err
+		return nil, err
 	}
 
 	// Since we don't have a LoadBalancer we use the IP of the first ControlPlane
@@ -154,10 +154,26 @@ func GetFirstDevice(ctx context.Context, hvclient hvclient.Client, machineType i
 		return devices[i].DeviceId < devices[j].DeviceId
 	})
 
-	return findAvailableDeviceFromList(devices, machineType, clusterName, machineName)
+	hvDevices, err := findAvailableDeviceFromList(devices, machineType, hvCluster.Name, machineName)
+	if hvDevices == nil {
+		conditions.MarkFalse(
+			hvCluster,
+			infrav1.DeviceAssociateSucceededCondition,
+			infrav1.NoAvailableDeviceReason,
+			clusterv1.ConditionSeverityWarning,
+			"no associated device found",
+		)
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("failed to find available device: %w", err)
+	}
+
+	conditions.MarkTrue(hvCluster, infrav1.DeviceAssociateSucceededCondition)
+	return hvDevices, nil
 }
 
-func findAvailableDeviceFromList(devices []hv.BareMetalDevice, deviceType infrav1.HivelocityDeviceType, clusterName, machineName string) (hv.BareMetalDevice, error) {
+func findAvailableDeviceFromList(devices []hv.BareMetalDevice, deviceType infrav1.HivelocityDeviceType, clusterName, machineName string) (*hv.BareMetalDevice, error) {
 	for _, device := range devices {
 		// Ignore if associated already
 		machineTag, err := hvtag.MachineTagFromList(device.Tags)
@@ -167,7 +183,7 @@ func findAvailableDeviceFromList(devices []hv.BareMetalDevice, deviceType infrav
 		}
 		if machineName != "" && machineTag.Value == machineName {
 			// associated to this machine - return
-			return device, nil
+			return &device, nil
 		}
 		if machineTag.Value != "" {
 			// associated to other machine - continue
@@ -196,9 +212,9 @@ func findAvailableDeviceFromList(devices []hv.BareMetalDevice, deviceType infrav
 			continue
 		}
 
-		return device, nil
+		return &device, nil
 	}
-	return hv.BareMetalDevice{}, errNoDeviceAvailable
+	return nil, nil
 }
 
 // actionVerifyAssociate verifies that the HV device has actually been associated to this machine and only this.
@@ -411,11 +427,13 @@ func (s *Service) actionDeviceProvisioned(ctx context.Context) actionResult {
 	conditions.MarkTrue(s.scope.HivelocityMachine, infrav1.DeviceReadyCondition)
 	s.scope.HivelocityMachine.SetMachineStatus(device)
 	if device.PowerStatus == hvclient.PowerStatusOff {
+		conditions.MarkFalse(s.scope.HivelocityMachine, infrav1.HivelocityMachineReadyCondition, infrav1.DevicePowerOffReason, clusterv1.ConditionSeverityError, "the device is in power off state")
 		s.scope.HivelocityMachine.Status.Ready = false
 		log.Info("Power is off?",
 			"DeviceId", device.DeviceId,
 			"PowerStatus", device.PowerStatus)
 	} else {
+		conditions.MarkTrue(s.scope.HivelocityMachine, infrav1.HivelocityMachineReadyCondition)
 		s.scope.HivelocityMachine.Status.Ready = true
 	}
 
