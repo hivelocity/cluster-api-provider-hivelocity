@@ -28,6 +28,7 @@ import (
 	hvclient "github.com/hivelocity/cluster-api-provider-hivelocity/pkg/services/hivelocity/client"
 	"github.com/hivelocity/cluster-api-provider-hivelocity/pkg/utils"
 	caphvversion "github.com/hivelocity/cluster-api-provider-hivelocity/pkg/version"
+	"github.com/spf13/pflag"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -53,28 +54,34 @@ func init() {
 	//+kubebuilder:scaffold:scheme
 }
 
+var (
+	metricsAddr                  string
+	enableLeaderElection         bool
+	leaderElectionNamespace      string
+	probeAddr                    string
+	watchFilterValue             string
+	watchNamespace               string
+	hivelocityClusterConcurrency int
+	hivelocityMachineConcurrency int
+	logLevel                     string
+)
+
 func main() {
-	var metricsAddr string
-	var enableLeaderElection bool
-	var leaderElectionNamespace string
-	var probeAddr string
-	var watchFilterValue string
-	var watchNamespace string
-	var hivelocityClusterConcurrency int
-	var hivelocityMachineConcurrency int
-	var logLevel string
+	fs := pflag.CommandLine
 
-	flag.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
-	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
-	flag.BoolVar(&enableLeaderElection, "leader-elect", true, "Enable leader election for controller manager. Enabling this will ensure there is only one active controller manager.")
-	flag.StringVar(&leaderElectionNamespace, "leader-elect-namespace", "", "Namespace that the controller performs leader election in. If unspecified, the controller will discover which namespace it is running in.")
-	flag.IntVar(&hivelocityClusterConcurrency, "hivelocitycluster-concurrency", 1, "Number of HivelocityClusters to process simultaneously")
-	flag.IntVar(&hivelocityMachineConcurrency, "hivelocitymachine-concurrency", 1, "Number of HivelocityMachines to process simultaneously")
-	flag.StringVar(&watchFilterValue, "watch-filter", "", fmt.Sprintf("Label value that the controller watches to reconcile cluster-api objects. Label key is always %s. If unspecified, the controller watches for all cluster-api objects.", clusterv1.WatchLabel))
-	flag.StringVar(&watchNamespace, "namespace", "", "Namespace that the controller watches to reconcile cluster-api objects. If unspecified, the controller watches for cluster-api objects across all namespaces.")
-	flag.StringVar(&logLevel, "log-level", "debug", "Specifies log level. Options are 'debug', 'info' and 'error'")
+	fs.StringVar(&metricsAddr, "metrics-bind-address", ":8080", "The address the metric endpoint binds to.")
+	fs.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
+	fs.BoolVar(&enableLeaderElection, "leader-elect", true, "Enable leader election for controller manager. Enabling this will ensure there is only one active controller manager.")
+	fs.StringVar(&leaderElectionNamespace, "leader-elect-namespace", "", "Namespace that the controller performs leader election in. If unspecified, the controller will discover which namespace it is running in.")
+	fs.IntVar(&hivelocityClusterConcurrency, "hivelocitycluster-concurrency", 1, "Number of HivelocityClusters to process simultaneously")
+	fs.IntVar(&hivelocityMachineConcurrency, "hivelocitymachine-concurrency", 1, "Number of HivelocityMachines to process simultaneously")
+	fs.StringVar(&watchFilterValue, "watch-filter", "", fmt.Sprintf("Label value that the controller watches to reconcile cluster-api objects. Label key is always %s. If unspecified, the controller watches for all cluster-api objects.", clusterv1.WatchLabel))
+	fs.StringVar(&watchNamespace, "namespace", "", "Namespace that the controller watches to reconcile cluster-api objects. If unspecified, the controller watches for cluster-api objects across all namespaces.")
+	fs.StringVar(&logLevel, "log-level", "debug", "Specifies log level. Options are 'debug', 'info' and 'error'")
 
-	flag.Parse()
+	pflag.CommandLine.AddGoFlagSet(flag.CommandLine)
+
+	pflag.Parse()
 
 	ctrl.SetLogger(utils.GetDefaultLogger(logLevel))
 
