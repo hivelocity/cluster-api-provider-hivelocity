@@ -720,14 +720,14 @@ Region
 </tr>
 <tr>
 <td>
-<code>deviceState</code><br/>
+<code>powerState</code><br/>
 <em>
 string
 </em>
 </td>
 <td>
 <em>(Optional)</em>
-<p>DeviceState is the state of the device for this machine.</p>
+<p>PowerState is the state of the device for this machine.</p>
 </td>
 </tr>
 <tr>

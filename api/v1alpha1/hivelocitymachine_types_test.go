@@ -154,14 +154,14 @@ var _ = Describe("Test SetMachineStatus", func() {
 						Address: "hostname",
 					},
 				},
-				Region:      Region("testregion"),
-				DeviceState: "on",
+				Region:     Region("testregion"),
+				PowerState: "ON",
 			},
 			device: hv.BareMetalDevice{
 				Hostname:     "device-hostname",
 				PrimaryIp:    "127.0.0.1",
 				LocationName: "LAX2",
-				PowerStatus:  "off",
+				PowerStatus:  "OFF",
 			},
 			expectStatus: HivelocityMachineStatus{
 				Addresses: []clusterv1.MachineAddress{
@@ -178,8 +178,8 @@ var _ = Describe("Test SetMachineStatus", func() {
 						Address: "127.0.0.1",
 					},
 				},
-				Region:      Region("LAX2"),
-				DeviceState: "off",
+				Region:     Region("LAX2"),
+				PowerState: "OFF",
 			},
 		}),
 		Entry("no existing status", testCaseSetMachineStatus{
@@ -188,7 +188,7 @@ var _ = Describe("Test SetMachineStatus", func() {
 				Hostname:     "device-hostname",
 				PrimaryIp:    "127.0.0.1",
 				LocationName: "LAX2",
-				PowerStatus:  "off",
+				PowerStatus:  "OFF",
 			},
 			expectStatus: HivelocityMachineStatus{
 				Addresses: []clusterv1.MachineAddress{
@@ -205,8 +205,8 @@ var _ = Describe("Test SetMachineStatus", func() {
 						Address: "127.0.0.1",
 					},
 				},
-				Region:      Region("LAX2"),
-				DeviceState: "off",
+				Region:     Region("LAX2"),
+				PowerState: "OFF",
 			},
 		}),
 	)

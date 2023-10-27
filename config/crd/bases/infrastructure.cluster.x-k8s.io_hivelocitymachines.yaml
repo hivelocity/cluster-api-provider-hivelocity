@@ -32,7 +32,7 @@ spec:
       name: Type
       type: string
     - description: Hivelocity device state
-      jsonPath: .status.deviceState
+      jsonPath: .status.powerState
       name: State
       type: string
     - description: Machine ready status
@@ -174,9 +174,6 @@ spec:
                   - type
                   type: object
                 type: array
-              deviceState:
-                description: DeviceState is the state of the device for this machine.
-                type: string
               failureMessage:
                 description: FailureMessage will be set in the event that there is
                   a terminal problem reconciling the Machine and will contain a more
@@ -186,6 +183,10 @@ spec:
                 description: FailureReason will be set in the event that there is
                   a terminal problem reconciling the Machine and will contain a succinct
                   value suitable for machine interpretation.
+                type: string
+              powerState:
+                description: PowerState is the power state of the device for this
+                  machine (ON|OFF).
                 type: string
               ready:
                 description: Ready is true when the provider resource is ready.
