@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/hivelocity/cluster-api-provider-hivelocity/api/v1alpha1"
+	infrav1 "github.com/hivelocity/cluster-api-provider-hivelocity/api/v1alpha1"
 	"github.com/hivelocity/cluster-api-provider-hivelocity/pkg/scope"
 	mockclient "github.com/hivelocity/cluster-api-provider-hivelocity/pkg/services/hivelocity/client/mock"
 	"github.com/hivelocity/cluster-api-provider-hivelocity/pkg/services/hivelocity/hvtag"
@@ -30,12 +31,42 @@ import (
 )
 
 func Test_findAvailableDeviceFromList(t *testing.T) {
-	devices := []hv.BareMetalDevice{
-		mockclient.NoTagsDevice,
-		mockclient.FreeDevice,
+	tests := []struct {
+		description string
+		devices     []hv.BareMetalDevice
+		deviceType  infrav1.HivelocityDeviceType
+		shouldNil   bool
+	}{
+		{
+			description: "checks no device selected if no deviceType matches",
+			devices: []hv.BareMetalDevice{
+				mockclient.NoTagsDevice,
+				mockclient.FreeDevice,
+			},
+			deviceType: "fooDeviceType",
+			shouldNil:  true,
+		},
+		{
+			description: "check no device selected if device has no caphv-use=allow tag",
+			devices: []hv.BareMetalDevice{
+				mockclient.CaphNotAllowDevice,
+			},
+			deviceType: "hvCustom",
+			shouldNil:  true,
+		},
 	}
-	device := findAvailableDeviceFromList(devices, "fooDeviceType", "my-cluster")
-	require.Nil(t, device)
+
+	for _, test := range tests {
+		t.Run(test.description, func(t *testing.T) {
+			device := findAvailableDeviceFromList(test.devices, test.deviceType, "my-cluster")
+
+			if test.shouldNil {
+				require.Nil(t, device)
+			} else {
+				require.NotNil(t, device)
+			}
+		})
+	}
 }
 
 func TestService_verifyAssociatedDevice(t *testing.T) {

@@ -215,6 +215,11 @@ func findAvailableDeviceFromList(devices []hv.BareMetalDevice, deviceType infrav
 			continue
 		}
 
+		if !hvtag.DeviceUsableByCAPI(device.Tags) {
+			// not allowed to use the device
+			continue
+		}
+
 		return &device
 	}
 	return nil

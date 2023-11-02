@@ -53,7 +53,7 @@ func Test_NewMockedHVClientFactory(t *testing.T) {
 	ctx := context.Background()
 	device, err := client.GetDevice(ctx, FreeDeviceID)
 	require.NoError(t, err)
-	require.ElementsMatch(t, device.Tags, []string{"caphv-device-type=hvCustom"})
+	require.ElementsMatch(t, device.Tags, []string{"caphv-device-type=hvCustom", "caphv-use=allow"})
 	err = client.SetDeviceTags(ctx, FreeDeviceID, []string{"new-tag"})
 	require.NoError(t, err)
 
@@ -70,7 +70,7 @@ func Test_NewMockedHVClientFactory(t *testing.T) {
 	clientNewF := factoryNewF.NewClient("dummy-key")
 	device, err = clientNewF.GetDevice(ctx, FreeDeviceID)
 	require.NoError(t, err)
-	require.ElementsMatch(t, device.Tags, []string{"caphv-device-type=hvCustom"})
+	require.ElementsMatch(t, device.Tags, []string{"caphv-device-type=hvCustom", "caphv-use=allow"})
 }
 
 func Test_ProvisionDevice(t *testing.T) {

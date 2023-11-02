@@ -2,12 +2,12 @@
 
 ## Tagging Machines
 
-First you need to tag machines, so that the CAPHV controller can select and provision them.
+First you need to tag machines, so that the CAPHV controller can select and provision them. The devices must have `caphv-use=allow` tag so that the controller can use them.
 
 See [Provisioning Machines](../topics/provisioning-machines.md) for more about this.
 
 `make tilt-up` and other Makefile targets call `go run ./test/claim-devices-or-fail` to claim all devices
-with a particular tag. But be careful, since all machines with this tag will get all existing tags removed. 
+with a particular tag. But be careful, since all machines with this tag will get all existing tags removed.
 Don't accidentally "free" running machines this way.
 
 ## SSH-Key
@@ -41,4 +41,3 @@ You can create this key via the web UI: [my.hivelocity.net/account](https://my.h
 During development the management-cluster runs in local [kind cluster](https://kind.sigs.k8s.io/).
 
 The tool `kind` gets installed into `hack/tools/bin/` automatically via the Makefile.
-

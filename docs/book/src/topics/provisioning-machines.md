@@ -8,6 +8,8 @@ When starting a cluster you define a worker-machine-type and a control-plane-mac
 
 Before you create your cluster you need to tag the devices accordingly.
 
+The devices must have `caphv-use=allow` tag so that the controller can use them.
+
 For example you set tags "caphv-device-type=hvControlPlane" on all machines which should become control planes, and "caphv-device-type=hvWorker" on all machines which should become worker nodes.
 
 You can use the web-GUI of Hivelocity for this.
