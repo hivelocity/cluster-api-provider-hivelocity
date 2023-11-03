@@ -148,7 +148,11 @@ var _ = Describe("HivelocityMachineReconciler", func() {
 				},
 				Spec: infrav1.HivelocityMachineSpec{
 					ImageName: "Ubuntu 20.x",
-					Type:      "hvCustom",
+					DeviceSelector: infrav1.DeviceSelector{
+						MatchLabels: map[string]string{
+							"deviceType": "hvCustom",
+						},
+					},
 				},
 			}
 
@@ -231,7 +235,7 @@ var _ = Describe("HivelocityMachineReconciler", func() {
 			device, err := hvClient.GetDevice(ctx, mock.FreeDeviceID)
 			Expect(err).ShouldNot(HaveOccurred())
 			Expect(device.Tags).Should(BeEquivalentTo([]string{
-				"caphv-device-type=hvCustom",
+				"caphvlabel:deviceType=hvCustom",
 				"caphv-use=allow",
 				"caphv-cluster-hv-test1=owned",
 				"caphv-cluster-name=hv-test1",
@@ -337,7 +341,11 @@ var _ = Describe("Hivelocity secret", func() {
 			},
 			Spec: infrav1.HivelocityMachineSpec{
 				ImageName: "Ubuntu 20.x",
-				Type:      "hvCustom",
+				DeviceSelector: infrav1.DeviceSelector{
+					MatchLabels: map[string]string{
+						"deviceType": "hvCustom",
+					},
+				},
 			},
 		}
 		Expect(testEnv.Create(ctx, hivelocityMachine)).To(Succeed())
@@ -427,18 +435,12 @@ var _ = Describe("HivelocityMachine validation", func() {
 			},
 			Spec: infrav1.HivelocityMachineSpec{
 				ImageName: "Ubuntu 20.x",
-				Type:      "hvCustom",
 			},
 		}
 	})
 
 	AfterEach(func() {
 		Expect(testEnv.Cleanup(ctx, testNs, hvMachine)).To(Succeed())
-	})
-
-	It("should fail with wrong type", func() {
-		hvMachine.Spec.Type = "wrong-type"
-		Expect(testEnv.Create(ctx, hvMachine)).ToNot(Succeed())
 	})
 
 	It("should fail without imageName", func() {

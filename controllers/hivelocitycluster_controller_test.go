@@ -216,7 +216,11 @@ var _ = Describe("Hivelocity ClusterReconciler", func() {
 					},
 					Spec: infrav1.HivelocityMachineSpec{
 						ImageName: "Ubuntu 20.x",
-						Type:      "pool",
+						DeviceSelector: infrav1.DeviceSelector{
+							MatchLabels: map[string]string{
+								"deviceType": "pool",
+							},
+						},
 					},
 				}
 				Expect(testEnv.Create(ctx, hvMachine)).To(Succeed())

@@ -40,11 +40,8 @@ const (
 
 // FreeDevice is  a device which is not associated with a node.
 var FreeDevice = hv.BareMetalDevice{
-	Hostname: "host-FreeDevice",
-	Tags: []string{
-		hvtag.DeviceTag{Key: hvtag.DeviceTagKeyDeviceType, Value: "hvCustom"}.ToString(),
-		hvtag.DeviceTag{Key: hvtag.DeviceTagKeyCAPHVUseAllowed, Value: "allow"}.ToString(),
-	},
+	Hostname:    "host-FreeDevice",
+	Tags:        []string{"caphvlabel:deviceType=hvCustom", "caphv-use=allow"},
 	DeviceId:    FreeDeviceID,
 	PowerStatus: "ON",
 	OsName:      defaultImage,
@@ -52,11 +49,8 @@ var FreeDevice = hv.BareMetalDevice{
 
 // FreeDevicePool1 is  a device which is not associated with a node.
 var FreeDevicePool1 = hv.BareMetalDevice{
-	Hostname: "host-FreeDevice",
-	Tags: []string{
-		hvtag.DeviceTag{Key: hvtag.DeviceTagKeyDeviceType, Value: "pool"}.ToString(),
-		hvtag.DeviceTag{Key: hvtag.DeviceTagKeyCAPHVUseAllowed, Value: "allow"}.ToString(),
-	},
+	Hostname:    "host-FreeDevice",
+	Tags:        []string{"caphvlabel:deviceType=pool", "caphv-use=allow"},
 	DeviceId:    51,
 	PowerStatus: "ON",
 	OsName:      defaultImage,
@@ -64,11 +58,8 @@ var FreeDevicePool1 = hv.BareMetalDevice{
 
 // FreeDevicePool2 is  a device which is not associated with a node.
 var FreeDevicePool2 = hv.BareMetalDevice{
-	Hostname: "host-FreeDevice",
-	Tags: []string{
-		hvtag.DeviceTag{Key: hvtag.DeviceTagKeyDeviceType, Value: "pool"}.ToString(),
-		hvtag.DeviceTag{Key: hvtag.DeviceTagKeyCAPHVUseAllowed, Value: "allow"}.ToString(),
-	},
+	Hostname:    "host-FreeDevice",
+	Tags:        []string{"caphvlabel:deviceType=pool", "caphv-use=allow"},
 	DeviceId:    52,
 	PowerStatus: "ON",
 	OsName:      defaultImage,
@@ -76,11 +67,8 @@ var FreeDevicePool2 = hv.BareMetalDevice{
 
 // FreeDevicePool3 is  a device which is not associated with a node.
 var FreeDevicePool3 = hv.BareMetalDevice{
-	Hostname: "host-FreeDevice",
-	Tags: []string{
-		hvtag.DeviceTag{Key: hvtag.DeviceTagKeyDeviceType, Value: "pool"}.ToString(),
-		hvtag.DeviceTag{Key: hvtag.DeviceTagKeyCAPHVUseAllowed, Value: "allow"}.ToString(),
-	},
+	Hostname:    "host-FreeDevice",
+	Tags:        []string{"caphvlabel:deviceType=pool", "caphv-use=allow"},
 	DeviceId:    53,
 	PowerStatus: "ON",
 	OsName:      defaultImage,
@@ -114,11 +102,22 @@ var NoTagsDevice = hv.BareMetalDevice{
 
 // CaphNotAllowDevice is a device which is has no "caphv-use=allow" tag.
 var CaphNotAllowDevice = hv.BareMetalDevice{
-	Hostname: "host-FreeDevice",
-	Tags: []string{
-		hvtag.DeviceTag{Key: hvtag.DeviceTagKeyDeviceType, Value: "hvCustom"}.ToString(),
-	},
+	Hostname:    "host-FreeDevice",
+	Tags:        []string{"caphvlabel:deviceType=hvCustom"},
 	DeviceId:    FreeDeviceID,
+	PowerStatus: "ON",
+	OsName:      defaultImage,
+}
+
+// MultiLabelsDevice is a device which has multiple tags.
+var MultiLabelsDevice = hv.BareMetalDevice{
+	Hostname: "host3-unused",
+	Tags: []string{
+		"caphvlabel:foo1=bar1",
+		"caphvlabel:foo2=bar2",
+		"caphv-use=allow",
+	},
+	DeviceId:    NoTagsDeviceID,
 	PowerStatus: "ON",
 	OsName:      defaultImage,
 }

@@ -82,10 +82,6 @@ var _ = Describe("Test DeviceTagKey.IsValid", func() {
 			key:           DeviceTagKeyMachine,
 			expectIsValid: true,
 		}),
-		Entry("device type key", testCaseDeviceTagKeyIsValid{
-			key:           DeviceTagKeyDeviceType,
-			expectIsValid: true,
-		}),
 		Entry("machine type key", testCaseDeviceTagKeyIsValid{
 			key:           DeviceTagKeyMachineType,
 			expectIsValid: true,
@@ -172,14 +168,6 @@ var _ = Describe("TestClusterTagFromList", func() {
 		deviceTag, err := ClusterTagFromList([]string{DeviceTagKeyCluster.Prefix() + "value", string(DeviceTagKeyCluster) + "value"})
 		Expect(err).To(BeNil())
 		Expect(deviceTag).To(Equal(DeviceTag{Key: DeviceTagKeyCluster, Value: "value"}))
-	})
-})
-
-var _ = Describe("TestDeviceTypeTagFromList", func() {
-	It("returns a DeviceTag with DeviceTagKeyDeviceType", func() {
-		deviceTag, err := DeviceTypeTagFromList([]string{DeviceTagKeyDeviceType.Prefix() + "value", string(DeviceTagKeyDeviceType) + "value"})
-		Expect(err).To(BeNil())
-		Expect(deviceTag).To(Equal(DeviceTag{Key: DeviceTagKeyDeviceType, Value: "value"}))
 	})
 })
 
@@ -345,7 +333,6 @@ var _ = Describe("RemoveEphemeralTags", func() {
 	It("removes ephemeral tags, but keeps permanent tags", func() {
 		newTags := RemoveEphemeralTags([]string{
 			// non-ephemeral (keep)
-			DeviceTagKeyDeviceType.Prefix() + "my-device-type",
 			DeviceTagKeyPermanentError.Prefix() + "my-permantent-error",
 			DeviceTagKeyCAPHVUseAllowed.Prefix() + "allow",
 
@@ -355,7 +342,6 @@ var _ = Describe("RemoveEphemeralTags", func() {
 			"some-other-tag",
 		})
 		Expect(newTags).To(Equal([]string{
-			"caphv-device-type=my-device-type",
 			"caphv-permanent-error=my-permantent-error",
 			"caphv-use=allow",
 			"some-other-tag"}))
@@ -365,7 +351,6 @@ var _ = Describe("RemoveEphemeralTags", func() {
 var _ = Describe("PermanentErrorTagFromList", func() {
 	It("return permantent error from list", func() {
 		tag, err := PermanentErrorTagFromList([]string{
-			DeviceTagKeyDeviceType.Prefix() + "my-device-type",
 			DeviceTagKeyPermanentError.Prefix() + "my-permantent-error",
 			DeviceTagKeyCluster.Prefix() + "my-cluster",
 			DeviceTagKeyMachine.Prefix() + "my-machine",

@@ -5,5 +5,7 @@ metadata:
 spec:
   template:
     spec:
-      type: "${HIVELOCITY_WORKER_MACHINE_TYPE}"
+      deviceSelector:
+        matchLabels:
+          deviceType: e2eWorker
       imageName: "ubuntu-22.04"

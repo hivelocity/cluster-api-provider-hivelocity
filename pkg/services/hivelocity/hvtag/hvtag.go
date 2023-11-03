@@ -34,9 +34,6 @@ const (
 	// DeviceTagKeyCluster is the key for the name of the associated HivelocityCluster object.
 	DeviceTagKeyCluster DeviceTagKey = "caphv-cluster-name"
 
-	// DeviceTagKeyDeviceType is the key for the device type that users can reference in HivelocityMachine.Spec.
-	DeviceTagKeyDeviceType DeviceTagKey = "caphv-device-type"
-
 	// DeviceTagKeyMachineType is the key for the machine type, i.e. worker, control_plane.
 	DeviceTagKeyMachineType DeviceTagKey = "caphv-machine-type"
 
@@ -73,7 +70,6 @@ var (
 func (key DeviceTagKey) IsValid() bool {
 	return key == DeviceTagKeyMachine ||
 		key == DeviceTagKeyCluster ||
-		key == DeviceTagKeyDeviceType ||
 		key == DeviceTagKeyMachineType ||
 		key == DeviceTagKeyPermanentError ||
 		key == DeviceTagKeyCAPHVUseAllowed
@@ -132,11 +128,6 @@ func MachineTagFromList(tagList []string) (DeviceTag, error) {
 // ClusterTagFromList returns the cluster tag from a list of tag strings.
 func ClusterTagFromList(tagList []string) (DeviceTag, error) {
 	return DeviceTagFromList(DeviceTagKeyCluster, tagList)
-}
-
-// DeviceTypeTagFromList returns the device type tag from a list of tag strings.
-func DeviceTypeTagFromList(tagList []string) (DeviceTag, error) {
-	return DeviceTagFromList(DeviceTagKeyDeviceType, tagList)
 }
 
 // PermanentErrorTagFromList returns the permanent error tag from a list of tag strings.
@@ -214,7 +205,6 @@ func isEphemeralTag(tag string) bool {
 	// ignore tags that are only allowed to be changed or removed by the user
 	for _, keepPrefix := range []string{
 		string(DeviceTagKeyPermanentError),
-		string(DeviceTagKeyDeviceType),
 		string(DeviceTagKeyCAPHVUseAllowed),
 	} {
 		if strings.HasPrefix(tag, keepPrefix+"=") {

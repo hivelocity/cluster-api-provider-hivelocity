@@ -34,25 +34,49 @@ func Test_findAvailableDeviceFromList(t *testing.T) {
 	tests := []struct {
 		description string
 		devices     []hv.BareMetalDevice
-		deviceType  infrav1.HivelocityDeviceType
+		deviceType  infrav1.DeviceSelector
+		wantMachine *hv.BareMetalDevice
 		shouldNil   bool
 	}{
 		{
-			description: "checks no device selected if no deviceType matches",
+			description: "checks that no device is selected if no DeviceSelector matches",
 			devices: []hv.BareMetalDevice{
 				mockclient.NoTagsDevice,
 				mockclient.FreeDevice,
 			},
-			deviceType: "fooDeviceType",
-			shouldNil:  true,
+			deviceType: infrav1.DeviceSelector{
+				MatchLabels: map[string]string{
+					"foo1": "bar1",
+				},
+			},
+			shouldNil: true,
 		},
 		{
 			description: "check no device selected if device has no caphv-use=allow tag",
 			devices: []hv.BareMetalDevice{
 				mockclient.CaphNotAllowDevice,
 			},
-			deviceType: "hvCustom",
-			shouldNil:  true,
+			deviceType: infrav1.DeviceSelector{
+				MatchLabels: map[string]string{
+					"deviceType": "hvCustom",
+				},
+			},
+			shouldNil: true,
+		},
+		{
+			description: "selects device which has all the tags",
+			devices: []hv.BareMetalDevice{
+				mockclient.MultiLabelsDevice,
+				mockclient.FreeDevice,
+			},
+			deviceType: infrav1.DeviceSelector{
+				MatchLabels: map[string]string{
+					"foo1": "bar1",
+					"foo2": "bar2",
+				},
+			},
+			wantMachine: &mockclient.MultiLabelsDevice,
+			shouldNil:   false,
 		},
 	}
 
@@ -64,6 +88,7 @@ func Test_findAvailableDeviceFromList(t *testing.T) {
 				require.Nil(t, device)
 			} else {
 				require.NotNil(t, device)
+				require.Equal(t, test.wantMachine, device)
 			}
 		})
 	}
