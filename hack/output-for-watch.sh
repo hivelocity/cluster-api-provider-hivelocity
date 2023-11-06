@@ -34,7 +34,7 @@ kubectl get machines -A
 
 print_heading hivelocitymachine
 
-kubectl get hivelocitymachine -A "-o=custom-columns=NAMESPACE:.metadata.namespace,NAME:.metadata.name,Cluster:.metadata.labels.cluster\.x-k8s\.io/cluster-name,Type:.spec.type,State:.status.deviceState,Ready:.status.ready,ProviderID:.spec.providerID,Machine:.metadata.ownerReferences[?(@.kind==\"Machine\")].name,IP:.status.addresses[?(@.type==\"InternalIP\")].address"
+kubectl get hivelocitymachine -A "-o=custom-columns=NAMESPACE:.metadata.namespace,NAME:.metadata.name,Cluster:.metadata.labels.cluster\.x-k8s\.io/cluster-name,Type:.spec.type,State:.status.powerState,Ready:.status.ready,ProviderID:.spec.providerID,Machine:.metadata.ownerReferences[?(@.kind==\"Machine\")].name,IP:.status.addresses[?(@.type==\"InternalIP\")].address"
 
 print_heading events
 

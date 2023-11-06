@@ -126,9 +126,9 @@ type HivelocityMachineStatus struct {
 	// Region contains the name of the Hivelocity location the device is running.
 	Region Region `json:"region,omitempty"`
 
-	// DeviceState is the state of the device for this machine.
+	// PowerState is the power state of the device for this machine (ON|OFF).
 	// +optional
-	DeviceState string `json:"deviceState,omitempty"`
+	PowerState string `json:"powerState,omitempty"`
 
 	// FailureReason will be set in the event that there is a terminal problem
 	// reconciling the Machine and will contain a succinct value suitable
@@ -154,7 +154,7 @@ type HivelocityMachineStatus struct {
 // +kubebuilder:printcolumn:name="Cluster",type="string",JSONPath=".metadata.labels.cluster\\.x-k8s\\.io/cluster-name",description="Cluster to which this HivelocityMachine belongs"
 // +kubebuilder:printcolumn:name="Image",type="string",JSONPath=".spec.imageName",description="Image name"
 // +kubebuilder:printcolumn:name="Type",type="string",JSONPath=".spec.type",description="Device type"
-// +kubebuilder:printcolumn:name="State",type="string",JSONPath=".status.deviceState",description="Hivelocity device state"
+// +kubebuilder:printcolumn:name="State",type="string",JSONPath=".status.powerState",description="Hivelocity device state"
 // +kubebuilder:printcolumn:name="Ready",type="string",JSONPath=".status.ready",description="Machine ready status"
 // +kubebuilder:printcolumn:name="ProviderID",type="string",JSONPath=".spec.providerID",description="ProviderID of machine object"
 // +kubebuilder:printcolumn:name="Machine",type="string",JSONPath=".metadata.ownerReferences[?(@.kind==\"Machine\")].name",description="Machine object which owns with this HivelocityMachine"
@@ -214,7 +214,7 @@ func (r *HivelocityMachine) SetMachineStatus(device hv.BareMetalDevice) {
 			Address: device.PrimaryIp,
 		},
 	}
-	r.Status.DeviceState = device.PowerStatus
+	r.Status.PowerState = device.PowerStatus
 	r.Status.Region = Region(device.LocationName)
 }
 
