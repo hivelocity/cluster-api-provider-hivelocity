@@ -34,7 +34,7 @@ func Test_findAvailableDeviceFromList(t *testing.T) {
 		mockclient.NoTagsDevice,
 		mockclient.FreeDevice,
 	}
-	device := findAvailableDeviceFromList(devices, "fooDeviceType", "my-cluster", "my-machine")
+	device := findAvailableDeviceFromList(devices, "fooDeviceType", "my-cluster")
 	require.Nil(t, device)
 }
 

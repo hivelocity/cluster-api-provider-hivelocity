@@ -23,11 +23,36 @@ import (
 const (
 	// DeviceReadyCondition reports on current status of the device. Ready indicates the device is in a Running state.
 	DeviceReadyCondition clusterv1.ConditionType = "DeviceReady"
+
 	// DeviceNotFoundReason (Severity=Error) documents a HivelocityMachine controller detecting
 	// the underlying device cannot be found anymore.
 	DeviceNotFoundReason = "DeviceNotFound"
+
 	// DeviceTagsInvalidReason documents a HivelocityMachine controller detecting invalid device tags.
 	DeviceTagsInvalidReason = "DeviceTagsInvalid"
+
+	// DeviceReloadingTooLongReason indicates that the device is reloading too long.
+	// The controller sets a corresponding tag, so that the machine can get reset by an operator.
+	DeviceReloadingTooLongReason = "DeviceReloadingTooLongReason"
+)
+
+const (
+	// DeviceProvisioningSucceededCondition reports on whether the device has been successfully provisioned.
+	DeviceProvisioningSucceededCondition clusterv1.ConditionType = "DeviceProvisioningSucceeded"
+
+	// DeviceReloadingReason documents that the device is reloading.
+	DeviceReloadingReason = "DeviceReloading"
+
+	// DeviceShutdownCalledReason documents that the device has been tried to shut down.
+	DeviceShutdownCalledReason = "DeviceShutdownCalled"
+
+	// DeviceShutDownReason documents that the device is shut down.
+	DeviceShutDownReason = "DeviceShutDown"
+)
+
+const (
+	// DeviceDeProvisioningSucceededCondition reports on whether the device has been successfully deprovisioned.
+	DeviceDeProvisioningSucceededCondition clusterv1.ConditionType = "DeviceDeProvisioningSucceeded"
 )
 
 const (

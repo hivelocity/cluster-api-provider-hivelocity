@@ -34,11 +34,10 @@ kubectl get machines -A
 
 print_heading hivelocitymachine
 
-kubectl get hivelocitymachine -A "-o=custom-columns=NAMESPACE:.metadata.namespace,NAME:.metadata.name,Cluster:.metadata.labels.cluster\.x-k8s\.io/cluster-name,Type:.spec.type,State:.status.powerState,Ready:.status.ready,ProviderID:.spec.providerID,Machine:.metadata.ownerReferences[?(@.kind==\"Machine\")].name,IP:.status.addresses[?(@.type==\"InternalIP\")].address"
-
+kubectl get hivelocitymachine -A
 print_heading events
 
-kubectl get events -A -o=wide --sort-by=.lastTimestamp | grep -vP 'LeaderElection' | tail -8
+kubectl get events -A -o=wide --sort-by=.lastTimestamp | grep -vP 'LeaderElection|CSRApproved' | tail -8
 
 print_heading conditions
 
@@ -50,6 +49,15 @@ print_heading logs
 ./hack/tail-controller-logs.sh
 
 echo
+
+capi_error="$(kubectl logs -n capi-system --since=5m deployments/capi-controller-manager | \
+    grep -iP 'error|\be\d\d\d\d\b' | \
+    grep -vP 'ignoring DaemonSet-managed Pods|TLS handshake error from' | \
+    tail -7)"
+if [ -n "$capi_error" ]; then
+  print_heading capi controller errors
+  echo "$capi_error"
+fi
 
 ip=$(kubectl get cluster -A -o=jsonpath='{.items[*].spec.controlPlaneEndpoint.host}' | head -1)
 if [ -z "$ip" ]; then
@@ -93,7 +101,7 @@ else
     echo "👌 number of nodes in wl-cluster is equal to number of machines in mgt-cluster"
 fi
 
-not_approved=$(KUBECONFIG=$kubeconfig_wl kubectl get csr --no-headers | grep -v Approved)
+not_approved=$(KUBECONFIG=$kubeconfig_wl kubectl get csr --no-headers  --sort-by='.metadata.creationTimestamp' | grep -v Approved | tail -8 )
 if [ -n "$not_approved" ]; then
     echo "❌ (CSRs)certificate signing requests which are not approved"
     echo "$not_approved"

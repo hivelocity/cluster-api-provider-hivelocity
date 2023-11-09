@@ -19,9 +19,11 @@ package device
 
 import (
 	"context"
+	_ "embed"
 	"errors"
 	"fmt"
 	"sort"
+	"strings"
 	"time"
 
 	infrav1 "github.com/hivelocity/cluster-api-provider-hivelocity/api/v1alpha1"
@@ -105,12 +107,26 @@ func (s *Service) actionAssociateDevice(ctx context.Context) actionResult {
 	log := s.scope.Logger.WithValues("function", "actionAssociateDevice")
 	log.V(1).Info("Started function")
 
-	device, err := GetFirstDevice(ctx, s.scope.HVClient, s.scope.HivelocityMachine.Spec.Type,
+	device, err := GetFirstFreeDevice(ctx, s.scope.HVClient, s.scope.HivelocityMachine.Spec.Type,
 		s.scope.HivelocityCluster, s.scope.Name())
 	if err != nil {
 		s.handleRateLimitExceeded(err, "ListDevices")
 		return actionError{err: fmt.Errorf("failed to find available device: %w", err)}
 	}
+
+	if device == nil {
+		conditions.MarkFalse(
+			s.scope.HivelocityMachine,
+			infrav1.DeviceAssociateSucceededCondition,
+			infrav1.NoAvailableDeviceReason,
+			clusterv1.ConditionSeverityWarning,
+			"no available device found",
+		)
+		record.Warnf(s.scope.HivelocityMachine, "NoFreeDeviceFound", "Failed to find free device")
+		return actionContinue{delay: time.Minute}
+	}
+
+	conditions.Delete(s.scope.HivelocityMachine, infrav1.DeviceAssociateSucceededCondition)
 
 	// associate this device with the machine object by setting tags
 	device.Tags = append(device.Tags,
@@ -132,12 +148,12 @@ func (s *Service) actionAssociateDevice(ctx context.Context) actionResult {
 	return actionComplete{}
 }
 
-// GetFirstDevice finds the first free matching device. The parameter machineName is optional.
-func GetFirstDevice(ctx context.Context, hvclient hvclient.Client, machineType infrav1.HivelocityDeviceType, hvCluster *infrav1.HivelocityCluster,
-	machineName string) (*hv.BareMetalDevice, error) {
+// GetFirstFreeDevice finds the first free matching device. The parameter machineName is optional.
+func GetFirstFreeDevice(ctx context.Context, hvclient hvclient.Client, machineType infrav1.HivelocityDeviceType,
+	hvCluster *infrav1.HivelocityCluster, machineName string,
+) (*hv.BareMetalDevice, error) {
 	// list all devices
 	devices, err := hvclient.ListDevices(ctx)
-
 	if err != nil {
 		return nil, err
 	}
@@ -152,23 +168,11 @@ func GetFirstDevice(ctx context.Context, hvclient hvclient.Client, machineType i
 		return devices[i].DeviceId < devices[j].DeviceId
 	})
 
-	hvDevices := findAvailableDeviceFromList(devices, machineType, hvCluster.Name, machineName)
-	if hvDevices == nil {
-		conditions.MarkFalse(
-			hvCluster,
-			infrav1.DeviceAssociateSucceededCondition,
-			infrav1.NoAvailableDeviceReason,
-			clusterv1.ConditionSeverityWarning,
-			"no associated device found",
-		)
-		return nil, nil
-	}
-
-	conditions.MarkTrue(hvCluster, infrav1.DeviceAssociateSucceededCondition)
-	return hvDevices, nil
+	device := findAvailableDeviceFromList(devices, machineType, hvCluster.Name)
+	return device, nil
 }
 
-func findAvailableDeviceFromList(devices []hv.BareMetalDevice, deviceType infrav1.HivelocityDeviceType, clusterName, machineName string) *hv.BareMetalDevice {
+func findAvailableDeviceFromList(devices []hv.BareMetalDevice, deviceType infrav1.HivelocityDeviceType, clusterName string) *hv.BareMetalDevice {
 	for _, device := range devices {
 
 		// Skip if caphv-permanent-error exists
@@ -184,10 +188,6 @@ func findAvailableDeviceFromList(devices []hv.BareMetalDevice, deviceType infrav
 			// unexpected error - continue
 			continue
 		}
-		if machineName != "" && machineTag.Value == machineName {
-			// associated to this machine - return
-			return &device
-		}
 		if machineTag.Value != "" {
 			// associated to other machine - continue
 			continue
@@ -195,7 +195,7 @@ func findAvailableDeviceFromList(devices []hv.BareMetalDevice, deviceType infrav
 
 		deviceTypeTag, err := hvtag.DeviceTypeTagFromList(device.Tags)
 		if err != nil {
-			// TODO: What if no device type has been set? Is the device available or not?
+			// No device type has been set, don't use it.
 			continue
 		}
 
@@ -259,6 +259,9 @@ func (s *Service) actionVerifyAssociate(ctx context.Context) actionResult {
 
 	if clusterTagErr == nil && machineTagErr == nil {
 		log.V(1).Info("Completed function")
+		record.Eventf(s.scope.HivelocityMachine, "SuccessfulAssociateDevice", "Device %d was associated with cluster %q", deviceID,
+			s.scope.HivelocityCluster.Name)
+		conditions.MarkTrue(s.scope.HivelocityMachine, infrav1.DeviceAssociateSucceededCondition)
 		return actionComplete{}
 	}
 
@@ -286,6 +289,167 @@ func hasTimedOut(lastUpdated *metav1.Time, timeout time.Duration) bool {
 	return lastUpdated.Add(timeout).Before(now.Time)
 }
 
+// actionVerifyShutdown makes sure that the device is shut down.
+func (s *Service) actionVerifyShutdown(ctx context.Context) actionResult {
+
+	deviceID, err := s.scope.HivelocityMachine.DeviceIDFromProviderID()
+	if err != nil {
+		return actionError{err: fmt.Errorf("[actionVerifyShutdown] ProviderIDToDeviceID failed: %w", err)}
+	}
+
+	isReloading, isPoweredOn, err := s.getPowerAndReloadingState(ctx, deviceID)
+	if err != nil {
+		return actionError{err: fmt.Errorf("[actionVerifyShutdown] getPowerAndReloadingState failed: %w", err)}
+	}
+
+	// if device is powered off and not reloading, then we are done and can start provisioning
+	if !isPoweredOn && !isReloading {
+		conditions.MarkFalse(
+			s.scope.HivelocityMachine,
+			infrav1.DeviceProvisioningSucceededCondition,
+			infrav1.DeviceShutDownReason,
+			clusterv1.ConditionSeverityInfo,
+			"device is shut down and will be provisioned",
+		)
+		return actionComplete{}
+	}
+
+	provisionCondition := conditions.Get(s.scope.HivelocityMachine, infrav1.DeviceProvisioningSucceededCondition)
+
+	// handle reloading state
+
+	if isReloading {
+		if s.isReloadingTooLong(provisionCondition, isPoweredOn) {
+			return s.setReloadingTooLongTag(ctx, deviceID, provisionCondition.LastTransitionTime)
+		}
+
+		conditions.MarkFalse(
+			s.scope.HivelocityMachine,
+			infrav1.DeviceProvisioningSucceededCondition,
+			infrav1.DeviceReloadingReason,
+			clusterv1.ConditionSeverityWarning,
+			fmt.Sprintf("device %d is reloading", deviceID),
+		)
+		return actionContinue{delay: 1 * time.Minute}
+	}
+
+	// handle powered on state
+
+	// if shutdown has been called in the past two minutes already, do not call it again and wait
+	if provisionCondition != nil && provisionCondition.Reason == infrav1.DeviceShutdownCalledReason && !hasTimedOut(&provisionCondition.LastTransitionTime, 2*time.Minute) {
+		return actionContinue{delay: 30 * time.Second}
+	}
+
+	// remove condition to reset the timer - we set the condition anyway again
+	conditions.Delete(s.scope.HivelocityMachine, infrav1.DeviceProvisioningSucceededCondition)
+
+	err = s.scope.HVClient.ShutdownDevice(ctx, deviceID)
+	if err != nil {
+		return actionError{err: fmt.Errorf("[actionVerifyShutdown] ShutdownDevice failed: %w", err)}
+	}
+
+	record.Eventf(s.scope.HivelocityMachine, "SuccessfulShutdownDevice", "Called ShutdownDevice API for %d", deviceID)
+
+	conditions.MarkFalse(
+		s.scope.HivelocityMachine,
+		infrav1.DeviceProvisioningSucceededCondition,
+		infrav1.DeviceShutdownCalledReason,
+		clusterv1.ConditionSeverityInfo,
+		"device shut down has been triggered",
+	)
+	return actionContinue{delay: 30 * time.Second}
+}
+
+func (s *Service) isReloadingTooLong(condition *clusterv1.Condition, isPowerOn bool) bool {
+	if condition == nil {
+		return false
+	}
+	if condition.Reason != infrav1.DeviceReloadingReason {
+		return false
+	}
+	timeout := 5 * time.Minute
+	if isPowerOn {
+		// the device is "reloading" during provisioning, which can take longer.
+		timeout = 25 * time.Minute
+	}
+	if !hasTimedOut(&condition.LastTransitionTime, timeout) {
+		return false
+	}
+	return true
+}
+
+// Set permanent error with an appropriate label,
+// and go back to the state associate to associate with another device via actionGoBack.
+// This method is used for provisioning and deprovisioning.
+func (s *Service) setReloadingTooLongTag(ctx context.Context, deviceID int32, lastTransitionTime metav1.Time) actionResult {
+	device, err := s.scope.HVClient.GetDevice(ctx, deviceID)
+	if err != nil {
+		s.handleRateLimitExceeded(err, "GetDevice")
+		if errors.Is(err, hvclient.ErrDeviceNotFound) {
+			msg := fmt.Sprintf("Hivelocity device %d not found", deviceID)
+			conditions.MarkFalse(
+				s.scope.HivelocityMachine,
+				infrav1.DeviceReadyCondition,
+				infrav1.DeviceNotFoundReason,
+				clusterv1.ConditionSeverityError,
+				msg,
+			)
+			record.Warnf(s.scope.HivelocityMachine, "DeviceNotFound", msg)
+			s.scope.HivelocityMachine.SetFailure(capierrors.UpdateMachineError, infrav1.FailureMessageDeviceNotFound)
+			return actionComplete{}
+		}
+		return actionError{err: fmt.Errorf("failed to get associated device: %w", err)}
+	}
+	tags := hvtag.RemoveEphemeralTags(device.Tags)
+	_, err = hvtag.PermanentErrorTagFromList(tags)
+	if errors.Is(err, hvtag.ErrDeviceTagNotFound) {
+		tags = append(tags, fmt.Sprintf("%s=reloading-since-%s",
+			hvtag.DeviceTagKeyPermanentError,
+			lastTransitionTime.Format(time.RFC3339)))
+	} else if err != nil {
+		return actionError{err: fmt.Errorf("[setReloadingTooLongTag] PermanentErrorTagFromList failed: %w", err)}
+	}
+
+	err = s.scope.HVClient.SetDeviceTags(ctx, device.DeviceId, tags)
+	if err != nil {
+		return actionError{err: fmt.Errorf("[setReloadingTooLongTag] SetDeviceTags failed: %w", err)}
+	}
+
+	msg := fmt.Sprintf("device %d reloading too long. Tag %q was set. Trying next device.", device.DeviceId,
+		hvtag.DeviceTagKeyPermanentError)
+
+	conditions.MarkFalse(
+		s.scope.HivelocityMachine,
+		infrav1.DeviceReadyCondition,
+		infrav1.DeviceReloadingTooLongReason,
+		clusterv1.ConditionSeverityError,
+		msg,
+	)
+	record.Warnf(s.scope.HivelocityMachine, "DeviceReloadingTooLong", msg)
+	return actionGoBack{nextState: infrav1.StateAssociateDevice}
+}
+
+func (s *Service) getPowerAndReloadingState(ctx context.Context, deviceID int32) (
+	isReloading bool, isPoweredOn bool, err error) {
+	dump, err := s.scope.HVClient.GetDeviceDump(ctx, deviceID)
+	if err != nil {
+		return false, false, fmt.Errorf("[getPowerAndReloadingState] GetDeviceDump failed: %d %w", deviceID, err)
+	}
+	power, ok := dump.PowerStatus.(string)
+	if !ok {
+		return false, false, fmt.Errorf("[getPowerAndReloadingState] dump.PowerStatus failed: %d %+v %w", deviceID, dump.PowerStatus, err)
+	}
+	switch power {
+	case "ON":
+		isPoweredOn = true
+	case "OFF":
+		isPoweredOn = false
+	default:
+		return false, false, fmt.Errorf("[getPowerAndReloadingState] dump.PowerStatus unknown: %d %s %w", deviceID, power, err)
+	}
+	return dump.IsReload, isPoweredOn, nil
+}
+
 // actionProvisionDevice provisions the device.
 func (s *Service) actionProvisionDevice(ctx context.Context) actionResult {
 	log := s.scope.Logger.WithValues("function", "actionProvisionDevice")
@@ -306,6 +470,21 @@ func (s *Service) actionProvisionDevice(ctx context.Context) actionResult {
 			return actionGoBack{nextState: infrav1.StateAssociateDevice}
 		}
 		return actionError{err: fmt.Errorf("failed to get device: %w", err)}
+	}
+
+	isReloading, isPoweredOn, err := s.getPowerAndReloadingState(ctx, deviceID)
+	if err != nil {
+		return actionError{err: fmt.Errorf("[actionProvisionDevice] getPowerAndReloadingState failed: %s", err)}
+	}
+	if isReloading {
+		msg := fmt.Sprintf("unexpected: device %d is reloading.", deviceID)
+		record.Warnf(s.scope.HivelocityMachine, "ProvisionDeviceIsReloading", msg)
+		return actionError{err: errors.New(msg)}
+	}
+	if isPoweredOn {
+		msg := fmt.Sprintf("unexpected: device %d has power on.", deviceID)
+		record.Warnf(s.scope.HivelocityMachine, "ProvisionDeviceIsPoweredOn", msg)
+		return actionError{err: errors.New(msg)}
 	}
 
 	userData, err := s.scope.GetRawBootstrapData(ctx)
@@ -354,14 +533,16 @@ func (s *Service) actionProvisionDevice(ctx context.Context) actionResult {
 
 	// Provision the device
 	if _, err := s.scope.HVClient.ProvisionDevice(ctx, deviceID, opts); err != nil {
-		// TODO: Handle error that machine is not shut down
 		s.handleRateLimitExceeded(err, "ProvisionDevice")
 		record.Warnf(s.scope.HivelocityMachine, "FailedProvisionDevice", "Failed to provision device %d: %s", deviceID, err)
 		return actionContinue{delay: 30 * time.Second}
-		// actionError{err: fmt.Errorf("failed to provision device %d: %s", deviceID, err)}
 	}
 
-	record.Eventf(s.scope.HivelocityMachine, "SuccessfulProvisionDevice", "Successfully provisioned device: %d", deviceID)
+	record.Eventf(s.scope.HivelocityMachine, "SuccessfulStartedProvisionDevice", "Successfully started ProvisionDevice: %d", deviceID)
+
+	conditions.MarkTrue(
+		s.scope.HivelocityMachine,
+		infrav1.DeviceProvisioningSucceededCondition)
 
 	log.V(1).Info("Completed function")
 	return actionComplete{}
@@ -427,25 +608,41 @@ func (s *Service) actionDeviceProvisioned(ctx context.Context) actionResult {
 		return actionComplete{}
 	}
 
+	isReloading, _, err := s.getPowerAndReloadingState(ctx, deviceID)
+	if err != nil {
+		return actionError{err: fmt.Errorf("[actionDeviceProvisioned] getPowerAndReloadingState failed: %w", err)}
+	}
+	if isReloading {
+		conditions.MarkFalse(
+			s.scope.HivelocityMachine,
+			infrav1.DeviceProvisioningSucceededCondition,
+			infrav1.DeviceReloadingReason,
+			clusterv1.ConditionSeverityWarning,
+			fmt.Sprintf("Provisioned device %d is reloading", deviceID),
+		)
+		return actionContinue{delay: 15 * time.Second}
+	}
+	conditions.MarkTrue(
+		s.scope.HivelocityMachine,
+		infrav1.DeviceProvisioningSucceededCondition)
+
 	// update machine object with infos from device
 	conditions.MarkTrue(s.scope.HivelocityMachine, infrav1.DeviceReadyCondition)
 	s.scope.HivelocityMachine.SetMachineStatus(device)
 	if device.PowerStatus == hvclient.PowerStatusOff {
 		conditions.MarkFalse(s.scope.HivelocityMachine, infrav1.HivelocityMachineReadyCondition, infrav1.DevicePowerOffReason, clusterv1.ConditionSeverityError, "the device is in power off state")
 		s.scope.HivelocityMachine.Status.Ready = false
-		log.Info("Power is off?",
-			"DeviceId", device.DeviceId,
-			"PowerStatus", device.PowerStatus)
-	} else {
-		conditions.MarkTrue(s.scope.HivelocityMachine, infrav1.HivelocityMachineReadyCondition)
-		s.scope.HivelocityMachine.Status.Ready = true
+		return actionContinue{delay: 20 * time.Second}
 	}
+	conditions.MarkTrue(s.scope.HivelocityMachine, infrav1.HivelocityMachineReadyCondition)
+	s.scope.HivelocityMachine.Status.Ready = true
 
 	log.V(1).Info("Completed function",
 		"DeviceId", device.DeviceId,
 		"PowerStatus", device.PowerStatus,
 		"script", utils.FirstN(device.Script, 50))
 
+	// This is the final state, if the machine is provisioned and everything is fine.
 	return actionComplete{}
 }
 
@@ -469,7 +666,7 @@ func (s *Service) verifyAssociatedDevice(device *hv.BareMetalDevice) error {
 }
 
 // actionDeleteDeviceDeProvision re-provisions a device to remove it from cluster.
-func (s *Service) actionDeleteDeviceDeProvision(ctx context.Context) actionResult {
+func (s *Service) actionDeleteDeviceDeProvision(ctx context.Context) (ar actionResult) {
 	log := s.scope.Logger.WithValues("function", "actionDeleteDeviceDeProvision")
 	log.V(1).Info("Started function")
 
@@ -490,28 +687,92 @@ func (s *Service) actionDeleteDeviceDeProvision(ctx context.Context) actionResul
 		return actionError{err: fmt.Errorf("failed to get device: %w", err)}
 	}
 
-	newTags, _ := s.scope.HivelocityCluster.DeviceTag().RemoveFromList(device.Tags)
-	newTags, _ = s.scope.HivelocityMachine.DeviceTag().RemoveFromList(newTags)
-	newTags, _ = s.scope.DeviceTagMachineType().RemoveFromList(newTags)
+	isReloading, isPoweredOn, err := s.getPowerAndReloadingState(ctx, deviceID)
+	if err != nil {
+		return actionError{err: fmt.Errorf("actionDeleteDeviceDeProvision] getPowerAndReloadingState failed: %w", err)}
+	}
+
+	if !isReloading && !isPoweredOn {
+		return s.actionDeleteDeviceDeProvisionPowerIsOff(ctx, device)
+	}
+
+	deprovisionCondition := conditions.Get(s.scope.HivelocityMachine, infrav1.DeviceDeProvisioningSucceededCondition)
+
+	// handle reloading state
+	if isReloading {
+		if s.isReloadingTooLong(deprovisionCondition, isPoweredOn) {
+			return s.setReloadingTooLongTag(ctx, deviceID, deprovisionCondition.LastTransitionTime)
+		}
+
+		conditions.MarkFalse(
+			s.scope.HivelocityMachine,
+			infrav1.DeviceDeProvisioningSucceededCondition,
+			infrav1.DeviceReloadingReason,
+			clusterv1.ConditionSeverityWarning,
+			fmt.Sprintf("device %d is reloading", deviceID),
+		)
+		return actionContinue{delay: 1 * time.Minute}
+	}
+
+	if !strings.Contains(device.Script, "cloud-init") {
+		// This is the dummy OS
+		return actionComplete{}
+	}
+
+	// handle powered on state
+
+	// if shutdown has been called in the past two minutes already, do not call it again and wait
+	if deprovisionCondition != nil && deprovisionCondition.Reason == infrav1.DeviceShutdownCalledReason && !hasTimedOut(&deprovisionCondition.LastTransitionTime, 2*time.Minute) {
+		return actionContinue{delay: 30 * time.Second}
+	}
+
+	// remove condition to reset the timer - we set the condition anyway again
+	conditions.Delete(s.scope.HivelocityMachine, infrav1.DeviceDeProvisioningSucceededCondition)
+
+	err = s.scope.HVClient.ShutdownDevice(ctx, deviceID)
+	if err != nil {
+		return actionError{err: fmt.Errorf("[actionDeleteDeviceDeProvision] ShutdownDevice failed: %w", err)}
+	}
+
+	record.Eventf(s.scope.HivelocityMachine, "SuccessfulShutdownDevice", "Called ShutdownDevice API for %d", deviceID)
+
+	conditions.MarkFalse(
+		s.scope.HivelocityMachine,
+		infrav1.DeviceDeProvisioningSucceededCondition,
+		infrav1.DeviceShutdownCalledReason,
+		clusterv1.ConditionSeverityInfo,
+		"device shut down has been triggered",
+	)
+	return actionContinue{delay: 30 * time.Second}
+}
+
+func (s *Service) actionDeleteDeviceDeProvisionPowerIsOff(ctx context.Context, device hv.BareMetalDevice) actionResult {
+	log := s.scope.Logger.WithValues("function", "actionDeleteDeviceDeProvisionPowerIsOff")
+	deviceID := device.DeviceId
 
 	opts := hv.BareMetalDeviceUpdate{
 		Hostname:    s.scope.Name() + "-deleted.example.com",
-		Tags:        newTags,
 		OsName:      defaultImageName,
 		ForceReload: true,
+		Script:      "",
+		Tags:        device.Tags,
 	}
 
 	// Deprovision the device with default image.
 	if _, err := s.scope.HVClient.ProvisionDevice(ctx, deviceID, opts); err != nil {
 		// TODO: Handle error that machine is not shut down
 		s.handleRateLimitExceeded(err, "ProvisionDevice")
-		record.Warnf(s.scope.HivelocityMachine, "FailedDeProvisionDevice", "Failed to de-provision device %d: %s", deviceID, err)
+		record.Warnf(s.scope.HivelocityMachine, "FailedCallProvisionToDeprovision", "Failed to call provision to deprovision device %d: %s", deviceID, err)
 		return actionError{err: fmt.Errorf("failed to de-provision device %d: %s", deviceID, err)}
 	}
-	record.Eventf(s.scope.HivelocityMachine, "SuccessfulDeProvisionDevice", "Successfully de-provision device %d", deviceID)
+	msg := fmt.Sprintf("Successfully called provision to deprovision %d with %s",
+		deviceID, opts.OsName)
+	record.Eventf(s.scope.HivelocityMachine, "SuccessfulCallProvisionToDeprovision", msg)
 
 	log.V(1).Info("Completed function")
-	return actionComplete{}
+	return actionContinue{
+		delay: time.Minute,
+	}
 }
 
 // actionDeleteDeviceDissociate ensures that the device has no tags of machine.
@@ -519,6 +780,10 @@ func (s *Service) actionDeleteDeviceDissociate(ctx context.Context) actionResult
 	log := s.scope.Logger.WithValues("function", "actionDeleteDeviceDissociate")
 	log.V(1).Info("Started function")
 
+	if s.scope.HivelocityMachine.Spec.ProviderID == nil || *(s.scope.HivelocityMachine.Spec.ProviderID) == "" {
+		log.V(1).Info("No ProviderID, no need to dissociate device: actionComplete")
+		return actionComplete{}
+	}
 	deviceID, err := s.scope.HivelocityMachine.DeviceIDFromProviderID()
 	if err != nil {
 		return actionError{err: fmt.Errorf("failed to get deviceID from providerID: %w", err)}
@@ -529,12 +794,33 @@ func (s *Service) actionDeleteDeviceDissociate(ctx context.Context) actionResult
 		s.handleRateLimitExceeded(err, "GetDevice")
 		if errors.Is(err, hvclient.ErrDeviceNotFound) {
 			// Nothing to do if device is not found
-			s.scope.Info("Unable to locate Hivelocity device by ID or tags")
-			record.Warnf(s.scope.HivelocityMachine, "NoDeviceFound", "Unable to find matching Hivelocity device for %s", s.scope.Name())
+			msg := fmt.Sprintf("[actionDeleteDeviceDissociate] Unable to find matching Hivelocity device %d", deviceID)
+			s.scope.Info(msg)
+			record.Warnf(s.scope.HivelocityMachine, "NoDeviceFound", msg)
 			return actionComplete{}
 		}
 		return actionError{err: fmt.Errorf("failed to get device: %w", err)}
 	}
+
+	if device.PowerStatus != hvclient.PowerStatusOff {
+		err = s.scope.HVClient.ShutdownDevice(ctx, deviceID)
+		if err != nil {
+			s.handleRateLimitExceeded(err, "ShutdownDevice")
+			return actionError{err: fmt.Errorf("[actionDeleteDeviceDissociate] failed to shutdown device: %w", err)}
+		}
+		conditions.MarkFalse(
+			s.scope.HivelocityMachine,
+			infrav1.DeviceDeProvisioningSucceededCondition,
+			infrav1.DeviceShutdownCalledReason,
+			clusterv1.ConditionSeverityInfo,
+			fmt.Sprintf("shut down for device %d was called", deviceID),
+		)
+		return actionContinue{delay: 30 * time.Second}
+	}
+
+	conditions.MarkTrue(
+		s.scope.HivelocityMachine,
+		infrav1.DeviceDeProvisioningSucceededCondition)
 
 	newTags, updated1 := s.scope.HivelocityCluster.DeviceTag().RemoveFromList(device.Tags)
 	newTags, updated2 := s.scope.HivelocityMachine.DeviceTag().RemoveFromList(newTags)

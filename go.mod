@@ -7,7 +7,6 @@ go 1.20
 //replace sigs.k8s.io/cluster-api/test/framework => sigs.k8s.io/cluster-api/test v1.4.2
 
 require (
-	github.com/antihax/optional v1.0.0
 	github.com/blang/semver/v4 v4.0.0
 	github.com/go-logr/logr v1.2.4
 	github.com/go-logr/zapr v1.2.3
@@ -44,6 +43,7 @@ require (
 	github.com/Masterminds/sprig/v3 v3.2.3 // indirect
 	github.com/Microsoft/go-winio v0.5.0 // indirect
 	github.com/alessio/shellescape v1.4.1 // indirect
+	github.com/antihax/optional v1.0.0 // indirect
 	github.com/antlr/antlr4/runtime/Go/antlr v1.4.10 // indirect
 	github.com/asaskevich/govalidator v0.0.0-20190424111038-f61b66f89f4a // indirect
 	github.com/beorn7/perks v1.0.1 // indirect

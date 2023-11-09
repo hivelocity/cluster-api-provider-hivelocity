@@ -17,7 +17,7 @@
 pod=$(kubectl -n capi-hivelocity-system get pods | grep caphv-controller-manager | cut -d' ' -f1)
 
 if [ -z "$pod" ]; then
-    echo "failed to find caphv-controller-manager pod"
+    echo "❌ failed to find caphv-controller-manager pod"
     exit 1
 fi
 

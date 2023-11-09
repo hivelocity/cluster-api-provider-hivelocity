@@ -27,9 +27,7 @@ import (
 	"regexp"
 	"runtime/debug"
 	"strings"
-	"time"
 
-	"github.com/antihax/optional"
 	"github.com/go-logr/logr"
 	"github.com/hivelocity/cluster-api-provider-hivelocity/pkg/utils"
 	caphvversion "github.com/hivelocity/cluster-api-provider-hivelocity/pkg/version"
@@ -47,9 +45,9 @@ const PowerStatusOn = "ON"
 // Client collects all methods used by the controller in the Hivelocity API.
 type Client interface {
 	PowerOnDevice(ctx context.Context, deviceID int32) error
+	ShutdownDevice(ctx context.Context, deviceID int32) error
 	ProvisionDevice(ctx context.Context, deviceID int32, opts hv.BareMetalDeviceUpdate) (hv.BareMetalDevice, error)
 	ListDevices(context.Context) ([]hv.BareMetalDevice, error)
-	ShutdownDevice(ctx context.Context, deviceID int32) error
 	ListImages(ctx context.Context, productID int32) ([]string, error)
 	ListSSHKeys(context.Context) ([]hv.SshKeyResponse, error)
 
@@ -58,6 +56,8 @@ type Client interface {
 
 	// SetDeviceTags sets the tags to the given list.
 	SetDeviceTags(ctx context.Context, deviceID int32, tags []string) error
+
+	GetDeviceDump(ctx context.Context, deviceID int32) (hv.DeviceDump, error)
 }
 
 // Factory is the interface for creating new Client objects.
@@ -155,42 +155,20 @@ func (c *realClient) SetDeviceTags(ctx context.Context, deviceID int32, tags []s
 	return checkRateLimit(err)
 }
 
-func (c *realClient) PowerOnDevice(_ context.Context, _ int32) error {
-	return nil // todo
+func (c *realClient) PowerOnDevice(ctx context.Context, deviceID int32) error {
+	_, _, err := c.client.DeviceApi.PostPowerResource(ctx, deviceID, "boot", nil) //nolint:bodyclose // Close() gets done in client
+	return err
 }
 
 func (c *realClient) ProvisionDevice(ctx context.Context, deviceID int32, opts hv.BareMetalDeviceUpdate) (hv.BareMetalDevice, error) {
 	log := log.FromContext(ctx)
 	var swaggerErr hv.GenericSwaggerError
 
-	power, _, err := c.client.DeviceApi.GetPowerResource(ctx, deviceID, nil) //nolint:bodyclose // Close() gets done in client
-	if errors.As(err, &swaggerErr) {
-		body := string(swaggerErr.Body())
-		log.Info("ProvisionDevice() failed (GetPowerResource)", "DeviceID", deviceID, "body", body)
-	}
-
-	if power.PowerStatus == PowerStatusOn {
-		// First we need to send "shutdown".
-		// https://developers.hivelocity.net/reference/post_power_resource
-		_, _, err := c.client.DeviceApi.PostPowerResource(ctx, deviceID, "shutdown", nil) //nolint:bodyclose // Close() gets done in client
-		if errors.As(err, &swaggerErr) {
-			body := string(swaggerErr.Body())
-			log.Info("ProvisionDevice() failed (PostPowerResource)", "DeviceID", deviceID, "body", body)
-		}
-		log.Info("ProvisionDevice() called PostPowerResource shutdown", "DeviceID", deviceID)
-		time.Sleep(30 * time.Second)
-	}
-
 	log.Info("calling ProvisionDevice()", "DeviceID", deviceID, "hostname", opts.Hostname, "OsName", opts.OsName,
 		"script", utils.FirstN(opts.Script, 50),
 		"ForceReload", opts.ForceReload)
 
-	// https://developers.hivelocity.net/reference/put_bare_metal_device_id_resource
-	localVars := hv.BareMetalDevicesApiPutBareMetalDeviceIdResourceOpts{
-		SkipPowerCheck: optional.NewBool(true),
-	}
-
-	device, _, err := c.client.BareMetalDevicesApi.PutBareMetalDeviceIdResource(ctx, deviceID, opts, &localVars) //nolint:bodyclose // Close() gets done in client
+	device, _, err := c.client.BareMetalDevicesApi.PutBareMetalDeviceIdResource(ctx, deviceID, opts, nil) //nolint:bodyclose // Close() gets done in client
 	if errors.As(err, &swaggerErr) {
 		body := string(swaggerErr.Body())
 		log.Info("ProvisionDevice() failed (PutBareMetalDeviceIdResource)", "DeviceID", deviceID, "body", body)
@@ -258,4 +236,9 @@ func checkRateLimit(err error) error {
 		return ErrRateLimitExceeded
 	}
 	return err
+}
+
+func (c *realClient) GetDeviceDump(ctx context.Context, deviceID int32) (hv.DeviceDump, error) {
+	dump, _, err := c.client.DeviceApi.GetDeviceIdResource(ctx, deviceID, nil) //nolint:bodyclose // Close() gets done in client
+	return dump, err
 }

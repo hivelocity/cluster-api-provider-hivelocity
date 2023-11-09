@@ -83,46 +83,14 @@ func releaseOldMachines(ctx context.Context, apiClient *hv.APIClient, deviceType
 	fmt.Printf("resetting labels of all devices which have %s=%s. Found %d devices\n",
 		hvtag.DeviceTagKeyDeviceType, deviceType, len(devicesWithTag))
 	for _, device := range devicesWithTag {
-		err := resetTags(ctx, device, apiClient)
+		fmt.Printf("    resetting labels of device %d\n", device.DeviceId)
+		newTags := hvtag.RemoveEphemeralTags(device.Tags)
+		_, _, err := apiClient.DeviceApi.PutDeviceTagIdResource(ctx, device.DeviceId, hv.DeviceTag{
+			Tags: newTags}, nil)
 		if err != nil {
 			return err
 		}
 	}
 
 	return nil
-}
-
-// resetTags: Remove our labels, but keep DeviceTagKeyPermanentError and DeviceTagKeyDeviceType.
-// And keep other labels.
-func resetTags(ctx context.Context, device hv.BareMetalDevice, apiClient *hv.APIClient) error {
-	fmt.Printf("    resetting labels of device %d\n", device.DeviceId)
-	var newTags []string
-	for _, tag := range device.Tags {
-		if removeTag(tag) {
-			continue
-		}
-		newTags = append(newTags, tag)
-	}
-	_, _, err := apiClient.DeviceApi.PutDeviceTagIdResource(ctx, device.DeviceId, hv.DeviceTag{
-		Tags: newTags}, nil)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-// tag: Something like caphv-cluster-name=hv-guettli
-func removeTag(tag string) bool {
-	if !strings.HasPrefix(tag, "caphv-") {
-		return false
-	}
-	for _, keepPrefix := range []string{
-		string(hvtag.DeviceTagKeyPermanentError),
-		string(hvtag.DeviceTagKeyDeviceType),
-	} {
-		if strings.HasPrefix(tag, keepPrefix) {
-			return false
-		}
-	}
-	return true
 }
