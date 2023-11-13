@@ -136,7 +136,7 @@ func (a *OrderApiService) GetOrderIdResource(ctx context.Context, orderId int32,
 }
 
 /*
-OrderApiService Return a list with all Orders
+OrderApiService Return a list of all In-Progress orders
  * @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
  * @param optional nil or *OrderApiGetOrderInprogressResourceOpts - Optional Parameters:
      * @param "XFields" (optional.String) -  An optional fields mask

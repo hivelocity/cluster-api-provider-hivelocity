@@ -119,7 +119,6 @@ func (sm *SecretManager) claimSecret(ctx context.Context, secret *corev1.Secret,
 func (sm *SecretManager) findSecret(ctx context.Context, key types.NamespacedName) (secret *corev1.Secret, err error) {
 	secret = &corev1.Secret{}
 
-	// Look for secret in the filtered cache
 	err = sm.client.Get(ctx, key, secret)
 	if err == nil {
 		return secret, nil
@@ -135,18 +134,6 @@ func (sm *SecretManager) findSecret(ctx context.Context, key types.NamespacedNam
 	}
 
 	return secret, nil
-}
-
-// ObtainSecret retrieves a Secret and ensures that it has a label that will
-// ensure it is present in the cache (and that we can watch for changes).
-func (sm *SecretManager) ObtainSecret(ctx context.Context, key types.NamespacedName) (*corev1.Secret, error) {
-	secret, err := sm.findSecret(ctx, key)
-	if err != nil {
-		return nil, fmt.Errorf("failed to fetch secret %s in namespace %s: %w", key.Name, key.Namespace, err)
-	}
-	err = sm.claimSecret(ctx, secret, nil, false, false)
-
-	return secret, err
 }
 
 // AcquireSecret retrieves a Secret and ensures that it has a label that will

@@ -33,7 +33,7 @@ The id is optional and if it is necessary must be sent as URL param.
      * @param "ContactId" (optional.String) -  \&quot;ID of Contact to manage Basic Profile\&quot;
      * @param "XFields" (optional.String) -  An optional fields mask
 
-@return BasicProfile
+@return BasicProfileDump
 */
 
 type ProfileApiGetBasicProfileResourceOpts struct {
@@ -41,13 +41,13 @@ type ProfileApiGetBasicProfileResourceOpts struct {
 	XFields   optional.String
 }
 
-func (a *ProfileApiService) GetBasicProfileResource(ctx context.Context, localVarOptionals *ProfileApiGetBasicProfileResourceOpts) (BasicProfile, *http.Response, error) {
+func (a *ProfileApiService) GetBasicProfileResource(ctx context.Context, localVarOptionals *ProfileApiGetBasicProfileResourceOpts) (BasicProfileDump, *http.Response, error) {
 	var (
 		localVarHttpMethod  = strings.ToUpper("Get")
 		localVarPostBody    interface{}
 		localVarFileName    string
 		localVarFileBytes   []byte
-		localVarReturnValue BasicProfile
+		localVarReturnValue BasicProfileDump
 	)
 
 	// create path and map variables
@@ -122,7 +122,7 @@ func (a *ProfileApiService) GetBasicProfileResource(ctx context.Context, localVa
 		}
 
 		if localVarHttpResponse.StatusCode == 200 {
-			var v BasicProfile
+			var v BasicProfileDump
 			err = a.client.decode(&v, localVarBody, localVarHttpResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()
@@ -146,7 +146,7 @@ The id is optional and if it is necessary must be sent as URL param.
      * @param "ContactId" (optional.String) -  \&quot;ID of Contact to manage Profile\&quot;
      * @param "XFields" (optional.String) -  An optional fields mask
 
-@return Profile
+@return ProfileDump
 */
 
 type ProfileApiGetProfileResourceOpts struct {
@@ -154,13 +154,13 @@ type ProfileApiGetProfileResourceOpts struct {
 	XFields   optional.String
 }
 
-func (a *ProfileApiService) GetProfileResource(ctx context.Context, localVarOptionals *ProfileApiGetProfileResourceOpts) (Profile, *http.Response, error) {
+func (a *ProfileApiService) GetProfileResource(ctx context.Context, localVarOptionals *ProfileApiGetProfileResourceOpts) (ProfileDump, *http.Response, error) {
 	var (
 		localVarHttpMethod  = strings.ToUpper("Get")
 		localVarPostBody    interface{}
 		localVarFileName    string
 		localVarFileBytes   []byte
-		localVarReturnValue Profile
+		localVarReturnValue ProfileDump
 	)
 
 	// create path and map variables
@@ -235,7 +235,7 @@ func (a *ProfileApiService) GetProfileResource(ctx context.Context, localVarOpti
 		}
 
 		if localVarHttpResponse.StatusCode == 200 {
-			var v Profile
+			var v ProfileDump
 			err = a.client.decode(&v, localVarBody, localVarHttpResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()
@@ -260,7 +260,7 @@ The id is optional and if it is necessary must be sent as URL param.
      * @param "ContactId" (optional.String) -  \&quot;ID of Contact to manage Profile\&quot;
      * @param "XFields" (optional.String) -  An optional fields mask
 
-@return Profile
+@return ProfileDump
 */
 
 type ProfileApiPutProfileResourceOpts struct {
@@ -268,13 +268,13 @@ type ProfileApiPutProfileResourceOpts struct {
 	XFields   optional.String
 }
 
-func (a *ProfileApiService) PutProfileResource(ctx context.Context, payload ProfileUpdate, localVarOptionals *ProfileApiPutProfileResourceOpts) (Profile, *http.Response, error) {
+func (a *ProfileApiService) PutProfileResource(ctx context.Context, payload ProfileUpdate, localVarOptionals *ProfileApiPutProfileResourceOpts) (ProfileDump, *http.Response, error) {
 	var (
 		localVarHttpMethod  = strings.ToUpper("Put")
 		localVarPostBody    interface{}
 		localVarFileName    string
 		localVarFileBytes   []byte
-		localVarReturnValue Profile
+		localVarReturnValue ProfileDump
 	)
 
 	// create path and map variables
@@ -351,7 +351,7 @@ func (a *ProfileApiService) PutProfileResource(ctx context.Context, payload Prof
 		}
 
 		if localVarHttpResponse.StatusCode == 200 {
-			var v Profile
+			var v ProfileDump
 			err = a.client.decode(&v, localVarBody, localVarHttpResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()

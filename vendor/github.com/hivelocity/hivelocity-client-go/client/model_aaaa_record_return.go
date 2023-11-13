@@ -10,10 +10,10 @@
 package swagger
 
 type AaaaRecordReturn struct {
-	DomainId int32  `json:"domainId"`
+	Address  string `json:"address,omitempty"`
 	Id       int32  `json:"id,omitempty"`
 	Type_    string `json:"type"`
-	Ttl      int32  `json:"ttl"`
 	Name     string `json:"name"`
-	Address  string `json:"address,omitempty"`
+	DomainId int32  `json:"domainId"`
+	Ttl      int32  `json:"ttl"`
 }

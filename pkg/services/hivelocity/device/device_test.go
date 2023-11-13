@@ -20,7 +20,6 @@ package device
 import (
 	"testing"
 
-	"github.com/hivelocity/cluster-api-provider-hivelocity/api/v1alpha1"
 	infrav1 "github.com/hivelocity/cluster-api-provider-hivelocity/api/v1alpha1"
 	"github.com/hivelocity/cluster-api-provider-hivelocity/pkg/scope"
 	mockclient "github.com/hivelocity/cluster-api-provider-hivelocity/pkg/services/hivelocity/client/mock"
@@ -54,7 +53,7 @@ func Test_findAvailableDeviceFromList(t *testing.T) {
 		{
 			description: "check no device selected if device has no caphv-use=allow tag",
 			devices: []hv.BareMetalDevice{
-				mockclient.CaphNotAllowDevice,
+				mockclient.CaphvNotAllowDevice,
 			},
 			deviceType: infrav1.DeviceSelector{
 				MatchLabels: map[string]string{
@@ -82,7 +81,7 @@ func Test_findAvailableDeviceFromList(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.description, func(t *testing.T) {
-			device := findAvailableDeviceFromList(test.devices, test.deviceType, "my-cluster")
+			device, _ := findAvailableDeviceFromList(test.devices, test.deviceType, "my-cluster")
 
 			if test.shouldNil {
 				require.Nil(t, device)
@@ -97,8 +96,8 @@ func Test_findAvailableDeviceFromList(t *testing.T) {
 func TestService_verifyAssociatedDevice(t *testing.T) {
 	service := Service{
 		scope: &scope.MachineScope{
-			ClusterScope: scope.ClusterScope{HivelocityCluster: &v1alpha1.HivelocityCluster{ObjectMeta: metav1.ObjectMeta{Name: "dummy-cluster"}}},
-			HivelocityMachine: &v1alpha1.HivelocityMachine{
+			ClusterScope: scope.ClusterScope{HivelocityCluster: &infrav1.HivelocityCluster{ObjectMeta: metav1.ObjectMeta{Name: "dummy-cluster"}}},
+			HivelocityMachine: &infrav1.HivelocityMachine{
 				ObjectMeta: metav1.ObjectMeta{Name: "dummy-machine"},
 			},
 		},

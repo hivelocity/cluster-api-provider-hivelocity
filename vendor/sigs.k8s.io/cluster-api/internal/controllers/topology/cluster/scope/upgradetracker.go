@@ -21,40 +21,90 @@ import "k8s.io/apimachinery/pkg/util/sets"
 // UpgradeTracker is a helper to capture the upgrade status and make upgrade decisions.
 type UpgradeTracker struct {
 	ControlPlane       ControlPlaneUpgradeTracker
-	MachineDeployments MachineDeploymentUpgradeTracker
+	MachineDeployments WorkerUpgradeTracker
+	MachinePools       WorkerUpgradeTracker
 }
 
 // ControlPlaneUpgradeTracker holds the current upgrade status of the Control Plane.
 type ControlPlaneUpgradeTracker struct {
-	// PendingUpgrade is true if the control plane version needs to be updated. False otherwise.
-	PendingUpgrade bool
+	// IsPendingUpgrade is true if the Control Plane version needs to be updated. False otherwise.
+	// If IsPendingUpgrade is true it also means the Control Plane is not going to pick up the new version
+	// in the current reconcile loop.
+	// Example cases when IsPendingUpgrade is set to true:
+	// - Upgrade is blocked by BeforeClusterUpgrade hook
+	// - Upgrade is blocked because the current ControlPlane is not stable (provisioning OR scaling OR upgrading)
+	// - Upgrade is blocked because any of the current MachineDeployments or MachinePools are upgrading.
+	IsPendingUpgrade bool
 
-	// IsProvisioning is true if the control plane is being provisioned for the first time. False otherwise.
+	// IsProvisioning is true if the current Control Plane is being provisioned for the first time. False otherwise.
 	IsProvisioning bool
 
-	// IsUpgrading is true if the control plane is in the middle of an upgrade.
-	// Note: Refer to control plane contract for definition of upgrading.
+	// IsUpgrading is true if the Control Plane is in the middle of an upgrade.
+	// Note: Refer to Control Plane contract for definition of upgrading.
+	// IsUpgrading is set to true if the current ControlPlane (ControlPlane at the beginning of the reconcile)
+	// is upgrading.
+	// Note: IsUpgrading only represents the current ControlPlane state. If the Control Plane is about to pick up the
+	// version in the reconcile loop IsUpgrading will not be true, because the current ControlPlane is not upgrading,
+	// the desired ControlPlane is.
+	// Also look at: IsStartingUpgrade.
 	IsUpgrading bool
 
-	// IsScaling is true if the control plane is in the middle of a scale operation.
+	// IsStartingUpgrade is true if the Control Plane is picking up the new version in the current reconcile loop.
+	// If IsStartingUpgrade is true it implies that the desired Control Plane version and the current Control Plane
+	// versions are different.
+	IsStartingUpgrade bool
+
+	// IsScaling is true if the current Control Plane is scaling. False otherwise.
+	// IsScaling only represents the state of the current Control Plane. IsScaling does not represent the state
+	// of the desired Control Plane.
+	// Example:
+	// - IsScaling will be true if the current ControlPlane is scaling.
+	// - IsScaling will not be true if the current Control Plane is stable and the reconcile loop is going to scale the Control Plane.
 	// Note: Refer to control plane contract for definition of scaling.
+	// Note: IsScaling will be false if the Control Plane does not support replicas.
 	IsScaling bool
 }
 
-// MachineDeploymentUpgradeTracker holds the current upgrade status and makes upgrade
-// decisions for MachineDeployments.
-type MachineDeploymentUpgradeTracker struct {
-	pendingNames                           sets.Set[string]
-	deferredNames                          sets.Set[string]
-	upgradingNames                         sets.Set[string]
-	rollingOutNames                        sets.Set[string]
-	holdUpgrades                           bool
-	maxMachineDeploymentUpgradeConcurrency int
+// WorkerUpgradeTracker holds the current upgrade status of MachineDeployments or MachinePools.
+type WorkerUpgradeTracker struct {
+	// pendingCreateTopologyNames is the set of MachineDeployment/MachinePool topology names that are newly added to the
+	// Cluster Topology but will not be created in the current reconcile loop.
+	// By marking a MachineDeployment/MachinePool topology as pendingCreate we skip creating the MachineDeployment/MachinePool.
+	// Nb. We use MachineDeployment/MachinePool topology names instead of MachineDeployment/MachinePool names because the new
+	// MachineDeployment/MachinePool names can keep changing for each reconcile loop leading to continuous updates to the
+	// TopologyReconciled condition.
+	pendingCreateTopologyNames sets.Set[string]
+
+	// pendingUpgradeNames is the set of MachineDeployment/MachinePool names that are not going to pick up the new version
+	// in the current reconcile loop.
+	// By marking a MachineDeployment/MachinePool as pendingUpgrade we skip reconciling the MachineDeployment/MachinePool.
+	pendingUpgradeNames sets.Set[string]
+
+	// deferredNames is the set of MachineDeployment/MachinePool names that are not going to pick up the new version
+	// in the current reconcile loop because they are deferred by the user.
+	// Note: If a MachineDeployment/MachinePool is marked as deferred it should also be marked as pendingUpgrade.
+	deferredNames sets.Set[string]
+
+	// upgradingNames is the set of MachineDeployment/MachinePool names that are upgrading. This set contains the names of
+	// MachineDeployments/MachinePools that are currently upgrading and the names of MachineDeployments/MachinePools that
+	// will pick up the upgrade in the current reconcile loop.
+	// Note: This information is used to:
+	// - decide if ControlPlane can be upgraded.
+	// - calculate MachineDeployment/MachinePool upgrade concurrency.
+	// - update TopologyReconciled Condition.
+	// - decide if the AfterClusterUpgrade hook can be called.
+	upgradingNames sets.Set[string]
+
+	// maxUpgradeConcurrency defines the maximum number of MachineDeployments/MachinePools that should be in an
+	// upgrading state. This includes the MachineDeployments/MachinePools that are currently upgrading and the
+	// MachineDeployments/MachinePools that will start the upgrade after the current reconcile loop.
+	maxUpgradeConcurrency int
 }
 
 // UpgradeTrackerOptions contains the options for NewUpgradeTracker.
 type UpgradeTrackerOptions struct {
 	maxMDUpgradeConcurrency int
+	maxMPUpgradeConcurrency int
 }
 
 // UpgradeTrackerOption returns an option for the NewUpgradeTracker function.
@@ -71,6 +121,15 @@ func (m MaxMDUpgradeConcurrency) ApplyToUpgradeTracker(options *UpgradeTrackerOp
 	options.maxMDUpgradeConcurrency = int(m)
 }
 
+// MaxMPUpgradeConcurrency sets the upper limit for the number of Machine Pools that can upgrade
+// concurrently.
+type MaxMPUpgradeConcurrency int
+
+// ApplyToUpgradeTracker applies the given UpgradeTrackerOptions.
+func (m MaxMPUpgradeConcurrency) ApplyToUpgradeTracker(options *UpgradeTrackerOptions) {
+	options.maxMPUpgradeConcurrency = int(m)
+}
+
 // NewUpgradeTracker returns an upgrade tracker with empty tracking information.
 func NewUpgradeTracker(opts ...UpgradeTrackerOption) *UpgradeTracker {
 	options := &UpgradeTrackerOptions{}
@@ -81,103 +140,108 @@ func NewUpgradeTracker(opts ...UpgradeTrackerOption) *UpgradeTracker {
 		// The concurrency should be at least 1.
 		options.maxMDUpgradeConcurrency = 1
 	}
+	if options.maxMPUpgradeConcurrency < 1 {
+		// The concurrency should be at least 1.
+		options.maxMPUpgradeConcurrency = 1
+	}
 	return &UpgradeTracker{
-		MachineDeployments: MachineDeploymentUpgradeTracker{
-			pendingNames:                           sets.Set[string]{},
-			deferredNames:                          sets.Set[string]{},
-			rollingOutNames:                        sets.Set[string]{},
-			upgradingNames:                         sets.Set[string]{},
-			maxMachineDeploymentUpgradeConcurrency: options.maxMDUpgradeConcurrency,
+		MachineDeployments: WorkerUpgradeTracker{
+			pendingCreateTopologyNames: sets.Set[string]{},
+			pendingUpgradeNames:        sets.Set[string]{},
+			deferredNames:              sets.Set[string]{},
+			upgradingNames:             sets.Set[string]{},
+			maxUpgradeConcurrency:      options.maxMDUpgradeConcurrency,
+		},
+		MachinePools: WorkerUpgradeTracker{
+			pendingCreateTopologyNames: sets.Set[string]{},
+			pendingUpgradeNames:        sets.Set[string]{},
+			deferredNames:              sets.Set[string]{},
+			upgradingNames:             sets.Set[string]{},
+			maxUpgradeConcurrency:      options.maxMPUpgradeConcurrency,
 		},
 	}
 }
 
-// MarkRollingOut marks a MachineDeployment as currently rolling out or
-// is about to rollout.
-// NOTE: We are using Rollout because this includes upgrades and also other changes
-// that could imply Machines being created/deleted; in both cases we should wait for
-// the operation to complete before moving to the next step of the Cluster upgrade.
-func (m *MachineDeploymentUpgradeTracker) MarkRollingOut(names ...string) {
-	for _, name := range names {
-		m.rollingOutNames.Insert(name)
-	}
-}
-
-// MarkUpgradingAndRollingOut marks a MachineDeployment as currently upgrading or about to upgrade.
-// NOTE: Marking a MachineDeployment as upgrading also marks it as RollingOut.
-func (m *MachineDeploymentUpgradeTracker) MarkUpgradingAndRollingOut(names ...string) {
+// MarkUpgrading marks a MachineDeployment/MachinePool as currently upgrading or about to upgrade.
+func (m *WorkerUpgradeTracker) MarkUpgrading(names ...string) {
 	for _, name := range names {
 		m.upgradingNames.Insert(name)
-		m.rollingOutNames.Insert(name)
 	}
-}
-
-// RolloutNames returns the list of machine deployments that are rolling out or
-// are about to rollout.
-// Note: This also includes the names of MachineDeployments that are upgrading
-// MachineDeployments are also considered rolling out.
-func (m *MachineDeploymentUpgradeTracker) RolloutNames() []string {
-	return sets.List(m.rollingOutNames)
 }
 
 // UpgradingNames returns the list of machine deployments that are upgrading or
 // are about to upgrade.
-func (m *MachineDeploymentUpgradeTracker) UpgradingNames() []string {
+func (m *WorkerUpgradeTracker) UpgradingNames() []string {
 	return sets.List(m.upgradingNames)
 }
 
-// HoldUpgrades is used to set if any subsequent upgrade operations should be paused,
-// e.g. because a AfterControlPlaneUpgrade hook response asked to do so.
-// If HoldUpgrades is called with `true` then AllowUpgrade would return false.
-func (m *MachineDeploymentUpgradeTracker) HoldUpgrades(val bool) {
-	m.holdUpgrades = val
+// UpgradeConcurrencyReached returns true if the number of MachineDeployments/MachinePools upgrading is at the concurrency limit.
+func (m *WorkerUpgradeTracker) UpgradeConcurrencyReached() bool {
+	return m.upgradingNames.Len() >= m.maxUpgradeConcurrency
 }
 
-// AllowUpgrade returns true if a MachineDeployment is allowed to upgrade,
-// returns false otherwise.
-// Note: If AllowUpgrade returns true the machine deployment will pick up
-// the topology version. This will eventually trigger a machine deployment
-// rollout.
-func (m *MachineDeploymentUpgradeTracker) AllowUpgrade() bool {
-	if m.holdUpgrades {
-		return false
-	}
-	return m.upgradingNames.Len() < m.maxMachineDeploymentUpgradeConcurrency
+// MarkPendingCreate marks a machine deployment topology that is pending to be created.
+// This is generally used to capture machine deployments that are yet to be created
+// because the control plane is not yet stable.
+func (m *WorkerUpgradeTracker) MarkPendingCreate(mdTopologyName string) {
+	m.pendingCreateTopologyNames.Insert(mdTopologyName)
+}
+
+// IsPendingCreate returns true is the MachineDeployment/MachinePool topology is marked as pending create.
+func (m *WorkerUpgradeTracker) IsPendingCreate(mdTopologyName string) bool {
+	return m.pendingCreateTopologyNames.Has(mdTopologyName)
+}
+
+// IsAnyPendingCreate returns true if any of the machine deployments are pending
+// to be created. Returns false, otherwise.
+func (m *WorkerUpgradeTracker) IsAnyPendingCreate() bool {
+	return len(m.pendingCreateTopologyNames) != 0
+}
+
+// PendingCreateTopologyNames returns the list of machine deployment topology names that
+// are pending create.
+func (m *WorkerUpgradeTracker) PendingCreateTopologyNames() []string {
+	return sets.List(m.pendingCreateTopologyNames)
 }
 
 // MarkPendingUpgrade marks a machine deployment as in need of an upgrade.
 // This is generally used to capture machine deployments that have not yet
 // picked up the topology version.
-func (m *MachineDeploymentUpgradeTracker) MarkPendingUpgrade(name string) {
-	m.pendingNames.Insert(name)
+func (m *WorkerUpgradeTracker) MarkPendingUpgrade(name string) {
+	m.pendingUpgradeNames.Insert(name)
+}
+
+// IsPendingUpgrade returns true is the MachineDeployment/MachinePool marked as pending upgrade.
+func (m *WorkerUpgradeTracker) IsPendingUpgrade(name string) bool {
+	return m.pendingUpgradeNames.Has(name)
+}
+
+// IsAnyPendingUpgrade returns true if any of the machine deployments are pending
+// an upgrade. Returns false, otherwise.
+func (m *WorkerUpgradeTracker) IsAnyPendingUpgrade() bool {
+	return len(m.pendingUpgradeNames) != 0
 }
 
 // PendingUpgradeNames returns the list of machine deployment names that
 // are pending an upgrade.
-func (m *MachineDeploymentUpgradeTracker) PendingUpgradeNames() []string {
-	return sets.List(m.pendingNames)
+func (m *WorkerUpgradeTracker) PendingUpgradeNames() []string {
+	return sets.List(m.pendingUpgradeNames)
 }
 
-// PendingUpgrade returns true if any of the machine deployments are pending
-// an upgrade. Returns false, otherwise.
-func (m *MachineDeploymentUpgradeTracker) PendingUpgrade() bool {
-	return len(m.pendingNames) != 0
-}
-
-// MarkDeferredUpgrade marks that the upgrade for a MachineDeployment
+// MarkDeferredUpgrade marks that the upgrade for a MachineDeployment/MachinePool
 // has been deferred.
-func (m *MachineDeploymentUpgradeTracker) MarkDeferredUpgrade(name string) {
+func (m *WorkerUpgradeTracker) MarkDeferredUpgrade(name string) {
 	m.deferredNames.Insert(name)
 }
 
-// DeferredUpgradeNames returns the list of MachineDeployment names for
+// DeferredUpgradeNames returns the list of MachineDeployment/MachinePool names for
 // which the upgrade has been deferred.
-func (m *MachineDeploymentUpgradeTracker) DeferredUpgradeNames() []string {
+func (m *WorkerUpgradeTracker) DeferredUpgradeNames() []string {
 	return sets.List(m.deferredNames)
 }
 
 // DeferredUpgrade returns true if the upgrade has been deferred for any of the
-// MachineDeployments. Returns false, otherwise.
-func (m *MachineDeploymentUpgradeTracker) DeferredUpgrade() bool {
+// MachineDeployments/MachinePools. Returns false, otherwise.
+func (m *WorkerUpgradeTracker) DeferredUpgrade() bool {
 	return len(m.deferredNames) != 0
 }

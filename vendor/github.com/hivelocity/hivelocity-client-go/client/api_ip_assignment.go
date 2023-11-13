@@ -666,6 +666,7 @@ func (a *IPAssignmentApiService) PostIpAssignmentIdClearResource(ctx context.Con
 
 /*
 IPAssignmentApiService Request new assignment
+This endpoint is used to request a new IP Assignment from MyV and the API itself.  It will create a request on Zendesk for Networking support team.
   - @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
   - @param payload
 */

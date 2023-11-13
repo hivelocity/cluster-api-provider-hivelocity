@@ -10,8 +10,8 @@
 package swagger
 
 type OrderGroup struct {
-	Name      string  `json:"name,omitempty"`
+	DeviceIds []int32 `json:"device_ids,omitempty"`
 	Id        int32   `json:"id,omitempty"`
 	SameRack  bool    `json:"same_rack,omitempty"`
-	DeviceIds []int32 `json:"device_ids,omitempty"`
+	Name      string  `json:"name,omitempty"`
 }

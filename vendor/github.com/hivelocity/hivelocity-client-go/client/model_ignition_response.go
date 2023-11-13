@@ -10,7 +10,7 @@
 package swagger
 
 type IgnitionResponse struct {
-	Name     string `json:"name,omitempty"`
 	Id       int32  `json:"id,omitempty"`
 	Contents string `json:"contents,omitempty"`
+	Name     string `json:"name,omitempty"`
 }

@@ -10,13 +10,17 @@
 package swagger
 
 type Location struct {
-	// true|false if edge site.
-	Edge bool `json:"edge,omitempty"`
-	// The unique facility code.
-	Code string `json:"code,omitempty"`
-	// The unique facility name.
-	Title    string            `json:"title,omitempty"`
-	Location *LocationLocation `json:"location,omitempty"`
+	// The unique identifier for a facility
+	Id int32 `json:"id,omitempty"`
 	// true|false if core site.
 	Core bool `json:"core,omitempty"`
+	// Location option IDs of location
+	LocationOptionIds []int32 `json:"location_option_ids,omitempty"`
+	// The unique facility name.
+	Title string `json:"title,omitempty"`
+	// The unique facility code.
+	Code     string            `json:"code,omitempty"`
+	Location *LocationLocation `json:"location,omitempty"`
+	// true|false if edge site.
+	Edge bool `json:"edge,omitempty"`
 }

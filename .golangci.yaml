@@ -6,14 +6,13 @@ linters:
     - bidichk
     - bodyclose
     - containedctx
-    - depguard
+    # - depguard
     - dogsled
     - durationcheck
     - errcheck
     - errchkjson
     - exportloopref
     - gci
-    - goconst
     - gocritic
     - godot
     - gofmt
@@ -75,9 +74,9 @@ linters-settings:
     allow-leading-space: false
     require-specific: true
   staticcheck:
-    go: "1.20"
+    go: "1.21"
   stylecheck:
-    go: "1.20"
+    go: "1.21"
   gosec:
     excludes:
       - G307 # Deferring unsafe method "Close" on type "\*os.File"
@@ -105,7 +104,7 @@ linters-settings:
       - rangeValCopy
       - hugeParam
   unused:
-    go: "1.20"
+    go: "1.21"
 issues:
   max-same-issues: 0
   max-issues-per-linter: 0

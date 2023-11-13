@@ -10,7 +10,7 @@
 package swagger
 
 type OperatingSystem struct {
-	SshKey      bool `json:"sshKey,omitempty"`
 	PostInstall bool `json:"postInstall,omitempty"`
 	CloudInit   bool `json:"cloudInit,omitempty"`
+	SshKey      bool `json:"sshKey,omitempty"`
 }

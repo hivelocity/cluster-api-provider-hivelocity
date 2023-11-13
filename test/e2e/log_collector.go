@@ -44,6 +44,11 @@ func (collector logCollector) CollectMachinePoolLog(ctx context.Context, managem
 	return nil
 }
 
+// CollectInfrastructureLogs implements the CollectInfrastructureLog method of the LogCollector interface.
+func (collector logCollector) CollectInfrastructureLogs(_ context.Context, _ client.Client, _ *clusterv1.Cluster, _ string) error {
+	return nil
+}
+
 // CollectMachineLog implements the CollectMachineLog method of the LogCollector interface.
 func (collector logCollector) CollectMachineLog(_ context.Context, _ client.Client, m *clusterv1.Machine, outputPath string) error {
 	var hostIPAddr string

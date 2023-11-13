@@ -219,20 +219,20 @@ TokenApiService Create a new Public API Token for the current user
  * @param optional nil or *TokenApiPostTokenResourceOpts - Optional Parameters:
      * @param "XFields" (optional.String) -  An optional fields mask
 
-@return PublicApiTokenDump
+@return PublicApiTokenResponsePostDump
 */
 
 type TokenApiPostTokenResourceOpts struct {
 	XFields optional.String
 }
 
-func (a *TokenApiService) PostTokenResource(ctx context.Context, payload PublicApiToken, localVarOptionals *TokenApiPostTokenResourceOpts) (PublicApiTokenDump, *http.Response, error) {
+func (a *TokenApiService) PostTokenResource(ctx context.Context, payload PublicApiToken, localVarOptionals *TokenApiPostTokenResourceOpts) (PublicApiTokenResponsePostDump, *http.Response, error) {
 	var (
 		localVarHttpMethod  = strings.ToUpper("Post")
 		localVarPostBody    interface{}
 		localVarFileName    string
 		localVarFileBytes   []byte
-		localVarReturnValue PublicApiTokenDump
+		localVarReturnValue PublicApiTokenResponsePostDump
 	)
 
 	// create path and map variables
@@ -306,7 +306,7 @@ func (a *TokenApiService) PostTokenResource(ctx context.Context, payload PublicA
 		}
 
 		if localVarHttpResponse.StatusCode == 200 {
-			var v PublicApiTokenDump
+			var v PublicApiTokenResponsePostDump
 			err = a.client.decode(&v, localVarBody, localVarHttpResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()

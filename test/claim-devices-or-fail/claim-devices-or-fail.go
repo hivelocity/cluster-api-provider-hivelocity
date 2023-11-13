@@ -38,7 +38,7 @@ func main() {
 		Key: apiKey,
 	})
 	if len(os.Args) < 2 {
-		log.Fatalln("please provide one more device types (like hvControlPlane)")
+		log.Fatalln("please provide one more device types (like caphvlabel:deviceType=hvControlPlane)")
 	}
 	apiClient := hv.NewAPIClient(hv.NewConfiguration())
 	allDevices, _, err := apiClient.BareMetalDevicesApi.GetBareMetalDeviceResource(ctx, nil)
@@ -46,8 +46,16 @@ func main() {
 		log.Fatalln(err)
 	}
 
+	var done []string
 	for i := 1; i < len(os.Args); i++ {
 		tag := os.Args[i]
+		if slices.Contains(done, tag) {
+			continue
+		}
+		done = append(done, tag)
+		if !strings.HasPrefix(tag, "caphvlabel:deviceType=") {
+			log.Fatalln("tag must start with caphvlabel:deviceType=")
+		}
 		err := releaseOldMachines(ctx, apiClient, tag, allDevices)
 		if err != nil {
 			log.Fatalln(err)
@@ -56,7 +64,8 @@ func main() {
 }
 
 func releaseOldMachines(ctx context.Context, apiClient *hv.APIClient, tag string,
-	allDevices []hv.BareMetalDevice) error {
+	allDevices []hv.BareMetalDevice,
+) error {
 	devicesWithTag := make([]hv.BareMetalDevice, 0)
 
 	for _, device := range allDevices {
@@ -84,7 +93,8 @@ func releaseOldMachines(ctx context.Context, apiClient *hv.APIClient, tag string
 		fmt.Printf("    resetting labels of device %d\n", device.DeviceId)
 		newTags := hvtag.RemoveEphemeralTags(device.Tags)
 		_, _, err := apiClient.DeviceApi.PutDeviceTagIdResource(ctx, device.DeviceId, hv.DeviceTag{
-			Tags: newTags}, nil)
+			Tags: newTags,
+		}, nil)
 		if err != nil {
 			return err
 		}

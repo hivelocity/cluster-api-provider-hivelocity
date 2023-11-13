@@ -24,6 +24,8 @@ type IpAssignment struct {
 	BroadcastIp string `json:"broadcastIp,omitempty"`
 	// Gateway address for this subnet.
 	GatewayIp string `json:"gatewayIp,omitempty"`
+	// DNS resolvers for this subnet. Only applicable to VPS instances.
+	DnsResolvers []string `json:"dnsResolvers,omitempty"`
 	// First address available for use by Devices on this subnet.
 	FirstUsableIp string `json:"firstUsableIp,omitempty"`
 	// Last address available for use by Devices on this subnet.
