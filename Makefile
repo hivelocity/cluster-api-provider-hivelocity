@@ -90,7 +90,7 @@ export KUBEBUILDER_ENVTEST_KUBERNETES_VERSION ?= 1.25.0
 CONTROLLER_GEN := $(abspath $(TOOLS_BIN_DIR)/controller-gen)
 controller-gen: $(CONTROLLER_GEN) ## Build a local copy of controller-gen
 $(CONTROLLER_GEN): # Build controller-gen from tools folder.
-	go install sigs.k8s.io/controller-tools/cmd/controller-gen@v0.12.0
+	go install sigs.k8s.io/controller-tools/cmd/controller-gen@v0.13.0
 
 KUSTOMIZE := $(abspath $(TOOLS_BIN_DIR)/kustomize)
 kustomize: $(KUSTOMIZE) ## Build a local copy of kustomize
@@ -121,7 +121,7 @@ $(CTLPTL):
 CLUSTERCTL := $(abspath $(TOOLS_BIN_DIR)/clusterctl)
 clusterctl: $(CLUSTERCTL) ## Build a local copy of clusterctl
 $(CLUSTERCTL):
-	curl -sSLf https://github.com/kubernetes-sigs/cluster-api/releases/download/v1.4.3/clusterctl-$$(go env GOOS)-$$(go env GOARCH) -o $(CLUSTERCTL)
+	curl -sSLf https://github.com/kubernetes-sigs/cluster-api/releases/download/v1.5.3/clusterctl-$$(go env GOOS)-$$(go env GOARCH) -o $(CLUSTERCTL)
 	chmod a+rx $(CLUSTERCTL)
 
 KIND := $(abspath $(TOOLS_BIN_DIR)/kind)
@@ -200,7 +200,7 @@ install-ccm-in-wl-cluster:
 	helm repo add $(INFRA_PROVIDER) https://hivelocity.github.io/hivelocity-cloud-controller-manager/
 	helm repo update $(INFRA_PROVIDER)
 	KUBECONFIG=$(WORKER_CLUSTER_KUBECONFIG) helm upgrade --install ccm-hivelocity hivelocity/ccm-hivelocity \
-		--version 0.1.2 \
+		--version 0.1.4 \
 		--namespace kube-system \
 		--set secret.name=$(INFRA_PROVIDER) \
 		--set secret.key=$(INFRA_PROVIDER)

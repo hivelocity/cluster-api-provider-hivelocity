@@ -196,7 +196,7 @@ func (r *HivelocityClusterReconciler) reconcileNormal(ctx context.Context, clust
 		if machineType == "" {
 			return ctrl.Result{}, fmt.Errorf("Spec.Template.Spec.Type of HivelocityMachineTemplate %q is empty", name)
 		}
-		hvDevice, err := device.GetFirstFreeDevice(ctx, clusterScope.HVClient, machineType, hvCluster, "")
+		hvDevice, err := device.GetFirstFreeDevice(ctx, clusterScope.HVClient, machineType, hvCluster)
 		if err != nil {
 			return ctrl.Result{}, fmt.Errorf("device.GetFirstFreeDevice() failed: %w", err)
 		}

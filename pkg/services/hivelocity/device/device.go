@@ -108,7 +108,7 @@ func (s *Service) actionAssociateDevice(ctx context.Context) actionResult {
 	log.V(1).Info("Started function")
 
 	device, err := GetFirstFreeDevice(ctx, s.scope.HVClient, s.scope.HivelocityMachine.Spec.Type,
-		s.scope.HivelocityCluster, s.scope.Name())
+		s.scope.HivelocityCluster)
 	if err != nil {
 		s.handleRateLimitExceeded(err, "ListDevices")
 		return actionError{err: fmt.Errorf("failed to find available device: %w", err)}
@@ -150,8 +150,7 @@ func (s *Service) actionAssociateDevice(ctx context.Context) actionResult {
 
 // GetFirstFreeDevice finds the first free matching device. The parameter machineName is optional.
 func GetFirstFreeDevice(ctx context.Context, hvclient hvclient.Client, machineType infrav1.HivelocityDeviceType,
-	hvCluster *infrav1.HivelocityCluster, machineName string,
-) (*hv.BareMetalDevice, error) {
+	hvCluster *infrav1.HivelocityCluster) (*hv.BareMetalDevice, error) {
 	// list all devices
 	devices, err := hvclient.ListDevices(ctx)
 	if err != nil {
