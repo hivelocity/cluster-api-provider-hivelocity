@@ -2248,8 +2248,8 @@ string
 <p>A temporary cluster that is used to provision a Target Management cluster.</p>
 <h3 id="bootstrap-provider"><a class="header" href="#bootstrap-provider">Bootstrap provider</a></h3>
 <p>Refers to a <a href="reference/glossary.html#provider">provider</a> that implements a solution for the <a href="reference/glossary.html#bootstrap">bootstrap</a> process.
-Bootstrap provider’s interaction with Cluster API is based on what is defined in the <a href="reference/glossary.html#contract">Cluster API contract</a>. </p>
-<p>See <a href="reference/glossary.html#cabpk">CABPK</a>. </p>
+Bootstrap provider’s interaction with Cluster API is based on what is defined in the <a href="reference/glossary.html#contract">Cluster API contract</a>.</p>
+<p>See <a href="reference/glossary.html#cabpk">CABPK</a>.</p>
 <h1 id="c"><a class="header" href="#c">C</a></h1>
 <hr />
 <h3 id="caep"><a class="header" href="#caep">CAEP</a></h3>
@@ -2314,6 +2314,9 @@ See <a href="reference/../tasks/experimental-features/cluster-class/index.html">
 <p>See <a href="reference/glossary.html#core-provider">core provider</a></p>
 <h3 id="cluster-api-runtime"><a class="header" href="#cluster-api-runtime">Cluster API Runtime</a></h3>
 <p>The Cluster API execution model, a set of controllers cooperating in managing the Kubernetes cluster lifecycle.</p>
+<h3 id="cluster-infrastructure"><a class="header" href="#cluster-infrastructure">Cluster Infrastructure</a></h3>
+<p>or <strong>Kubernetes Cluster Infrastructure</strong></p>
+<p>Defines the <strong>infrastructure that supports a Kubernetes cluster</strong>, like e.g. VPC, security groups, load balancers, etc. Please note that in the context of managed Kubernetes some of those components are going to be provided by the corresponding abstraction for a specific Cloud provider (EKS, OKE, AKS etc), and thus Cluster API should not take care of managing a subset or all those components.</p>
 <h3 id="contract"><a class="header" href="#contract">Contract</a></h3>
 <p>Or <strong>Cluster API contract</strong></p>
 <p>Defines a set of rules a <a href="reference/glossary.html#provider">provider</a> is expected to comply with in order to interact with Cluster API.
@@ -2329,7 +2332,7 @@ Those rules can be in the form of CustomResourceDefinition (CRD) fields and/or e
 Control plane provider’s interaction with Cluster API is based on what is defined in the <a href="reference/glossary.html#contract">Cluster API contract</a>.</p>
 <p>See <a href="reference/glossary.html#kcp">KCP</a>.</p>
 <h3 id="core-provider"><a class="header" href="#core-provider">Core provider</a></h3>
-<p>Refers to a <a href="reference/glossary.html#provider">provider</a> that implements Cluster API core controllers; if you 
+<p>Refers to a <a href="reference/glossary.html#provider">provider</a> that implements Cluster API core controllers; if you
 consider that the first project that must be deployed in a management Cluster is Cluster API itself, it should be clear why
 the Cluster API project is also referred to as the core provider.</p>
 <p>See <a href="reference/glossary.html#cluster-api">CAPI</a>.</p>
@@ -2353,7 +2356,7 @@ the Cluster API project is also referred to as the core provider.</p>
 <h1 id="i"><a class="header" href="#i">I</a></h1>
 <hr />
 <h3 id="infrastructure-provider"><a class="header" href="#infrastructure-provider">Infrastructure provider</a></h3>
-<p>Refers to a <a href="reference/glossary.html#provider">provider</a> that implements provisioning of infrastructure/computational resources required by 
+<p>Refers to a <a href="reference/glossary.html#provider">provider</a> that implements provisioning of infrastructure/computational resources required by
 the Cluster or by Machines (e.g. VMs, networking, etc.).
 Infrastructure provider’s interaction with Cluster API is based on what is defined in the <a href="reference/glossary.html#contract">Cluster API contract</a>.</p>
 <p>Clouds infrastructure providers include AWS, Azure, or Google; while VMware, MAAS, or metal3.io can be defined as bare metal providers.
@@ -2396,6 +2399,8 @@ IPAM provider’s interaction with Cluster API is based on the <code>IPAddressCl
 <p>See also: <a href="reference/glossary.html#server">Server</a></p>
 <h3 id="manage-a-cluster"><a class="header" href="#manage-a-cluster">Manage a cluster</a></h3>
 <p>Perform create, scale, upgrade, or destroy operations on the cluster.</p>
+<h3 id="managed-kubernetes"><a class="header" href="#managed-kubernetes">Managed Kubernetes</a></h3>
+<p>Managed Kubernetes refers to any Kubernetes cluster provisioning and maintenance abstraction, usually exposed as an API, that is natively available in a Cloud provider. For example: <a href="https://aws.amazon.com/eks/">EKS</a>, <a href="https://www.oracle.com/cloud/cloud-native/container-engine-kubernetes/">OKE</a>, <a href="https://azure.microsoft.com/en-us/products/kubernetes-service">AKS</a>, <a href="https://cloud.google.com/kubernetes-engine">GKE</a>, <a href="https://www.ibm.com/cloud/kubernetes-service">IBM Cloud Kubernetes Service</a>, <a href="https://www.digitalocean.com/products/kubernetes">DOKS</a>, and many more throughout the Kubernetes Cloud Native ecosystem.</p>
 <h3 id="managed-topology"><a class="header" href="#managed-topology">Managed Topology</a></h3>
 <p>See <a href="reference/glossary.html#topology">Topology</a></p>
 <h3 id="management-cluster"><a class="header" href="#management-cluster">Management cluster</a></h3>
