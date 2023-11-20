@@ -75,7 +75,7 @@ func (r *HivelocityMachineReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		return ctrl.Result{}, err
 	}
 
-	log = log.WithValues("HivelocityMachine", klog.KObj(hivelocityMachine))
+	log = log.WithValues("HivelocityMachine", klog.KObj(hivelocityMachine), "providerID", hivelocityMachine.Spec.ProviderID)
 
 	// Fetch the Machine.
 	machine, err := util.GetOwnerMachine(ctx, r.Client, hivelocityMachine.ObjectMeta)
