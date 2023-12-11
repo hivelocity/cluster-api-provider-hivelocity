@@ -347,6 +347,7 @@ var _ = Describe("RemoveEphemeralTags", func() {
 			// non-ephemeral (keep)
 			DeviceTagKeyDeviceType.Prefix() + "my-device-type",
 			DeviceTagKeyPermanentError.Prefix() + "my-permantent-error",
+			DeviceTagKeyCAPHVUseAllowed.Prefix() + "allow",
 
 			// remove these:
 			DeviceTagKeyCluster.Prefix() + "my-cluster",
@@ -356,6 +357,7 @@ var _ = Describe("RemoveEphemeralTags", func() {
 		Expect(newTags).To(Equal([]string{
 			"caphv-device-type=my-device-type",
 			"caphv-permanent-error=my-permantent-error",
+			"caphv-use=allow",
 			"some-other-tag"}))
 	})
 })

@@ -43,6 +43,9 @@ const (
 	// DeviceTagKeyPermanentError is the key for machines which need a manual reset by a Hivelocity admin.
 	DeviceTagKeyPermanentError DeviceTagKey = "caphv-permanent-error"
 
+	// DeviceTagKeyClusterUse is the key to allow device use by CAPI cluster.
+	DeviceTagKeyCAPHVUseAllowed DeviceTagKey = "caphv-use"
+
 	// Attention: If you add a new DeviceTagKey, then extend the method IsValid()!
 )
 
@@ -72,7 +75,8 @@ func (key DeviceTagKey) IsValid() bool {
 		key == DeviceTagKeyCluster ||
 		key == DeviceTagKeyDeviceType ||
 		key == DeviceTagKeyMachineType ||
-		key == DeviceTagKeyPermanentError
+		key == DeviceTagKeyPermanentError ||
+		key == DeviceTagKeyCAPHVUseAllowed
 }
 
 // DeviceTag defines the object that represents a key-value pair that is stored as tag of Hivelocity devices.
@@ -140,6 +144,16 @@ func PermanentErrorTagFromList(tagList []string) (DeviceTag, error) {
 	return DeviceTagFromList(DeviceTagKeyPermanentError, tagList)
 }
 
+// DeviceUsableByCAPI returns if cluster can use the device.
+func DeviceUsableByCAPI(tagList []string) bool {
+	deviceTag, err := DeviceTagFromList(DeviceTagKeyCAPHVUseAllowed, tagList)
+	if err != nil {
+		return false
+	}
+
+	return deviceTag.Key == DeviceTagKeyCAPHVUseAllowed && deviceTag.Value == "allow"
+}
+
 // deviceTagFromString takes the tag of a HV device and returns a DeviceTag or an error if it is invalid.
 func deviceTagFromString(tagString string) (DeviceTag, error) {
 	tagElements := strings.Split(tagString, "=")
@@ -201,6 +215,7 @@ func isEphemeralTag(tag string) bool {
 	for _, keepPrefix := range []string{
 		string(DeviceTagKeyPermanentError),
 		string(DeviceTagKeyDeviceType),
+		string(DeviceTagKeyCAPHVUseAllowed),
 	} {
 		if strings.HasPrefix(tag, keepPrefix+"=") {
 			return false
