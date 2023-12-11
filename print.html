@@ -280,6 +280,7 @@ need to reset the machine.</p>
 <p>You don’t want existing machines in your account to get re-provisioned to cluster nodes :-)</p>
 <p>When starting a cluster you define a worker-machine-type and a control-plane-machine-type. Both values can be equal, when you don’t want to differentiate between both types.</p>
 <p>Before you create your cluster you need to tag the devices accordingly.</p>
+<p>The devices must have <code>caphv-use=allow</code> tag so that the controller can use them.</p>
 <p>For example you set tags “caphv-device-type=hvControlPlane” on all machines which should become control planes, and “caphv-device-type=hvWorker” on all machines which should become worker nodes.</p>
 <p>You can use the web-GUI of Hivelocity for this.</p>
 <p>Then the CAPHV controller is able to select machines, and then provision them to become Kubernetes nodes.</p>
@@ -423,10 +424,10 @@ the user or a third party controller.</p>
 </code></pre>
 <div style="break-before: page; page-break-before: always;"></div><p> # Setup a Development Environment</p>
 <h2 id="tagging-machines"><a class="header" href="#tagging-machines">Tagging Machines</a></h2>
-<p>First you need to tag machines, so that the CAPHV controller can select and provision them.</p>
+<p>First you need to tag machines, so that the CAPHV controller can select and provision them. The devices must have <code>caphv-use=allow</code> tag so that the controller can use them.</p>
 <p>See <a href="developer/../topics/provisioning-machines.html">Provisioning Machines</a> for more about this.</p>
 <p><code>make tilt-up</code> and other Makefile targets call <code>go run ./test/claim-devices-or-fail</code> to claim all devices
-with a particular tag. But be careful, since all machines with this tag will get all existing tags removed. 
+with a particular tag. But be careful, since all machines with this tag will get all existing tags removed.
 Don’t accidentally “free” running machines this way.</p>
 <h2 id="ssh-key"><a class="header" href="#ssh-key">SSH-Key</a></h2>
 <p>The machines, which get provisioned by CAPHV have a SSH public key installed, so that you can connect

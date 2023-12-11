@@ -149,10 +149,10 @@
                     <main>
                         <p> # Setup a Development Environment</p>
 <h2 id="tagging-machines"><a class="header" href="#tagging-machines">Tagging Machines</a></h2>
-<p>First you need to tag machines, so that the CAPHV controller can select and provision them.</p>
+<p>First you need to tag machines, so that the CAPHV controller can select and provision them. The devices must have <code>caphv-use=allow</code> tag so that the controller can use them.</p>
 <p>See <a href="../topics/provisioning-machines.html">Provisioning Machines</a> for more about this.</p>
 <p><code>make tilt-up</code> and other Makefile targets call <code>go run ./test/claim-devices-or-fail</code> to claim all devices
-with a particular tag. But be careful, since all machines with this tag will get all existing tags removed. 
+with a particular tag. But be careful, since all machines with this tag will get all existing tags removed.
 Don’t accidentally “free” running machines this way.</p>
 <h2 id="ssh-key"><a class="header" href="#ssh-key">SSH-Key</a></h2>
 <p>The machines, which get provisioned by CAPHV have a SSH public key installed, so that you can connect
