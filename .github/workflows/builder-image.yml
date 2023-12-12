@@ -29,5 +29,6 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           file: ./images/builder/Dockerfile
+          context: ./images/builder
           push: true
           tags: ghcr.io/hivelocity/caphv-builder:0.1.0
