@@ -311,7 +311,6 @@ func hasTimedOut(lastUpdated *metav1.Time, timeout time.Duration) bool {
 
 // actionVerifyShutdown makes sure that the device is shut down.
 func (s *Service) actionVerifyShutdown(ctx context.Context) actionResult {
-
 	deviceID, err := s.scope.HivelocityMachine.DeviceIDFromProviderID()
 	if err != nil {
 		return actionError{err: fmt.Errorf("[actionVerifyShutdown] ProviderIDToDeviceID failed: %w", err)}
@@ -450,7 +449,8 @@ func (s *Service) setReloadingTooLongTag(ctx context.Context, deviceID int32, la
 }
 
 func (s *Service) getPowerAndReloadingState(ctx context.Context, deviceID int32) (
-	isReloading bool, isPoweredOn bool, err error) {
+	isReloading bool, isPoweredOn bool, err error,
+) {
 	dump, err := s.scope.HVClient.GetDeviceDump(ctx, deviceID)
 	if err != nil {
 		return false, false, fmt.Errorf("[getPowerAndReloadingState] GetDeviceDump failed: %d %w", deviceID, err)

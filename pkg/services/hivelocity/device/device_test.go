@@ -20,7 +20,6 @@ package device
 import (
 	"testing"
 
-	"github.com/hivelocity/cluster-api-provider-hivelocity/api/v1alpha1"
 	infrav1 "github.com/hivelocity/cluster-api-provider-hivelocity/api/v1alpha1"
 	"github.com/hivelocity/cluster-api-provider-hivelocity/pkg/scope"
 	mockclient "github.com/hivelocity/cluster-api-provider-hivelocity/pkg/services/hivelocity/client/mock"
@@ -97,8 +96,8 @@ func Test_findAvailableDeviceFromList(t *testing.T) {
 func TestService_verifyAssociatedDevice(t *testing.T) {
 	service := Service{
 		scope: &scope.MachineScope{
-			ClusterScope: scope.ClusterScope{HivelocityCluster: &v1alpha1.HivelocityCluster{ObjectMeta: metav1.ObjectMeta{Name: "dummy-cluster"}}},
-			HivelocityMachine: &v1alpha1.HivelocityMachine{
+			ClusterScope: scope.ClusterScope{HivelocityCluster: &infrav1.HivelocityCluster{ObjectMeta: metav1.ObjectMeta{Name: "dummy-cluster"}}},
+			HivelocityMachine: &infrav1.HivelocityMachine{
 				ObjectMeta: metav1.ObjectMeta{Name: "dummy-machine"},
 			},
 		},

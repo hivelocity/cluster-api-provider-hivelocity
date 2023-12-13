@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/go-logr/logr"
 	infrav1 "github.com/hivelocity/cluster-api-provider-hivelocity/api/v1alpha1"
 	"github.com/hivelocity/cluster-api-provider-hivelocity/pkg/scope"
 	secretutil "github.com/hivelocity/cluster-api-provider-hivelocity/pkg/secrets"
@@ -40,6 +39,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
@@ -215,26 +215,26 @@ func (r *HivelocityMachineReconciler) SetupWithManager(ctx context.Context, mgr 
 		For(&infrav1.HivelocityMachine{}).
 		WithEventFilter(predicates.ResourceNotPausedAndHasFilterLabel(log, r.WatchFilterValue)).
 		Watches(
-			&source.Kind{Type: &clusterv1.Machine{}},
+			&clusterv1.Machine{},
 			handler.EnqueueRequestsFromMapFunc(util.MachineToInfrastructureMapFunc(infrav1.GroupVersion.WithKind("HivelocityMachine"))),
 		).
 		Watches(
-			&source.Kind{Type: &infrav1.HivelocityCluster{}},
-			handler.EnqueueRequestsFromMapFunc(r.HivelocityClusterToHivelocityMachines(ctx, log)),
+			&infrav1.HivelocityCluster{},
+			handler.EnqueueRequestsFromMapFunc(r.HivelocityClusterToHivelocityMachines(ctx)),
 		).
 		Build(r)
 	if err != nil {
 		return fmt.Errorf("error creating controller: %w", err)
 	}
 
-	clusterToObjectFunc, err := util.ClusterToObjectsMapper(r.Client, &infrav1.HivelocityMachineList{}, mgr.GetScheme())
+	clusterToObjectFunc, err := util.ClusterToTypedObjectsMapper(r.Client, &infrav1.HivelocityMachineList{}, mgr.GetScheme())
 	if err != nil {
 		return fmt.Errorf("failed to create mapper for Cluster to HivelocityMachines: %w", err)
 	}
 
 	// Add a watch on clusterv1.Cluster object for unpause & ready notifications.
 	if err := c.Watch(
-		&source.Kind{Type: &clusterv1.Cluster{}},
+		source.Kind(mgr.GetCache(), &clusterv1.Cluster{}),
 		handler.EnqueueRequestsFromMapFunc(clusterToObjectFunc),
 		predicates.ClusterUnpausedAndInfrastructureReady(log),
 	); err != nil {
@@ -246,9 +246,11 @@ func (r *HivelocityMachineReconciler) SetupWithManager(ctx context.Context, mgr 
 
 // HivelocityClusterToHivelocityMachines is a handler.ToRequestsFunc to be used to enqeue requests for reconciliation
 // of HivelocityMachines.
-func (r *HivelocityMachineReconciler) HivelocityClusterToHivelocityMachines(ctx context.Context, log logr.Logger) handler.MapFunc {
-	return func(o client.Object) []ctrl.Request {
+func (r *HivelocityMachineReconciler) HivelocityClusterToHivelocityMachines(_ context.Context) handler.MapFunc {
+	return func(ctx context.Context, o client.Object) []ctrl.Request {
 		result := []ctrl.Request{}
+
+		log := log.FromContext(ctx)
 
 		c, ok := o.(*infrav1.HivelocityCluster)
 		if !ok {

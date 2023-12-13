@@ -6,14 +6,13 @@ linters:
     - bidichk
     - bodyclose
     - containedctx
-    - depguard
+    # - depguard
     - dogsled
     - durationcheck
     - errcheck
     - errchkjson
     - exportloopref
     - gci
-    - goconst
     - gocritic
     - godot
     - gofmt

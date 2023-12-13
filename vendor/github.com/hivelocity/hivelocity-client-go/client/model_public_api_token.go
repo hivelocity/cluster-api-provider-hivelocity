@@ -9,7 +9,13 @@
 
 package swagger
 
+import (
+	"time"
+)
+
 type PublicApiToken struct {
-	Name        string            `json:"name,omitempty"`
 	IpAddresses *PublicApiTokenIp `json:"ipAddresses,omitempty"`
+	// Token expiration datetime in Unix time format.
+	TimeExpiration time.Time `json:"timeExpiration,omitempty"`
+	Name           string    `json:"name,omitempty"`
 }

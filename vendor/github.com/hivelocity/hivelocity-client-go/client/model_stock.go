@@ -10,66 +10,72 @@
 package swagger
 
 type Stock struct {
+	// Additional semi-annual fee for this `product_id` in this `data_center`.
+	SemiAnnuallyLocationPremium float32 `json:"semi_annually_location_premium,omitempty"`
+	// Human readable networking specs in the format: Free Outbound Transfer / NIC Size
+	ProductBandwidth string `json:"product_bandwidth,omitempty"`
+	// Price per 3 year period (36 months).
+	ProductTriennialPrice float32 `json:"product_triennial_price,omitempty"`
+	// JSON CPU info for cores, threads, sockets, and vCPUs.
+	ProcessorInfo interface{} `json:"processor_info,omitempty"`
+	// Orders for the periods in the array will fail. Possible values: hourly|monthly|quarterly|semi-annually|biennial|triennial
+	ProductDisabledBillingPeriods []string `json:"product_disabled_billing_periods,omitempty"`
+	// true|false. If SPS product is VPS type
+	IsVps bool `json:"is_vps,omitempty"`
+	// true|false. If product is SPS
+	IsSps bool `json:"is_sps,omitempty"`
+	// Human readable GPU specs.
+	ProductGpu string `json:"product_gpu,omitempty"`
+	// Additional triennial fee for this `product_id` in this `data_center`.
+	TriennialLocationPremium float32 `json:"triennial_location_premium,omitempty"`
+	// Price per quarter (3 months).
+	ProductQuarterlyPrice float32 `json:"product_quarterly_price,omitempty"`
 	// Human readable memory specs.
 	ProductMemory string `json:"product_memory,omitempty"`
-	// Additional hourly fee for this `product_id` in this `data_center`.
-	HourlyLocationPremium float32 `json:"hourly_location_premium,omitempty"`
+	// Price per half year (6 months).
+	ProductSemiAnnuallyPrice float32 `json:"product_semi_annually_price,omitempty"`
 	// true|false if edge site.
 	Edge bool `json:"edge,omitempty"`
-	// The unique ID of this product.
-	ProductId int32 `json:"product_id,omitempty"`
+	// Retail price of product. Use with `product_on_sale`.
+	ProductOriginalPrice float32 `json:"product_original_price,omitempty"`
+	// Price per month.
+	ProductMonthlyPrice float32 `json:"product_monthly_price,omitempty"`
+	// Additional quarterly fee for this `product_id` in this `data_center`.
+	QuarterlyLocationPremium float32 `json:"quarterly_location_premium,omitempty"`
+	// true|false if core site.
+	Core bool `json:"core,omitempty"`
+	// Additional hourly fee for this `product_id` in this `data_center`.
+	HourlyLocationPremium float32 `json:"hourly_location_premium,omitempty"`
 	// *DEPRECATED*.
 	ProductDisplayPrice float32 `json:"product_display_price,omitempty"`
-	// available|limited|unavailable. Limited denotes minimal stock.
-	Stock string `json:"stock,omitempty"`
-	// Human readable drive specs. Can include multiple drives.
-	ProductDrive string `json:"product_drive,omitempty"`
-	// Additional monthly fee for this `product_id` in this `data_center`.
-	MonthlyLocationPremium float32 `json:"monthly_location_premium,omitempty"`
+	// Price per hour.
+	ProductHourlyPrice float32 `json:"product_hourly_price,omitempty"`
+	// Additional biennial fee for this `product_id` in this `data_center`.
+	BiennialLocationPremium float32 `json:"biennial_location_premium,omitempty"`
 	// Human readable CPU specs.
 	ProductCpu string `json:"product_cpu,omitempty"`
 	// Additional annual fee for this `product_id` in this `data_center`.
 	AnnuallyLocationPremium float32 `json:"annually_location_premium,omitempty"`
-	// JSON CPU info for cores, threads, sockets, and vCPUs.
-	ProcessorInfo interface{} `json:"processor_info,omitempty"`
-	// Price per month.
-	ProductMonthlyPrice float32 `json:"product_monthly_price,omitempty"`
-	// Price per hour.
-	ProductHourlyPrice float32 `json:"product_hourly_price,omitempty"`
-	// The unique name of this product.
-	ProductName string `json:"product_name,omitempty"`
-	// Price per 3 year period (36 months).
-	ProductTriennialPrice float32 `json:"product_triennial_price,omitempty"`
 	// Human readable CPU core and thread info in HTML format.
 	ProductCpuCores string `json:"product_cpu_cores,omitempty"`
-	// Price per half year (6 months).
-	ProductSemiAnnuallyPrice float32 `json:"product_semi_annually_price,omitempty"`
-	// Human readable networking specs in the format: Free Outbound Transfer / NIC Size
-	ProductBandwidth string `json:"product_bandwidth,omitempty"`
-	// Human readable GPU specs.
-	ProductGpu string `json:"product_gpu,omitempty"`
+	// available|limited|unavailable. Limited denotes minimal stock.
+	Stock string `json:"stock,omitempty"`
+	// Location option ID for datacenter
+	LocationOptionId int32 `json:"location_option_id,omitempty"`
 	// A facility code. For example `NYC1`.
 	DataCenter string `json:"data_center,omitempty"`
-	// Price per quarter (3 months).
-	ProductQuarterlyPrice float32 `json:"product_quarterly_price,omitempty"`
-	// Retail price of product. Use with `product_on_sale`.
-	ProductOriginalPrice float32 `json:"product_original_price,omitempty"`
-	// Orders for the periods in the array will fail. Possible values: hourly|monthly|quarterly|semi-annually|biennial|triennial
-	ProductDisabledBillingPeriods []string `json:"product_disabled_billing_periods,omitempty"`
+	// Additional monthly fee for this `product_id` in this `data_center`.
+	MonthlyLocationPremium float32 `json:"monthly_location_premium,omitempty"`
 	// true|false. Use with `product_original_price`.
 	ProductOnSale bool `json:"product_on_sale,omitempty"`
-	// Additional semi-annual fee for this `product_id` in this `data_center`.
-	SemiAnnuallyLocationPremium float32 `json:"semi_annually_location_premium,omitempty"`
-	// Additional biennial fee for this `product_id` in this `data_center`.
-	BiennialLocationPremium float32 `json:"biennial_location_premium,omitempty"`
-	// Additional quarterly fee for this `product_id` in this `data_center`.
-	QuarterlyLocationPremium float32 `json:"quarterly_location_premium,omitempty"`
-	// Price per year (12 months).
-	ProductAnnuallyPrice float32 `json:"product_annually_price,omitempty"`
-	// true|false if core site.
-	Core bool `json:"core,omitempty"`
 	// Price per 2 year period (24 months).
 	ProductBiennialPrice float32 `json:"product_biennial_price,omitempty"`
-	// Additional triennial fee for this `product_id` in this `data_center`.
-	TriennialLocationPremium float32 `json:"triennial_location_premium,omitempty"`
+	// The unique name of this product.
+	ProductName string `json:"product_name,omitempty"`
+	// Price per year (12 months).
+	ProductAnnuallyPrice float32 `json:"product_annually_price,omitempty"`
+	// Human readable drive specs. Can include multiple drives.
+	ProductDrive string `json:"product_drive,omitempty"`
+	// The unique ID of this product.
+	ProductId int32 `json:"product_id,omitempty"`
 }

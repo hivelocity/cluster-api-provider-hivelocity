@@ -33,20 +33,20 @@ ProductApiService Get product operating systems
  * @param optional nil or *ProductApiGetProductOperatingSystemsResourceOpts - Optional Parameters:
      * @param "XFields" (optional.String) -  An optional fields mask
 
-@return []Option
+@return []OptionDump
 */
 
 type ProductApiGetProductOperatingSystemsResourceOpts struct {
 	XFields optional.String
 }
 
-func (a *ProductApiService) GetProductOperatingSystemsResource(ctx context.Context, productId int32, localVarOptionals *ProductApiGetProductOperatingSystemsResourceOpts) ([]Option, *http.Response, error) {
+func (a *ProductApiService) GetProductOperatingSystemsResource(ctx context.Context, productId int32, localVarOptionals *ProductApiGetProductOperatingSystemsResourceOpts) ([]OptionDump, *http.Response, error) {
 	var (
 		localVarHttpMethod  = strings.ToUpper("Get")
 		localVarPostBody    interface{}
 		localVarFileName    string
 		localVarFileBytes   []byte
-		localVarReturnValue []Option
+		localVarReturnValue []OptionDump
 	)
 
 	// create path and map variables
@@ -119,7 +119,7 @@ func (a *ProductApiService) GetProductOperatingSystemsResource(ctx context.Conte
 		}
 
 		if localVarHttpResponse.StatusCode == 200 {
-			var v []Option
+			var v []OptionDump
 			err = a.client.decode(&v, localVarBody, localVarHttpResponse.Header.Get("Content-Type"))
 			if err != nil {
 				newErr.error = err.Error()

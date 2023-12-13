@@ -10,5 +10,8 @@
 package swagger
 
 type TotalActiveCredit struct {
+	// Whether credits are automatically being applied to new orders
+	AutoApply bool `json:"autoApply,omitempty"`
+	// The total active amount of credit available on the client account
 	TotalActive float32 `json:"totalActive,omitempty"`
 }

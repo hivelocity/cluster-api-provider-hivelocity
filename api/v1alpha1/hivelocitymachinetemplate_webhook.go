@@ -57,33 +57,33 @@ type HivelocityMachineTemplateWebhook struct{}
 var _ webhook.CustomValidator = &HivelocityMachineTemplateWebhook{}
 
 // ValidateCreate implements webhook.CustomValidator so a webhook will be registered for the type.
-func (r *HivelocityMachineTemplateWebhook) ValidateCreate(_ context.Context, obj runtime.Object) error {
+func (r *HivelocityMachineTemplateWebhook) ValidateCreate(_ context.Context, obj runtime.Object) (admission.Warnings, error) {
 	newHivelocityMachine, ok := obj.(*HivelocityMachineTemplate)
 	if !ok {
-		return apierrors.NewBadRequest(fmt.Sprintf("expected a HivelocityMachineTemplate but got a %T", obj))
+		return nil, apierrors.NewBadRequest(fmt.Sprintf("expected a HivelocityMachineTemplate but got a %T", obj))
 	}
 
 	hivelocitymachinetemplatelog.V(1).Info("validate create", "name", newHivelocityMachine)
-	return nil
+	return nil, nil
 }
 
 // ValidateUpdate implements webhook.CustomValidator so a webhook will be registered for the type.
-func (r *HivelocityMachineTemplateWebhook) ValidateUpdate(ctx context.Context, oldRaw runtime.Object, newRaw runtime.Object) error {
+func (r *HivelocityMachineTemplateWebhook) ValidateUpdate(ctx context.Context, oldRaw runtime.Object, newRaw runtime.Object) (admission.Warnings, error) {
 	newHivelocityMachineTemplate, ok := newRaw.(*HivelocityMachineTemplate)
 	if !ok {
-		return apierrors.NewBadRequest(fmt.Sprintf("expected a HivelocityMachineTemplate but got a %T", newRaw))
+		return nil, apierrors.NewBadRequest(fmt.Sprintf("expected a HivelocityMachineTemplate but got a %T", newRaw))
 	}
 
 	hivelocitymachinetemplatelog.V(1).Info("validate update", "name", newHivelocityMachineTemplate.Name)
 
 	oldHivelocityMachineTemplate, ok := oldRaw.(*HivelocityMachineTemplate)
 	if !ok {
-		return apierrors.NewBadRequest(fmt.Sprintf("expected a HivelocityMachineTemplate but got a %T", oldRaw))
+		return nil, apierrors.NewBadRequest(fmt.Sprintf("expected a HivelocityMachineTemplate but got a %T", oldRaw))
 	}
 
 	req, err := admission.RequestFromContext(ctx)
 	if err != nil {
-		return apierrors.NewBadRequest(fmt.Sprintf("expected a admission.Request inside context: %v", err))
+		return nil, apierrors.NewBadRequest(fmt.Sprintf("expected a admission.Request inside context: %v", err))
 	}
 
 	var allErrs field.ErrorList
@@ -92,10 +92,10 @@ func (r *HivelocityMachineTemplateWebhook) ValidateUpdate(ctx context.Context, o
 		allErrs = append(allErrs, field.Invalid(field.NewPath("spec"), newHivelocityMachineTemplate, "HivelocityMachineTemplate.Spec is immutable"))
 	}
 
-	return aggregateObjErrors(newHivelocityMachineTemplate.GroupVersionKind().GroupKind(), newHivelocityMachineTemplate.Name, allErrs)
+	return nil, aggregateObjErrors(newHivelocityMachineTemplate.GroupVersionKind().GroupKind(), newHivelocityMachineTemplate.Name, allErrs)
 }
 
 // ValidateDelete implements webhook.CustomValidator so a webhook will be registered for the type.
-func (r *HivelocityMachineTemplateWebhook) ValidateDelete(_ context.Context, _ runtime.Object) error {
-	return nil
+func (r *HivelocityMachineTemplateWebhook) ValidateDelete(_ context.Context, _ runtime.Object) (admission.Warnings, error) {
+	return nil, nil
 }

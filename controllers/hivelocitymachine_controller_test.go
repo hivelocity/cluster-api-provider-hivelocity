@@ -28,7 +28,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/cluster-api/util/conditions"
 	"sigs.k8s.io/cluster-api/util/patch"
@@ -185,7 +185,7 @@ var _ = Describe("HivelocityMachineReconciler", func() {
 				ph, err := patch.NewHelper(capiMachine, testEnv)
 				Expect(err).ShouldNot(HaveOccurred())
 				capiMachine.Spec.Bootstrap = clusterv1.Bootstrap{
-					DataSecretName: pointer.String("bootstrap-secret"),
+					DataSecretName: ptr.To[string]("bootstrap-secret"),
 				}
 				return ph.Patch(ctx, capiMachine, patch.WithStatusObservedGeneration{})
 			}, timeout, time.Second).Should(BeNil())
@@ -316,7 +316,7 @@ var _ = Describe("Hivelocity secret", func() {
 				},
 				FailureDomain: &defaultFailureDomain,
 				Bootstrap: clusterv1.Bootstrap{
-					DataSecretName: pointer.String("bootstrap-secret"),
+					DataSecretName: ptr.To[string]("bootstrap-secret"),
 				},
 			},
 		}

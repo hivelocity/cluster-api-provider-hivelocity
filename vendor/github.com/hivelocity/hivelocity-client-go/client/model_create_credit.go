@@ -10,6 +10,8 @@
 package swagger
 
 type CreateCredit struct {
-	Amount        float32 `json:"amount,omitempty"`
-	BillingInfoId int32   `json:"billingInfoId,omitempty"`
+	// The Billing Info ID used to purchase the credits on this account
+	BillingInfoId int32 `json:"billingInfoId,omitempty"`
+	// The amount of credit associated with the credit ID
+	Amount float32 `json:"amount,omitempty"`
 }

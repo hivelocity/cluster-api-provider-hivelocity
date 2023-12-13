@@ -20,7 +20,7 @@ IMAGE_PREFIX ?= ghcr.io/hivelocity
 INFRA_PROVIDER = hivelocity
 
 STAGING_IMAGE = $(INFRA_SHORT)-staging
-BUILDER_IMAGE = ghcr.io/syself/$(INFRA_SHORT)-builder
+BUILDER_IMAGE = ghcr.io/hivelocity/$(INFRA_SHORT)-builder
 BUILDER_IMAGE_VERSION = $(shell cat .builder-image-version.txt)
 
 SHELL = /usr/bin/env bash -o pipefail

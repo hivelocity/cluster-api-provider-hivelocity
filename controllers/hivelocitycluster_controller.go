@@ -37,6 +37,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 	"k8s.io/klog/v2"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	"sigs.k8s.io/cluster-api/util"
@@ -595,8 +596,13 @@ func (r *HivelocityClusterReconciler) newTargetClusterManager(ctx context.Contex
 	_ = certificatesv1.AddToScheme(scheme)
 	_ = infrav1.AddToScheme(scheme)
 
+	httpClient, err := rest.HTTPClientFor(restConfig)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get an HTTP client for the API of HivelocityCluster %s/%s: %w", hvCluster.Namespace, hvCluster.Name, err)
+	}
+
 	// Check whether kubeapi server responds
-	if _, err := apiutil.NewDynamicRESTMapper(restConfig); err != nil {
+	if _, err := apiutil.NewDynamicRESTMapper(restConfig, httpClient); err != nil {
 		conditions.MarkFalse(
 			hvCluster,
 			infrav1.TargetClusterReadyCondition,
@@ -610,9 +616,8 @@ func (r *HivelocityClusterReconciler) newTargetClusterManager(ctx context.Contex
 	clusterMgr, err := ctrl.NewManager(
 		restConfig,
 		ctrl.Options{
-			Scheme:             scheme,
-			MetricsBindAddress: "0",
-			LeaderElection:     false,
+			Scheme:         scheme,
+			LeaderElection: false,
 		},
 	)
 	if err != nil {
@@ -656,8 +661,8 @@ func (r *HivelocityClusterReconciler) SetupWithManager(ctx context.Context, mgr 
 	}
 
 	return controller.Watch(
-		&source.Kind{Type: &clusterv1.Cluster{}},
-		handler.EnqueueRequestsFromMapFunc(func(o client.Object) []reconcile.Request {
+		source.Kind(mgr.GetCache(), &clusterv1.Cluster{}),
+		handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, o client.Object) []reconcile.Request {
 			c, ok := o.(*clusterv1.Cluster)
 			if !ok {
 				panic(fmt.Sprintf("Expected a Cluster but got a %T", o))

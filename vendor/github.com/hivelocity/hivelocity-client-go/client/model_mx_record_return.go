@@ -10,11 +10,11 @@
 package swagger
 
 type MxRecordReturn struct {
-	Preference int32  `json:"preference"`
-	DomainId   int32  `json:"domainId"`
 	Exchange   string `json:"exchange"`
 	Id         int32  `json:"id"`
 	Type_      string `json:"type"`
-	Ttl        int32  `json:"ttl"`
+	Preference int32  `json:"preference"`
 	Name       string `json:"name"`
+	DomainId   int32  `json:"domainId"`
+	Ttl        int32  `json:"ttl"`
 }

@@ -40,7 +40,7 @@ const (
 	// DeviceTagKeyPermanentError is the key for machines which need a manual reset by a Hivelocity admin.
 	DeviceTagKeyPermanentError DeviceTagKey = "caphv-permanent-error"
 
-	// DeviceTagKeyClusterUse is the key to allow device use by CAPI cluster.
+	// DeviceTagKeyCAPHVUseAllowed is the key to allow device use by CAPI cluster.
 	DeviceTagKeyCAPHVUseAllowed DeviceTagKey = "caphv-use"
 
 	// Attention: If you add a new DeviceTagKey, then extend the method IsValid()!
