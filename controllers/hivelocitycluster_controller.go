@@ -85,7 +85,7 @@ type HivelocityClusterReconciler struct {
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.13.1/pkg/reconcile
 func (r *HivelocityClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ ctrl.Result, reterr error) {
-	log := ctrl.LoggerFrom(ctx)
+	logger := ctrl.LoggerFrom(ctx)
 
 	// Fetch the HivelocityCluster
 	hvCluster := &infrav1.HivelocityCluster{}
@@ -97,9 +97,9 @@ func (r *HivelocityClusterReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		return reconcile.Result{RequeueAfter: 1 * time.Second}, err
 	}
 
-	log = log.WithValues("HivelocityCluster", klog.KObj(hvCluster))
+	logger = logger.WithValues("HivelocityCluster", klog.KObj(hvCluster))
 
-	log.Info("Starting reconciling cluster")
+	logger.Info("Starting reconciling cluster")
 
 	// Fetch the Cluster.
 	cluster, err := util.GetOwnerCluster(ctx, r.Client, hvCluster.ObjectMeta)
@@ -108,24 +108,24 @@ func (r *HivelocityClusterReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	}
 
 	if cluster == nil {
-		log.Info("Cluster Controller has not yet set OwnerRef")
+		logger.Info("Cluster Controller has not yet set OwnerRef")
 		return reconcile.Result{
 			RequeueAfter: 2 * time.Second,
 		}, nil
 	}
 
-	log = log.WithValues("Cluster", klog.KObj(cluster))
-	ctx = ctrl.LoggerInto(ctx, log)
+	logger = logger.WithValues("Cluster", klog.KObj(cluster))
+	ctx = ctrl.LoggerInto(ctx, logger)
 
 	if annotations.IsPaused(cluster, hvCluster) {
-		log.Info("HivelocityCluster or linked Cluster is marked as paused. Won't reconcile")
+		logger.Info("HivelocityCluster or linked Cluster is marked as paused. Won't reconcile")
 		return reconcile.Result{}, nil
 	}
 
-	log.V(1).Info("Creating cluster scope")
+	logger.V(1).Info("Creating cluster scope")
 
 	// Create the scope.
-	secretManager := secretutil.NewSecretManager(log, r.Client, r.APIReader)
+	secretManager := secretutil.NewSecretManager(logger, r.Client, r.APIReader)
 	apiKey, hvSecret, err := getAndValidateHivelocityAPIKey(ctx, req.Namespace, hvCluster, secretManager)
 	if err != nil {
 		return hvAPIKeyErrorResult(ctx, err, hvCluster, infrav1.CredentialsAvailableCondition, r.Client)
@@ -136,7 +136,7 @@ func (r *HivelocityClusterReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	clusterScope, err := scope.NewClusterScope(ctx, scope.ClusterScopeParams{
 		Client:            r.Client,
 		APIReader:         r.APIReader,
-		Logger:            log,
+		Logger:            logger,
 		Cluster:           cluster,
 		HivelocityCluster: hvCluster,
 		HVClient:          hvClient,
@@ -168,8 +168,8 @@ func (r *HivelocityClusterReconciler) Reconcile(ctx context.Context, req ctrl.Re
 }
 
 func (r *HivelocityClusterReconciler) reconcileNormal(ctx context.Context, clusterScope *scope.ClusterScope) (ctrl.Result, error) {
-	log := clusterScope.Logger
-	log.V(1).Info("Reconciling HivelocityCluster")
+	logger := clusterScope.Logger
+	logger.V(1).Info("Reconciling HivelocityCluster")
 
 	hvCluster := clusterScope.HivelocityCluster
 
@@ -199,7 +199,7 @@ func (r *HivelocityClusterReconciler) reconcileNormal(ctx context.Context, clust
 		if err != nil {
 			return ctrl.Result{}, fmt.Errorf("device.GetFirstFreeDevice() failed: %w", err)
 		}
-		log.Info(fmt.Sprintf("Setting hvCluster.Spec.ControlPlaneEndpoint.Host to %q", hvDevice.PrimaryIp))
+		logger.Info(fmt.Sprintf("Setting hvCluster.Spec.ControlPlaneEndpoint.Host to %q", hvDevice.PrimaryIp))
 		hvCluster.Spec.ControlPlaneEndpoint.Host = hvDevice.PrimaryIp
 		hvCluster.Spec.ControlPlaneEndpoint.Port = 6443
 	}
@@ -233,7 +233,7 @@ func (r *HivelocityClusterReconciler) reconcileNormal(ctx context.Context, clust
 	// target cluster secret is ready
 	conditions.MarkTrue(hvCluster, infrav1.TargetClusterSecretReadyCondition)
 
-	log.V(1).Info("Reconciling finished")
+	logger.V(1).Info("Reconciling finished")
 	return reconcile.Result{}, nil
 }
 
