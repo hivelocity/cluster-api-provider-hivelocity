@@ -111,23 +111,23 @@ $(ENVSUBST): # Build envsubst from tools folder.
 SETUP_ENVTEST := $(abspath $(TOOLS_BIN_DIR)/setup-envtest)
 setup-envtest: $(SETUP_ENVTEST) ## Build a local copy of setup-envtest
 $(SETUP_ENVTEST): # Build setup-envtest from tools folder.
-	go install sigs.k8s.io/controller-runtime/tools/setup-envtest@v0.0.0-20230620070423-a784ee78d04b
+	go install sigs.k8s.io/controller-runtime/tools/setup-envtest@v0.0.0-20231206145619-1ea2be573f78
 
 CTLPTL := $(abspath $(TOOLS_BIN_DIR)/ctlptl)
 ctlptl: $(CTLPTL) ## Build a local copy of ctlptl
 $(CTLPTL):
-	go install github.com/tilt-dev/ctlptl/cmd/ctlptl@v0.8.20
+	go install github.com/tilt-dev/ctlptl/cmd/ctlptl@v0.8.25
 
 CLUSTERCTL := $(abspath $(TOOLS_BIN_DIR)/clusterctl)
 clusterctl: $(CLUSTERCTL) ## Build a local copy of clusterctl
 $(CLUSTERCTL):
-	curl -sSLf https://github.com/kubernetes-sigs/cluster-api/releases/download/v1.5.3/clusterctl-$$(go env GOOS)-$$(go env GOARCH) -o $(CLUSTERCTL)
+	curl -sSLf https://github.com/kubernetes-sigs/cluster-api/releases/download/v1.6.0/clusterctl-$$(go env GOOS)-$$(go env GOARCH) -o $(CLUSTERCTL)
 	chmod a+rx $(CLUSTERCTL)
 
 HELM := $(abspath $(TOOLS_BIN_DIR)/helm)
 helm: $(HELM) ## Build a local copy of helm
 $(HELM):
-	curl -sSL https://get.helm.sh/helm-v3.13.1-linux-amd64.tar.gz | tar xz -C $(TOOLS_BIN_DIR) --strip-components=1 linux-amd64/helm
+	curl -sSL https://get.helm.sh/helm-v3.13.2-linux-amd64.tar.gz | tar xz -C $(TOOLS_BIN_DIR) --strip-components=1 linux-amd64/helm
 	chmod a+rx $(HELM)
 KIND := $(abspath $(TOOLS_BIN_DIR)/kind)
 kind: $(KIND) ## Build a local copy of kind
@@ -153,7 +153,7 @@ $(go-cover-treemap):
 GOTESTSUM := $(abspath $(TOOLS_BIN_DIR)/gotestsum)
 gotestsum: $(GOTESTSUM) # Build gotestsum from tools folder.
 $(GOTESTSUM):
-	go install gotest.tools/gotestsum@v1.10.0
+	go install gotest.tools/gotestsum@v1.11.0
 
 VIDDY := $(abspath $(TOOLS_BIN_DIR)/viddy)
 viddy: $(VIDDY)
@@ -197,7 +197,7 @@ install-cilium-in-wl-cluster:
 	# Deploy cilium
 	$(HELM) repo add cilium https://helm.cilium.io/
 	$(HELM) repo update cilium
-	KUBECONFIG=$(WORKER_CLUSTER_KUBECONFIG) $(HELM) upgrade --install cilium cilium/cilium --version 1.12.2 \
+	KUBECONFIG=$(WORKER_CLUSTER_KUBECONFIG) $(HELM) upgrade --install cilium cilium/cilium --version 1.14.4 \
   	--namespace kube-system \
 	-f templates/cilium/cilium.yaml
 
@@ -562,7 +562,7 @@ ifeq ($(BUILD_IN_CONTAINER),true)
 else
 	go version
 	golangci-lint version
-	golangci-lint run -v --fix
+	golangci-lint run --fix
 endif
 
 .PHONY: format-starlark
@@ -595,7 +595,7 @@ ifeq ($(BUILD_IN_CONTAINER),true)
 else
 	go version
 	golangci-lint version
-	golangci-lint run -v
+	golangci-lint run
 endif
 
 .PHONY: lint-golang-ci
@@ -608,7 +608,7 @@ ifeq ($(BUILD_IN_CONTAINER),true)
 else
 	go version
 	golangci-lint version
-	golangci-lint run -v --out-format=github-actions
+	golangci-lint run --out-format=github-actions
 endif
 
 .PHONY: lint-yaml
