@@ -81,7 +81,7 @@ WORKER_CLUSTER_KUBECONFIG ?= ".workload-cluster-kubeconfig.yaml"
 MGT_CLUSTER_KUBECONFIG ?= ".mgt-cluster-kubeconfig.yaml"
 
 # Kubebuilder.
-export KUBEBUILDER_ENVTEST_KUBERNETES_VERSION ?= 1.25.0
+export KUBEBUILDER_ENVTEST_KUBERNETES_VERSION ?= 1.28.0
 
 ##@ Binaries
 ############
@@ -90,7 +90,7 @@ export KUBEBUILDER_ENVTEST_KUBERNETES_VERSION ?= 1.25.0
 CONTROLLER_GEN := $(abspath $(TOOLS_BIN_DIR)/controller-gen)
 controller-gen: $(CONTROLLER_GEN) ## Build a local copy of controller-gen
 $(CONTROLLER_GEN): # Build controller-gen from tools folder.
-	go install sigs.k8s.io/controller-tools/cmd/controller-gen@v0.12.0
+	go install sigs.k8s.io/controller-tools/cmd/controller-gen@v0.13.0
 
 KUSTOMIZE := $(abspath $(TOOLS_BIN_DIR)/kustomize)
 kustomize: $(KUSTOMIZE) ## Build a local copy of kustomize
@@ -101,7 +101,7 @@ TILT := $(abspath $(TOOLS_BIN_DIR)/tilt)
 tilt: $(TILT) ## Build a local copy of tilt
 $(TILT):
 	@mkdir -p $(TOOLS_BIN_DIR)
-	MINIMUM_TILT_VERSION=0.32.4 hack/ensure-tilt.sh
+	MINIMUM_TILT_VERSION=0.33.3 hack/ensure-tilt.sh
 
 ENVSUBST := $(abspath $(TOOLS_BIN_DIR)/envsubst)
 envsubst: $(ENVSUBST) ## Build a local copy of envsubst
@@ -121,9 +121,14 @@ $(CTLPTL):
 CLUSTERCTL := $(abspath $(TOOLS_BIN_DIR)/clusterctl)
 clusterctl: $(CLUSTERCTL) ## Build a local copy of clusterctl
 $(CLUSTERCTL):
-	curl -sSLf https://github.com/kubernetes-sigs/cluster-api/releases/download/v1.4.3/clusterctl-$$(go env GOOS)-$$(go env GOARCH) -o $(CLUSTERCTL)
+	curl -sSLf https://github.com/kubernetes-sigs/cluster-api/releases/download/v1.5.3/clusterctl-$$(go env GOOS)-$$(go env GOARCH) -o $(CLUSTERCTL)
 	chmod a+rx $(CLUSTERCTL)
 
+HELM := $(abspath $(TOOLS_BIN_DIR)/helm)
+helm: $(HELM) ## Build a local copy of helm
+$(HELM):
+	curl -sSL https://get.helm.sh/helm-v3.13.1-linux-amd64.tar.gz | tar xz -C $(TOOLS_BIN_DIR) --strip-components=1 linux-amd64/helm
+	chmod a+rx $(HELM)
 KIND := $(abspath $(TOOLS_BIN_DIR)/kind)
 kind: $(KIND) ## Build a local copy of kind
 $(KIND):
@@ -190,16 +195,16 @@ wait-and-get-secret:
 
 install-cilium-in-wl-cluster:
 	# Deploy cilium
-	helm repo add cilium https://helm.cilium.io/
-	helm repo update cilium
-	KUBECONFIG=$(WORKER_CLUSTER_KUBECONFIG) helm upgrade --install cilium cilium/cilium --version 1.12.2 \
+	$(HELM) repo add cilium https://helm.cilium.io/
+	$(HELM) repo update cilium
+	KUBECONFIG=$(WORKER_CLUSTER_KUBECONFIG) $(HELM) upgrade --install cilium cilium/cilium --version 1.12.2 \
   	--namespace kube-system \
 	-f templates/cilium/cilium.yaml
 
 install-ccm-in-wl-cluster:
-	helm repo add $(INFRA_PROVIDER) https://hivelocity.github.io/hivelocity-cloud-controller-manager/
-	helm repo update $(INFRA_PROVIDER)
-	KUBECONFIG=$(WORKER_CLUSTER_KUBECONFIG) helm upgrade --install ccm-hivelocity hivelocity/ccm-hivelocity \
+	$(HELM) repo add $(INFRA_PROVIDER) https://hivelocity.github.io/hivelocity-cloud-controller-manager/
+	$(HELM) repo update $(INFRA_PROVIDER)
+	KUBECONFIG=$(WORKER_CLUSTER_KUBECONFIG) $(HELM) upgrade --install ccm-hivelocity hivelocity/ccm-hivelocity \
 		--version 0.1.2 \
 		--namespace kube-system \
 		--set secret.name=$(INFRA_PROVIDER) \
@@ -483,6 +488,9 @@ verify-shellcheck: ## Verify shell files
 verify-starlark: ## Verify Starlark Code
 	./hack/verify-starlark.sh
 
+.PHONY: verify-manifests ## Verify Manifests
+verify-manifests:
+	./hack/verify-manifests.sh
 .PHONY: verify-container-images
 verify-container-images: ## Verify container images
 	trivy image -q --exit-code 1 --ignore-unfixed --severity MEDIUM,HIGH,CRITICAL $(IMAGE_PREFIX)/$(INFRA_SHORT):latest
@@ -662,16 +670,9 @@ format: format-starlark format-golang format-yaml ## Format Codebase
 .PHONY: generate
 generate: generate-manifests generate-go-deepcopy generate-boilerplate generate-modules ## Generate Files
 
-ALL_VERIFY_CHECKS = boilerplate shellcheck starlark
+ALL_VERIFY_CHECKS = boilerplate shellcheck starlark manifests
 .PHONY: verify
 verify: generate lint $(addprefix verify-,$(ALL_VERIFY_CHECKS)) ## Verify all
-	@if ! (git diff --exit-code ); then \
-		echo "\nChanges found in generated files"; \
-		echo "Please check the generated files and stage or commit the changes to fix this error."; \
-		echo "If you are actively developing these files you can ignore this error"; \
-		echo "(Don't forget to check in the generated files when finished)\n"; \
-		exit 1; \
-	fi
 
 .PHONY: modules
 modules: generate-modules ## Update go.mod & go.sum
