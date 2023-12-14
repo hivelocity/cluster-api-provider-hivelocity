@@ -27,12 +27,15 @@ import (
 	"time"
 
 	infrav1 "github.com/hivelocity/cluster-api-provider-hivelocity/api/v1alpha1"
+	hvlabels "github.com/hivelocity/cluster-api-provider-hivelocity/pkg/labels"
 	"github.com/hivelocity/cluster-api-provider-hivelocity/pkg/scope"
 	hvclient "github.com/hivelocity/cluster-api-provider-hivelocity/pkg/services/hivelocity/client"
 	"github.com/hivelocity/cluster-api-provider-hivelocity/pkg/services/hivelocity/hvtag"
 	"github.com/hivelocity/cluster-api-provider-hivelocity/pkg/utils"
 	hv "github.com/hivelocity/hivelocity-client-go/client"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/selection"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	capierrors "sigs.k8s.io/cluster-api/errors"
 	"sigs.k8s.io/cluster-api/util/conditions"
@@ -107,8 +110,7 @@ func (s *Service) actionAssociateDevice(ctx context.Context) actionResult {
 	log := s.scope.Logger.WithValues("function", "actionAssociateDevice")
 	log.V(1).Info("Started function")
 
-	device, err := GetFirstFreeDevice(ctx, s.scope.HVClient, s.scope.HivelocityMachine.Spec.Type,
-		s.scope.HivelocityCluster, s.scope.Name())
+	device, err := GetFirstFreeDevice(ctx, s.scope.HVClient, s.scope.HivelocityMachine.Spec, s.scope.HivelocityCluster)
 	if err != nil {
 		s.handleRateLimitExceeded(err, "ListDevices")
 		return actionError{err: fmt.Errorf("failed to find available device: %w", err)}
@@ -123,9 +125,8 @@ func (s *Service) actionAssociateDevice(ctx context.Context) actionResult {
 			"no available device found",
 		)
 		record.Warnf(s.scope.HivelocityMachine, "NoFreeDeviceFound", "Failed to find free device")
-		return actionContinue{delay: time.Minute}
+		return actionContinue{delay: 30 * time.Second}
 	}
-
 	conditions.Delete(s.scope.HivelocityMachine, infrav1.DeviceAssociateSucceededCondition)
 
 	// associate this device with the machine object by setting tags
@@ -149,9 +150,7 @@ func (s *Service) actionAssociateDevice(ctx context.Context) actionResult {
 }
 
 // GetFirstFreeDevice finds the first free matching device. The parameter machineName is optional.
-func GetFirstFreeDevice(ctx context.Context, hvclient hvclient.Client, machineType infrav1.HivelocityDeviceType,
-	hvCluster *infrav1.HivelocityCluster, machineName string,
-) (*hv.BareMetalDevice, error) {
+func GetFirstFreeDevice(ctx context.Context, hvclient hvclient.Client, hvMachineSpec infrav1.HivelocityMachineSpec, hvCluster *infrav1.HivelocityCluster) (*hv.BareMetalDevice, error) {
 	// list all devices
 	devices, err := hvclient.ListDevices(ctx)
 	if err != nil {
@@ -168,13 +167,15 @@ func GetFirstFreeDevice(ctx context.Context, hvclient hvclient.Client, machineTy
 		return devices[i].DeviceId < devices[j].DeviceId
 	})
 
-	device := findAvailableDeviceFromList(devices, machineType, hvCluster.Name)
+	device := findAvailableDeviceFromList(devices, hvMachineSpec.DeviceSelector, hvCluster.Name)
+
 	return device, nil
 }
 
-func findAvailableDeviceFromList(devices []hv.BareMetalDevice, deviceType infrav1.HivelocityDeviceType, clusterName string) *hv.BareMetalDevice {
-	for _, device := range devices {
+func findAvailableDeviceFromList(devices []hv.BareMetalDevice, deviceSelector infrav1.DeviceSelector, clusterName string) *hv.BareMetalDevice {
+	labelSelector := getLabelSelector(deviceSelector)
 
+	for _, device := range devices {
 		// Skip if caphv-permanent-error exists
 		_, err := hvtag.PermanentErrorTagFromList(device.Tags)
 		if err == nil {
@@ -193,14 +194,7 @@ func findAvailableDeviceFromList(devices []hv.BareMetalDevice, deviceType infrav
 			continue
 		}
 
-		deviceTypeTag, err := hvtag.DeviceTypeTagFromList(device.Tags)
-		if err != nil {
-			// No device type has been set, don't use it.
-			continue
-		}
-
-		// Ignore if has wrong device type
-		if deviceTypeTag.Value != string(deviceType) {
+		if !labelSelector.Matches(hvlabels.Tags(device.Tags)) {
 			continue
 		}
 
@@ -223,6 +217,27 @@ func findAvailableDeviceFromList(devices []hv.BareMetalDevice, deviceType infrav
 		return &device
 	}
 	return nil
+}
+
+func getLabelSelector(deviceSelector infrav1.DeviceSelector) labels.Selector {
+	labelSelector := labels.NewSelector()
+	var reqs labels.Requirements
+
+	for labelKey, labelVal := range deviceSelector.MatchLabels {
+		r, err := labels.NewRequirement(labelKey, selection.Equals, []string{labelVal})
+		if err == nil { // ignore invalid host selector
+			reqs = append(reqs, *r)
+		}
+	}
+	for _, req := range deviceSelector.MatchExpressions {
+		lowercaseOperator := selection.Operator(strings.ToLower(string(req.Operator)))
+		r, err := labels.NewRequirement(req.Key, lowercaseOperator, req.Values)
+		if err == nil { // ignore invalid host selector
+			reqs = append(reqs, *r)
+		}
+	}
+
+	return labelSelector.Add(reqs...)
 }
 
 // actionVerifyAssociate verifies that the HV device has actually been associated to this machine and only this.

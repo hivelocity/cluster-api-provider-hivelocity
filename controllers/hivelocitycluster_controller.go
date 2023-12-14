@@ -185,6 +185,7 @@ func (r *HivelocityClusterReconciler) reconcileNormal(ctx context.Context, clust
 	if hvCluster.Spec.ControlPlaneEndpoint.Host == "" {
 		var hmt = infrav1.HivelocityMachineTemplate{}
 		name := hvCluster.Name + "-control-plane"
+
 		err := r.Client.Get(ctx, client.ObjectKey{
 			Namespace: hvCluster.ObjectMeta.Namespace,
 			Name:      name,
@@ -192,16 +193,12 @@ func (r *HivelocityClusterReconciler) reconcileNormal(ctx context.Context, clust
 		if err != nil {
 			return ctrl.Result{}, fmt.Errorf("failed to get HivelocityMachineTemplate %q: %w", name, err)
 		}
-		machineType := hmt.Spec.Template.Spec.Type
-		if machineType == "" {
-			return ctrl.Result{}, fmt.Errorf("Spec.Template.Spec.Type of HivelocityMachineTemplate %q is empty", name)
-		}
-		hvDevice, err := device.GetFirstFreeDevice(ctx, clusterScope.HVClient, machineType, hvCluster, "")
+
+		hvDevice, err := device.GetFirstFreeDevice(ctx, clusterScope.HVClient, hmt.Spec.Template.Spec, hvCluster)
 		if err != nil {
 			return ctrl.Result{}, fmt.Errorf("device.GetFirstFreeDevice() failed: %w", err)
 		}
-		log.Info(fmt.Sprintf("Setting hvCluster.Spec.ControlPlaneEndpoint.Host to %q (machineType=%s).",
-			hvDevice.PrimaryIp, machineType))
+		log.Info(fmt.Sprintf("Setting hvCluster.Spec.ControlPlaneEndpoint.Host to %q", hvDevice.PrimaryIp))
 		hvCluster.Spec.ControlPlaneEndpoint.Host = hvDevice.PrimaryIp
 		hvCluster.Spec.ControlPlaneEndpoint.Port = 6443
 	}

@@ -76,6 +76,41 @@ spec:
           spec:
             description: HivelocityMachineSpec defines the desired state of HivelocityMachine.
             properties:
+              deviceSelector:
+                description: DeviceSelector can be used to limit the set of devices
+                  that this HivelocityMachine can claim.
+                properties:
+                  matchExpressions:
+                    description: MatchExpressions match expressions that must be true
+                      on a chosen Device
+                    items:
+                      description: DeviceSelectorRequirement defines a requirement
+                        used for MatchExpressions to select device.
+                      properties:
+                        key:
+                          type: string
+                        operator:
+                          description: Operator represents a key/field's relationship
+                            to value(s). See labels.Requirement and fields.Requirement
+                            for more details.
+                          type: string
+                        values:
+                          items:
+                            type: string
+                          type: array
+                      required:
+                      - key
+                      - operator
+                      - values
+                      type: object
+                    type: array
+                  matchLabels:
+                    additionalProperties:
+                      type: string
+                    description: Key/value pairs of labels that must exist on a chosen
+                      Device
+                    type: object
+                type: object
               imageName:
                 description: ImageName is the reference to the Machine Image from
                   which to create the device.
@@ -97,19 +132,8 @@ spec:
                     description: Information tracked by the provisioner.
                     type: string
                 type: object
-              type:
-                description: Type is the Hivelocity Machine Type for this machine.
-                enum:
-                - pool
-                - hvCustom
-                - hvControlPlane
-                - hvWorker
-                - e2eControlPlane
-                - e2eWorker
-                type: string
             required:
             - imageName
-            - type
             type: object
           status:
             description: HivelocityMachineStatus defines the observed state of HivelocityMachine.

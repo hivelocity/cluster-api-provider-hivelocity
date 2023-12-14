@@ -64,10 +64,10 @@ func (r *HivelocityMachine) ValidateUpdate(oldRaw runtime.Object) error {
 
 	var allErrs field.ErrorList
 
-	// Type is immutable
-	if !reflect.DeepEqual(old.Spec.Type, r.Spec.Type) {
+	// DeviceSelector is immutable
+	if !reflect.DeepEqual(old.Spec.DeviceSelector, r.Spec.DeviceSelector) {
 		allErrs = append(allErrs,
-			field.Invalid(field.NewPath("spec", "type"), r.Spec.Type, "field is immutable"),
+			field.Invalid(field.NewPath("spec", "DeviceSelector"), r.Spec.DeviceSelector, "field is immutable"),
 		)
 	}
 

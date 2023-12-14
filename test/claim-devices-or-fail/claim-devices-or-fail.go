@@ -47,18 +47,17 @@ func main() {
 	}
 
 	for i := 1; i < len(os.Args); i++ {
-		deviceType := os.Args[i]
-		err := releaseOldMachines(ctx, apiClient, deviceType, allDevices)
+		tag := os.Args[i]
+		err := releaseOldMachines(ctx, apiClient, tag, allDevices)
 		if err != nil {
 			log.Fatalln(err)
 		}
 	}
 }
 
-func releaseOldMachines(ctx context.Context, apiClient *hv.APIClient, deviceType string,
+func releaseOldMachines(ctx context.Context, apiClient *hv.APIClient, tag string,
 	allDevices []hv.BareMetalDevice) error {
 	devicesWithTag := make([]hv.BareMetalDevice, 0)
-	tag := fmt.Sprintf("%s=%s", hvtag.DeviceTagKeyDeviceType, deviceType)
 
 	for _, device := range allDevices {
 		if !slices.Contains(device.Tags, tag) {
@@ -78,10 +77,9 @@ func releaseOldMachines(ctx context.Context, apiClient *hv.APIClient, deviceType
 		devicesWithTag = append(devicesWithTag, device)
 	}
 	if len(devicesWithTag) == 0 {
-		return fmt.Errorf("no device found with %s=%s", hvtag.DeviceTagKeyDeviceType, deviceType)
+		return fmt.Errorf("no device found with %q, Please make a corresponding device available. For example, by giving a machine the appropriate label via the HV web UI", tag)
 	}
-	fmt.Printf("resetting labels of all devices which have %s=%s. Found %d devices\n",
-		hvtag.DeviceTagKeyDeviceType, deviceType, len(devicesWithTag))
+	fmt.Printf("resetting labels of all devices which have %s. Found %d devices\n", tag, len(devicesWithTag))
 	for _, device := range devicesWithTag {
 		fmt.Printf("    resetting labels of device %d\n", device.DeviceId)
 		newTags := hvtag.RemoveEphemeralTags(device.Tags)

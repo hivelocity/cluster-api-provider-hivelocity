@@ -24,6 +24,7 @@ import (
 	"github.com/hivelocity/cluster-api-provider-hivelocity/pkg/services/hivelocity/hvtag"
 	hv "github.com/hivelocity/hivelocity-client-go/client"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/selection"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	capierrors "sigs.k8s.io/cluster-api/errors"
 )
@@ -91,8 +92,9 @@ type HivelocityMachineSpec struct {
 	// +optional
 	ProviderID *string `json:"providerID,omitempty"`
 
-	// Type is the Hivelocity Machine Type for this machine.
-	Type HivelocityDeviceType `json:"type"`
+	// DeviceSelector can be used to limit the set of devices that this HivelocityMachine can claim.
+	// +optional
+	DeviceSelector DeviceSelector `json:"deviceSelector,omitempty"`
 
 	// ImageName is the reference to the Machine Image from which to create the device.
 	// +kubebuilder:validation:MinLength=1
@@ -101,6 +103,25 @@ type HivelocityMachineSpec struct {
 	// Status contains all status information of the controller. Do not edit these values!
 	// +optional
 	Status ControllerGeneratedStatus `json:"status,omitempty"`
+}
+
+// DeviceSelector specifies matching criteria for tags on devices.
+// This is used to target a specific set of devices that can be claimed by the HivelocityMachine.
+type DeviceSelector struct {
+	// Key/value pairs of labels that must exist on a chosen Device
+	// +optional
+	MatchLabels map[string]string `json:"matchLabels,omitempty"`
+
+	// MatchExpressions match expressions that must be true on a chosen Device
+	// +optional
+	MatchExpressions []DeviceSelectorRequirement `json:"matchExpressions,omitempty"`
+}
+
+// DeviceSelectorRequirement defines a requirement used for MatchExpressions to select device.
+type DeviceSelectorRequirement struct {
+	Key      string             `json:"key"`
+	Operator selection.Operator `json:"operator"`
+	Values   []string           `json:"values"`
 }
 
 // ControllerGeneratedStatus contains all status information which is important to persist.
