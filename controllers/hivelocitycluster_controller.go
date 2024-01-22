@@ -199,7 +199,11 @@ func (r *HivelocityClusterReconciler) reconcileNormal(ctx context.Context, clust
 		if err != nil {
 			return ctrl.Result{}, fmt.Errorf("device.GetFirstFreeDevice() failed: %w", err)
 		}
+		if hvDevice == nil {
+			return ctrl.Result{}, fmt.Errorf("device.GetFirstFreeDevice() found no device: %+v", hmt.Spec.Template.Spec.DeviceSelector)
+		}
 		logger.Info(fmt.Sprintf("Setting hvCluster.Spec.ControlPlaneEndpoint.Host to %q", hvDevice.PrimaryIp))
+
 		hvCluster.Spec.ControlPlaneEndpoint.Host = hvDevice.PrimaryIp
 		hvCluster.Spec.ControlPlaneEndpoint.Port = 6443
 	}

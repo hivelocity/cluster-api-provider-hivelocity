@@ -149,7 +149,7 @@ func (s *Service) actionAssociateDevice(ctx context.Context) actionResult {
 	return actionComplete{}
 }
 
-// GetFirstFreeDevice finds the first free matching device. The parameter machineName is optional.
+// GetFirstFreeDevice finds the first free matching device. It returns nil if no device is found.
 func GetFirstFreeDevice(ctx context.Context, hvclient hvclient.Client, hvMachineSpec infrav1.HivelocityMachineSpec, hvCluster *infrav1.HivelocityCluster) (*hv.BareMetalDevice, error) {
 	// list all devices
 	devices, err := hvclient.ListDevices(ctx)
