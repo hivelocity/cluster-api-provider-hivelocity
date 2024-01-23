@@ -47,7 +47,7 @@ func main() {
 	}
 
 	for i := 1; i < len(os.Args); i++ {
-		tag := os.Args[i]
+		tag := "caphvlabel:deviceType=" + os.Args[i]
 		err := releaseOldMachines(ctx, apiClient, tag, allDevices)
 		if err != nil {
 			log.Fatalln(err)
@@ -56,7 +56,8 @@ func main() {
 }
 
 func releaseOldMachines(ctx context.Context, apiClient *hv.APIClient, tag string,
-	allDevices []hv.BareMetalDevice) error {
+	allDevices []hv.BareMetalDevice,
+) error {
 	devicesWithTag := make([]hv.BareMetalDevice, 0)
 
 	for _, device := range allDevices {
@@ -84,7 +85,8 @@ func releaseOldMachines(ctx context.Context, apiClient *hv.APIClient, tag string
 		fmt.Printf("    resetting labels of device %d\n", device.DeviceId)
 		newTags := hvtag.RemoveEphemeralTags(device.Tags)
 		_, _, err := apiClient.DeviceApi.PutDeviceTagIdResource(ctx, device.DeviceId, hv.DeviceTag{
-			Tags: newTags}, nil)
+			Tags: newTags,
+		}, nil)
 		if err != nil {
 			return err
 		}
