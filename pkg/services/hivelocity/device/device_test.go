@@ -53,7 +53,7 @@ func Test_findAvailableDeviceFromList(t *testing.T) {
 		{
 			description: "check no device selected if device has no caphv-use=allow tag",
 			devices: []hv.BareMetalDevice{
-				mockclient.CaphNotAllowDevice,
+				mockclient.CaphvNotAllowDevice,
 			},
 			deviceType: infrav1.DeviceSelector{
 				MatchLabels: map[string]string{
@@ -81,7 +81,7 @@ func Test_findAvailableDeviceFromList(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.description, func(t *testing.T) {
-			device := findAvailableDeviceFromList(test.devices, test.deviceType, "my-cluster")
+			device, _ := findAvailableDeviceFromList(test.devices, test.deviceType, "my-cluster")
 
 			if test.shouldNil {
 				require.Nil(t, device)

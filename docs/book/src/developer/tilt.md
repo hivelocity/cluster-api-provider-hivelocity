@@ -8,7 +8,7 @@ We use [Tilt](https://tilt.dev/) to start a development cluster.
 
 You need to create a `.envrc` file and specify the values you need. In the git repo is already a file. You can adapt it to your needs.
 
-Machines with the corresponding `caphv-device-type` tag will get conditionless provisioned. Be sure that you don't provision machines which run valuable workload!
+Machines with the corresponding `caphvlabel:deviceType=` tag will get conditionless provisioned. Be sure that you don't provision machines which run valuable workload!
 
 We recommend to use custom device tags for testing.
 

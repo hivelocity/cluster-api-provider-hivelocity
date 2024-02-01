@@ -1,12 +1,12 @@
 
 # Developing Cluster API Provider Hivelocity
 
-Developing our provider is quite easy. First, you need to install some base requirements. Second, you need to follow the quickstart documents to set up everything related to Hivelocity. Third, you need to configure your tilt set-up. After having done those three steps, you can start developing with the local Kind cluster and the Tilt UI to create one of the different workload clusters that are already pre-configured.
+Developing our provider is quite easy. First, you need to install some base requirements. Second, you need to follow the quickstart documents to set up everything related to Hivelocity. Third, you need to configure your Tilt set-up. After having done those three steps, you can start developing with the local Kind cluster and the Tilt UI to create one of the different workload clusters that are already pre-configured.
 
 
 ## Why Tilt
 
-Provider Integration development requires a lot of iteration, and the “build, tag, push, update deployment” workflow can be very tedious. 
+Provider Integration development requires a lot of iteration, and the “build, tag, push, update deployment” workflow can be very tedious.
 
 Tilt makes this process much simpler by watching for updates and automatically building and deploying them.
 

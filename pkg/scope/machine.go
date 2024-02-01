@@ -31,6 +31,7 @@ import (
 	capierrors "sigs.k8s.io/cluster-api/errors"
 	"sigs.k8s.io/cluster-api/util"
 	"sigs.k8s.io/cluster-api/util/patch"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 // MachineScopeParams defines the input parameters used to create a new Scope.
@@ -173,7 +174,18 @@ func (m *MachineScope) GetRawBootstrapData(ctx context.Context) ([]byte, error) 
 	// Look for secret in the filtered cache
 	var secret corev1.Secret
 	if err := m.Client.Get(ctx, key, &secret); err != nil {
-		return nil, fmt.Errorf("failed to find bootstrap secret %+v: %w", key, err)
+		secretList := &corev1.SecretList{}
+
+		// Use the reader to list secrets in the specified namespace
+		if err := m.Client.List(ctx, secretList, client.InNamespace(m.Namespace())); err != nil {
+			return nil, err // Handle the error according to your application's requirements
+		}
+
+		var names []string
+		for _, secret := range secretList.Items {
+			names = append(names, secret.Name)
+		}
+		return nil, fmt.Errorf("failed to find bootstrap secret %+v: %w. FOUND: %+v", key, err, names)
 	}
 
 	value, ok := secret.Data["value"]

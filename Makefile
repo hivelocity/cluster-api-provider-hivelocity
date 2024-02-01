@@ -193,7 +193,7 @@ wait-and-get-secret:
 	$(KUBECTL) get secrets $(CLUSTER_NAME)-kubeconfig -o json | jq -r .data.value | base64 --decode > $(WORKER_CLUSTER_KUBECONFIG)
 	${TIMEOUT} --foreground 15m bash -c "while ! $(KUBECTL) --kubeconfig=$(WORKER_CLUSTER_KUBECONFIG) get nodes | grep control-plane; do sleep 1; done"
 
-install-cilium-in-wl-cluster:
+install-cilium-in-wl-cluster: $(HELM)
 	# Deploy cilium
 	$(HELM) repo add cilium https://helm.cilium.io/
 	$(HELM) repo update cilium
@@ -219,6 +219,14 @@ env-vars-for-wl-cluster:
 	@./hack/ensure-env-variables.sh CLUSTER_NAME CONTROL_PLANE_MACHINE_COUNT HIVELOCITY_CONTROL_PLANE_MACHINE_TYPE \
 	HIVELOCITY_API_KEY HIVELOCITY_SSH_KEY HIVELOCITY_WORKER_MACHINE_TYPE KUBERNETES_VERSION WORKER_MACHINE_COUNT \
 	HIVELOCITY_IMAGE_NAME HIVELOCITY_REGION
+	@if [[ ! $$HIVELOCITY_WORKER_MACHINE_TYPE == "caphvlabel:deviceType="* ]]; then \
+		echo "HIVELOCITY_WORKER_MACHINE_TYPE=$$HIVELOCITY_WORKER_MACHINE_TYPE needs to start with caphvlabel:deviceType=" ;\
+		exit 1 ;\
+	fi
+	@if [[ ! $$HIVELOCITY_CONTROL_PLANE_MACHINE_TYPE == "caphvlabel:deviceType="* ]]; then \
+		echo "HIVELOCITY_CONTROL_PLANE_MACHINE_TYPE=$$HIVELOCITY_CONTROL_PLANE_MACHINE_TYPE needs to start with caphvlabel:deviceType=" ;\
+		exit 1 ;\
+	fi
 
 create-workload-cluster: env-vars-for-wl-cluster $(HOME)/.ssh/$(INFRA_PROVIDER).pub $(CLUSTERCTL) $(KUSTOMIZE) $(ENVSUBST) install-crds ## Creates a workload-cluster.
 	# Create workload Cluster.

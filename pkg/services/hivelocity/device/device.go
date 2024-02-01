@@ -22,6 +22,7 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
+	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -33,6 +34,7 @@ import (
 	"github.com/hivelocity/cluster-api-provider-hivelocity/pkg/services/hivelocity/hvtag"
 	"github.com/hivelocity/cluster-api-provider-hivelocity/pkg/utils"
 	hv "github.com/hivelocity/hivelocity-client-go/client"
+	"golang.org/x/exp/maps"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
@@ -98,7 +100,7 @@ func (s *Service) Reconcile(ctx context.Context) (_ ctrl.Result, err error) {
 	actResult := hostStateMachine.ReconcileState(ctx)
 	result, err := actResult.Result()
 	if err != nil {
-		return ctrl.Result{Requeue: true}, fmt.Errorf("action %q failed: %w", initialState, err)
+		return reconcile.Result{}, fmt.Errorf("action %q failed: %w", initialState, err)
 	}
 
 	// TODO: Verify that patching the object is fine. Alternative would be to update it if that is better since we update the Spec as well
@@ -110,21 +112,22 @@ func (s *Service) actionAssociateDevice(ctx context.Context) actionResult {
 	log := s.scope.Logger.WithValues("function", "actionAssociateDevice")
 	log.V(1).Info("Started function")
 
-	device, err := GetFirstFreeDevice(ctx, s.scope.HVClient, s.scope.HivelocityMachine.Spec, s.scope.HivelocityCluster)
+	device, reason, err := GetFirstFreeDevice(ctx, s.scope.HVClient, s.scope.HivelocityMachine.Spec, s.scope.HivelocityCluster)
 	if err != nil {
 		s.handleRateLimitExceeded(err, "ListDevices")
-		return actionError{err: fmt.Errorf("failed to find available device: %w", err)}
+		return actionError{err: fmt.Errorf("failed to find available device: %w (%s)", err, reason)}
 	}
 
 	if device == nil {
+		msg := fmt.Sprintf("no available device found (selector: %+v) (%s)", s.scope.HivelocityMachine.Spec.DeviceSelector, reason)
 		conditions.MarkFalse(
 			s.scope.HivelocityMachine,
 			infrav1.DeviceAssociateSucceededCondition,
 			infrav1.NoAvailableDeviceReason,
 			clusterv1.ConditionSeverityWarning,
-			"no available device found",
+			msg,
 		)
-		record.Warnf(s.scope.HivelocityMachine, "NoFreeDeviceFound", "Failed to find free device")
+		record.Warn(s.scope.HivelocityMachine, "NoFreeDeviceFound", msg)
 		return actionContinue{delay: 30 * time.Second}
 	}
 	conditions.Delete(s.scope.HivelocityMachine, infrav1.DeviceAssociateSucceededCondition)
@@ -150,11 +153,11 @@ func (s *Service) actionAssociateDevice(ctx context.Context) actionResult {
 }
 
 // GetFirstFreeDevice finds the first free matching device. It returns nil if no device is found.
-func GetFirstFreeDevice(ctx context.Context, hvclient hvclient.Client, hvMachineSpec infrav1.HivelocityMachineSpec, hvCluster *infrav1.HivelocityCluster) (*hv.BareMetalDevice, error) {
+func GetFirstFreeDevice(ctx context.Context, hvclient hvclient.Client, hvMachineSpec infrav1.HivelocityMachineSpec, hvCluster *infrav1.HivelocityCluster) (*hv.BareMetalDevice, string, error) {
 	// list all devices
 	devices, err := hvclient.ListDevices(ctx)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 
 	// Since we don't have a LoadBalancer we use the IP of the first ControlPlane
@@ -167,34 +170,30 @@ func GetFirstFreeDevice(ctx context.Context, hvclient hvclient.Client, hvMachine
 		return devices[i].DeviceId < devices[j].DeviceId
 	})
 
-	device := findAvailableDeviceFromList(devices, hvMachineSpec.DeviceSelector, hvCluster.Name)
+	device, reason := findAvailableDeviceFromList(devices, hvMachineSpec.DeviceSelector, hvCluster.Name)
 
-	return device, nil
+	return device, reason, nil
 }
 
-func findAvailableDeviceFromList(devices []hv.BareMetalDevice, deviceSelector infrav1.DeviceSelector, clusterName string) *hv.BareMetalDevice {
+func findAvailableDeviceFromList(devices []hv.BareMetalDevice, deviceSelector infrav1.DeviceSelector, clusterName string) (
+	*hv.BareMetalDevice, string,
+) {
 	labelSelector := getLabelSelector(deviceSelector)
+
+	mapOfSkipReasons := make(map[string]int)
 
 	for _, device := range devices {
 		// Skip if caphv-permanent-error exists
 		_, err := hvtag.PermanentErrorTagFromList(device.Tags)
 		if err == nil {
 			// The tag exists. Skip this Device
+			mapOfSkipReasons["permanent-error"] += 1
 			continue
 		}
 
-		// Ignore if associated already
-		machineTag, err := hvtag.MachineTagFromList(device.Tags)
-		if err != nil && !errors.Is(err, hvtag.ErrDeviceTagNotFound) {
-			// unexpected error - continue
-			continue
-		}
-		if machineTag.Value != "" {
-			// associated to other machine - continue
-			continue
-		}
-
-		if !labelSelector.Matches(hvlabels.Tags(device.Tags)) {
+		if !hvtag.DeviceUsableByCAPI(device.Tags) {
+			// not allowed to use the device
+			mapOfSkipReasons["caphv-use-allow-is-missing"] += 1
 			continue
 		}
 
@@ -202,21 +201,46 @@ func findAvailableDeviceFromList(devices []hv.BareMetalDevice, deviceSelector in
 		clusterTag, err := hvtag.ClusterTagFromList(device.Tags)
 		if err != nil && !errors.Is(err, hvtag.ErrDeviceTagNotFound) {
 			// unexpected error - continue
+			mapOfSkipReasons["unexpected-error-while-get-cluster-tag"] += 1
 			continue
 		}
 		if clusterTag.Value != "" && clusterTag.Value != clusterName {
 			// associated to another cluster - continue
+			mapOfSkipReasons["associated-to-other-cluster"] += 1
 			continue
 		}
 
-		if !hvtag.DeviceUsableByCAPI(device.Tags) {
-			// not allowed to use the device
+		// Ignore if associated already
+		machineTag, err := hvtag.MachineTagFromList(device.Tags)
+		if err != nil && !errors.Is(err, hvtag.ErrDeviceTagNotFound) {
+			// unexpected error - continue
+			mapOfSkipReasons["unexpected-error-while-get-machine-tag"] += 1
+			continue
+		}
+		if machineTag.Value != "" {
+			// associated to other machine - continue
+			mapOfSkipReasons["machine-already-associated"] += 1
 			continue
 		}
 
-		return &device
+		if !labelSelector.Matches(hvlabels.Tags(device.Tags)) {
+			mapOfSkipReasons["label-selector-does-not-match"] += 1
+			continue
+		}
+
+		return &device, ""
 	}
-	return nil
+	var reasons []string
+	keys := maps.Keys(mapOfSkipReasons)
+	slices.Sort(keys)
+	for _, key := range keys {
+		value := mapOfSkipReasons[key]
+		if value == 0 {
+			continue
+		}
+		reasons = append(reasons, fmt.Sprintf("%s: %d", key, value))
+	}
+	return nil, strings.Join(reasons, ", ")
 }
 
 func getLabelSelector(deviceSelector infrav1.DeviceSelector) labels.Selector {
@@ -502,15 +526,16 @@ func (s *Service) actionProvisionDevice(ctx context.Context) actionResult {
 		return actionError{err: errors.New(msg)}
 	}
 	if isPoweredOn {
-		msg := fmt.Sprintf("unexpected: device %d has power on.", deviceID)
-		record.Warnf(s.scope.HivelocityMachine, "ProvisionDeviceIsPoweredOn", msg)
-		return actionError{err: errors.New(msg)}
+		msg := fmt.Sprintf("device %d has power on. Waiting until it is shut-down.", deviceID) // xbug: here every 5 min.
+		record.Eventf(s.scope.HivelocityMachine, "ProvisionDeviceIsPoweredOn", msg)
+		return actionContinue{delay: 4 * time.Second}
 	}
 
 	userData, err := s.scope.GetRawBootstrapData(ctx)
 	if err != nil {
-		record.Warnf(s.scope.HivelocityMachine, "FailedGetBootstrapData", err.Error())
-		return actionError{err: fmt.Errorf("failed to get raw bootstrap data: %s", err)}
+		// This is common while starting a new cluster.
+		record.Eventf(s.scope.HivelocityMachine, "FailedGetBootstrapData", "device %d: %s", deviceID, err.Error())
+		return actionContinue{delay: 10 * time.Second}
 	}
 
 	image, err := s.getDeviceImage(ctx)

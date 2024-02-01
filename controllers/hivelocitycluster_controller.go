@@ -184,7 +184,7 @@ func (r *HivelocityClusterReconciler) reconcileNormal(ctx context.Context, clust
 
 	// dirty hack. Loadbalancer are not supported yet.
 	if hvCluster.Spec.ControlPlaneEndpoint.Host == "" {
-		var hmt = infrav1.HivelocityMachineTemplate{}
+		hmt := infrav1.HivelocityMachineTemplate{}
 		name := hvCluster.Name + "-control-plane"
 
 		err := r.Client.Get(ctx, client.ObjectKey{
@@ -195,9 +195,9 @@ func (r *HivelocityClusterReconciler) reconcileNormal(ctx context.Context, clust
 			return ctrl.Result{}, fmt.Errorf("failed to get HivelocityMachineTemplate %q: %w", name, err)
 		}
 
-		hvDevice, err := device.GetFirstFreeDevice(ctx, clusterScope.HVClient, hmt.Spec.Template.Spec, hvCluster)
+		hvDevice, reason, err := device.GetFirstFreeDevice(ctx, clusterScope.HVClient, hmt.Spec.Template.Spec, hvCluster)
 		if err != nil {
-			return ctrl.Result{}, fmt.Errorf("device.GetFirstFreeDevice() failed: %w", err)
+			return ctrl.Result{}, fmt.Errorf("device.GetFirstFreeDevice() failed: %w (%s)", err, reason)
 		}
 		if hvDevice == nil {
 			return ctrl.Result{}, fmt.Errorf("device.GetFirstFreeDevice() found no device: %+v", hmt.Spec.Template.Spec.DeviceSelector)

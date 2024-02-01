@@ -100,8 +100,8 @@ var NoTagsDevice = hv.BareMetalDevice{
 	OsName:      defaultImage,
 }
 
-// CaphNotAllowDevice is a device which is has no "caphv-use=allow" tag.
-var CaphNotAllowDevice = hv.BareMetalDevice{
+// CaphvNotAllowDevice is a device which is has no "caphv-use=allow" tag.
+var CaphvNotAllowDevice = hv.BareMetalDevice{
 	Hostname:    "host-FreeDevice",
 	Tags:        []string{"caphvlabel:deviceType=hvCustom"},
 	DeviceId:    FreeDeviceID,

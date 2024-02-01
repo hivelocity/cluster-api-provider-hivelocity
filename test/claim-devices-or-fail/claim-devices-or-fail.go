@@ -38,7 +38,7 @@ func main() {
 		Key: apiKey,
 	})
 	if len(os.Args) < 2 {
-		log.Fatalln("please provide one more device types (like hvControlPlane)")
+		log.Fatalln("please provide one more device types (like caphvlabel:deviceType=hvControlPlane)")
 	}
 	apiClient := hv.NewAPIClient(hv.NewConfiguration())
 	allDevices, _, err := apiClient.BareMetalDevicesApi.GetBareMetalDeviceResource(ctx, nil)
@@ -47,7 +47,10 @@ func main() {
 	}
 
 	for i := 1; i < len(os.Args); i++ {
-		tag := "caphvlabel:deviceType=" + os.Args[i]
+		tag := os.Args[i]
+		if !strings.HasPrefix(tag, "caphvlabel:deviceType=") {
+			log.Fatalln("tag must start with caphvlabel:deviceType=")
+		}
 		err := releaseOldMachines(ctx, apiClient, tag, allDevices)
 		if err != nil {
 			log.Fatalln(err)

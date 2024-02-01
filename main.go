@@ -26,7 +26,6 @@ import (
 
 	infrav1 "github.com/hivelocity/cluster-api-provider-hivelocity/api/v1alpha1"
 	"github.com/hivelocity/cluster-api-provider-hivelocity/controllers"
-	secretutil "github.com/hivelocity/cluster-api-provider-hivelocity/pkg/secrets"
 	hvclient "github.com/hivelocity/cluster-api-provider-hivelocity/pkg/services/hivelocity/client"
 	"github.com/hivelocity/cluster-api-provider-hivelocity/pkg/utils"
 	caphvversion "github.com/hivelocity/cluster-api-provider-hivelocity/pkg/version"
@@ -112,7 +111,7 @@ func main() {
 		LeaderElectionResourceLock:    "leases",
 		LeaderElectionReleaseOnCancel: true,
 		Cache: cache.Options{
-			ByObject:          secretutil.AddSecretSelector(),
+			// ByObject:          secretutil.AddSecretSelector(),
 			SyncPeriod:        &syncPeriod,
 			DefaultNamespaces: watchNamespaces,
 		},

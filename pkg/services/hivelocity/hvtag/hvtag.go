@@ -108,13 +108,13 @@ func DeviceTagFromList(key DeviceTagKey, tagList []string) (DeviceTag, error) {
 
 		// Check whether a correct DeviceTag has been found already. If so, return with error.
 		if found {
-			return DeviceTag{}, ErrMultipleDeviceTagsFound
+			return DeviceTag{}, fmt.Errorf("%s: %w", key, ErrMultipleDeviceTagsFound)
 		}
 		found = true
 	}
 
 	if !found {
-		return DeviceTag{}, ErrDeviceTagNotFound
+		return DeviceTag{}, fmt.Errorf("%s: %w", key, ErrDeviceTagNotFound)
 	}
 
 	return deviceTag, nil

@@ -52,7 +52,7 @@ CONTROL_PLANE_TAG=$(yq .variables.HIVELOCITY_CONTROL_PLANE_MACHINE_TYPE "$E2E_CO
 WORKER_TAG=$(yq .variables.HIVELOCITY_WORKER_MACHINE_TYPE "$E2E_CONF_FILE")
 
 echo "#####################################################################################################"
-echo "All devices with one of these caphv-device-type tags will get claimed. They will get provisioned soon:"
+echo "All devices with one of these device tags will get claimed. They will get provisioned soon:"
 echo "$CONTROL_PLANE_TAG $WORKER_TAG"
 echo "#####################################################################################################"
 

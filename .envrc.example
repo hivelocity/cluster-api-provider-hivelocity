@@ -2,3 +2,5 @@
 export HIVELOCITY_API_KEY=...
 export KUBECONFIG=$PWD/.mgt-cluster-kubeconfig.yaml
 export CLUSTER_NAME="hvtest-$USER"
+export HIVELOCITY_CONTROL_PLANE_MACHINE_TYPE= # example: caphvlabel:deviceType=fooControlPlane
+export HIVELOCITY_WORKER_MACHINE_TYPE= # example: caphvlabel:deviceType=fooWorker
