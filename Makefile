@@ -232,8 +232,14 @@ create-workload-cluster: env-vars-for-wl-cluster $(HOME)/.ssh/$(INFRA_PROVIDER).
 	# Create workload Cluster.
 	rm -f $(WORKER_CLUSTER_KUBECONFIG)
 	go run ./cmd upload-ssh-pub-key $$HIVELOCITY_SSH_KEY $(HOME)/.ssh/$(INFRA_PROVIDER).pub
-	go run ./test/claim-devices-or-fail $$HIVELOCITY_CONTROL_PLANE_MACHINE_TYPE $$HIVELOCITY_WORKER_MACHINE_TYPE
-	$(KUBECTL)  create secret generic $(INFRA_PROVIDER) --from-literal=$(INFRA_PROVIDER)=$(HIVELOCITY_API_KEY) --save-config --dry-run=client -o yaml | $(KUBECTL) apply -f -
+
+	# If the secret already exists, then it is likely that the cluster is already running,
+	# and the user wants to connect to the running cluster.
+	# In this case, don't remove the labels from the machines, otherwise the running cluster will be broken.
+	$(KUBECTL) get secret $(INFRA_PROVIDER) >/dev/null 2>&1 || \
+	 	go run ./test/claim-devices-or-fail $$HIVELOCITY_CONTROL_PLANE_MACHINE_TYPE $$HIVELOCITY_WORKER_MACHINE_TYPE
+
+	$(KUBECTL) create secret generic $(INFRA_PROVIDER) --from-literal=$(INFRA_PROVIDER)=$(HIVELOCITY_API_KEY) --save-config --dry-run=client -o yaml | $(KUBECTL) apply -f -
 	$(KUSTOMIZE) build templates/cluster-templates/$(INFRA_PROVIDER) --load-restrictor LoadRestrictionsNone  > templates/cluster-templates/cluster-template-$(INFRA_PROVIDER).yaml
 	cat templates/cluster-templates/cluster-template-$(INFRA_PROVIDER).yaml | $(ENVSUBST) - > templates/cluster-templates/cluster-template-$(INFRA_PROVIDER).yaml.apply
 	$(KUBECTL)  apply -f templates/cluster-templates/cluster-template-$(INFRA_PROVIDER).yaml.apply

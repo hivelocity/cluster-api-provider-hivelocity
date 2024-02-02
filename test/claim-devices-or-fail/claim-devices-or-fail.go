@@ -46,8 +46,13 @@ func main() {
 		log.Fatalln(err)
 	}
 
+	var done []string
 	for i := 1; i < len(os.Args); i++ {
 		tag := os.Args[i]
+		if slices.Contains(done, tag) {
+			continue
+		}
+		done = append(done, tag)
 		if !strings.HasPrefix(tag, "caphvlabel:deviceType=") {
 			log.Fatalln("tag must start with caphvlabel:deviceType=")
 		}

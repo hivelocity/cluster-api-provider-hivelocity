@@ -111,7 +111,6 @@ func main() {
 		LeaderElectionResourceLock:    "leases",
 		LeaderElectionReleaseOnCancel: true,
 		Cache: cache.Options{
-			// ByObject:          secretutil.AddSecretSelector(),
 			SyncPeriod:        &syncPeriod,
 			DefaultNamespaces: watchNamespaces,
 		},
