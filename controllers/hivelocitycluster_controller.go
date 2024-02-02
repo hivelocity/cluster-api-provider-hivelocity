@@ -25,6 +25,8 @@ import (
 	"sync"
 	"time"
 
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
+
 	infrav1 "github.com/hivelocity/cluster-api-provider-hivelocity/api/v1alpha1"
 	"github.com/hivelocity/cluster-api-provider-hivelocity/pkg/scope"
 	secretutil "github.com/hivelocity/cluster-api-provider-hivelocity/pkg/secrets"
@@ -557,6 +559,8 @@ func (c *managementCluster) Namespace() string {
 	return c.hvCluster.Namespace
 }
 
+// newTargetClusterManager creates a new manager which is connected to
+// a workload cluster.
 func (r *HivelocityClusterReconciler) newTargetClusterManager(ctx context.Context, clusterScope *scope.ClusterScope) (ctrl.Manager, error) {
 	hvCluster := clusterScope.HivelocityCluster
 
@@ -622,6 +626,7 @@ func (r *HivelocityClusterReconciler) newTargetClusterManager(ctx context.Contex
 		ctrl.Options{
 			Scheme:         scheme,
 			LeaderElection: false,
+			Metrics:        metricsserver.Options{BindAddress: "0"},
 		},
 	)
 	if err != nil {

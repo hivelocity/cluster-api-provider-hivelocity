@@ -119,7 +119,6 @@ func (sm *SecretManager) claimSecret(ctx context.Context, secret *corev1.Secret,
 func (sm *SecretManager) findSecret(ctx context.Context, key types.NamespacedName) (secret *corev1.Secret, err error) {
 	secret = &corev1.Secret{}
 
-	// Look for secret in the filtered cache
 	err = sm.client.Get(ctx, key, secret)
 	if err == nil {
 		return secret, nil

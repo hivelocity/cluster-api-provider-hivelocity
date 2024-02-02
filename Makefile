@@ -191,7 +191,7 @@ wait-and-get-secret:
 	${TIMEOUT} --foreground 5m bash -c "while ! $(KUBECTL) get secrets | grep $(CLUSTER_NAME)-kubeconfig; do sleep 1; done"
 	# Get kubeconfig and store it locally.
 	$(KUBECTL) get secrets $(CLUSTER_NAME)-kubeconfig -o json | jq -r .data.value | base64 --decode > $(WORKER_CLUSTER_KUBECONFIG)
-	${TIMEOUT} --foreground 15m bash -c "while ! $(KUBECTL) --kubeconfig=$(WORKER_CLUSTER_KUBECONFIG) get nodes | grep control-plane; do sleep 1; done"
+	${TIMEOUT} --foreground 22m bash -c "while ! $(KUBECTL) --kubeconfig=$(WORKER_CLUSTER_KUBECONFIG) get nodes | grep control-plane; do sleep 5; done"
 
 install-cilium-in-wl-cluster: $(HELM)
 	# Deploy cilium
@@ -242,7 +242,7 @@ create-workload-cluster: env-vars-for-wl-cluster $(HOME)/.ssh/$(INFRA_PROVIDER).
 	$(KUBECTL) create secret generic $(INFRA_PROVIDER) --from-literal=$(INFRA_PROVIDER)=$(HIVELOCITY_API_KEY) --save-config --dry-run=client -o yaml | $(KUBECTL) apply -f -
 	$(KUSTOMIZE) build templates/cluster-templates/$(INFRA_PROVIDER) --load-restrictor LoadRestrictionsNone  > templates/cluster-templates/cluster-template-$(INFRA_PROVIDER).yaml
 	cat templates/cluster-templates/cluster-template-$(INFRA_PROVIDER).yaml | $(ENVSUBST) - > templates/cluster-templates/cluster-template-$(INFRA_PROVIDER).yaml.apply
-	$(KUBECTL)  apply -f templates/cluster-templates/cluster-template-$(INFRA_PROVIDER).yaml.apply
+	$(KUBECTL) apply -f templates/cluster-templates/cluster-template-$(INFRA_PROVIDER).yaml.apply
 	$(MAKE) wait-and-get-secret
 	$(MAKE) install-cilium-in-wl-cluster
 	$(MAKE) install-ccm-in-wl-cluster
@@ -258,7 +258,7 @@ delete-workload-cluster: ## Deletes the example workload Kubernetes cluster
 	@echo 'Your workload cluster will now be deleted, this can take up to 20 minutes'
 	$(KUBECTL) patch cluster $(CLUSTER_NAME) --type=merge -p '{"spec":{"paused": false}}'
 	$(KUBECTL) delete cluster $(CLUSTER_NAME)
-	${TIMEOUT} --foreground 15m bash -c "while $(KUBECTL) get cluster | grep $(NAME); do sleep 1; done"
+	${TIMEOUT} --foreground 22m bash -c "while $(KUBECTL) get cluster | grep $(NAME); do sleep 1; done"
 	@echo 'Cluster deleted'
 
 create-mgt-cluster: $(CLUSTERCTL) $(KUBECTL) cluster ## Start a mgt-cluster with the latest version of all capi components and the infra provider.
