@@ -676,22 +676,22 @@ func (r *HivelocityClusterReconciler) SetupWithManager(ctx context.Context, mgr 
 				panic(fmt.Sprintf("Expected a Cluster but got a %T", o))
 			}
 
-			log = log.WithValues("objectMapper", "clusterToHivelocityCluster", "namespace", c.Namespace, "cluster", c.Name)
+			l := log.WithValues("objectMapper", "clusterToHivelocityCluster", "namespace", c.Namespace, "cluster", c.Name)
 
 			// Don't handle deleted clusters
 			if !c.ObjectMeta.DeletionTimestamp.IsZero() {
-				log.V(1).Info("Cluster has a deletion timestamp, skipping mapping.")
+				l.V(1).Info("Cluster has a deletion timestamp, skipping mapping.")
 				return nil
 			}
 
 			// Make sure the ref is set
 			if c.Spec.InfrastructureRef == nil {
-				log.V(1).Info("Cluster does not have an InfrastructureRef, skipping mapping.")
+				l.V(1).Info("Cluster does not have an InfrastructureRef, skipping mapping.")
 				return nil
 			}
 
 			if c.Spec.InfrastructureRef.GroupVersionKind().Kind != "HivelocityCluster" {
-				log.V(1).Info("Cluster has an InfrastructureRef for a different type, skipping mapping.")
+				l.V(1).Info("Cluster has an InfrastructureRef for a different type, skipping mapping.")
 				return nil
 			}
 
@@ -703,11 +703,10 @@ func (r *HivelocityClusterReconciler) SetupWithManager(ctx context.Context, mgr 
 			}
 
 			if annotations.IsExternallyManaged(hvCluster) {
-				log.V(1).Info("HivelocityCluster is externally managed, skipping mapping.")
+				l.V(1).Info("HivelocityCluster is externally managed, skipping mapping.")
 				return nil
 			}
 
-			log.V(1).Info("Adding request.", "hivelocityCluster", c.Spec.InfrastructureRef.Name)
 			return []ctrl.Request{
 				{
 					NamespacedName: client.ObjectKey{Namespace: c.Namespace, Name: c.Spec.InfrastructureRef.Name},
