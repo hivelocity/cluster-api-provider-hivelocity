@@ -170,16 +170,26 @@ func GetFirstFreeDevice(ctx context.Context, hvclient hvclient.Client, hvMachine
 		return devices[i].DeviceId < devices[j].DeviceId
 	})
 
-	device, reason := findAvailableDeviceFromList(devices, hvMachineSpec.DeviceSelector, hvCluster.Name)
-
+	device, reason, err := findAvailableDeviceFromList(devices, hvMachineSpec.DeviceSelector, hvCluster.Name)
+	if err != nil {
+		return nil, "", err
+	}
+	log := ctrl.LoggerFrom(ctx)
+	if device != nil {
+		log.Info(fmt.Sprintf("GetFirstFreeDevice hvMachineSpec.DeviceSelector %+v device.Tags: %+v",
+			hvMachineSpec.DeviceSelector,
+			device.Tags))
+	}
 	return device, reason, nil
 }
 
 func findAvailableDeviceFromList(devices []hv.BareMetalDevice, deviceSelector infrav1.DeviceSelector, clusterName string) (
-	*hv.BareMetalDevice, string,
+	*hv.BareMetalDevice, string, error,
 ) {
-	labelSelector := getLabelSelector(deviceSelector)
-
+	labelSelector, err := getLabelSelector(deviceSelector)
+	if err != nil {
+		return nil, "", fmt.Errorf("getLabelSelector failed: %w", err)
+	}
 	mapOfSkipReasons := make(map[string]int)
 
 	for _, device := range devices {
@@ -228,7 +238,7 @@ func findAvailableDeviceFromList(devices []hv.BareMetalDevice, deviceSelector in
 			continue
 		}
 
-		return &device, ""
+		return &device, "", nil
 	}
 	reasons := make([]string, 0, len(mapOfSkipReasons))
 	keys := maps.Keys(mapOfSkipReasons)
@@ -240,28 +250,30 @@ func findAvailableDeviceFromList(devices []hv.BareMetalDevice, deviceSelector in
 		}
 		reasons = append(reasons, fmt.Sprintf("%s: %d", key, value))
 	}
-	return nil, strings.Join(reasons, ", ")
+	return nil, strings.Join(reasons, ", "), nil
 }
 
-func getLabelSelector(deviceSelector infrav1.DeviceSelector) labels.Selector {
+func getLabelSelector(deviceSelector infrav1.DeviceSelector) (labels.Selector, error) {
 	labelSelector := labels.NewSelector()
 	var reqs labels.Requirements
 
 	for labelKey, labelVal := range deviceSelector.MatchLabels {
 		r, err := labels.NewRequirement(labelKey, selection.Equals, []string{labelVal})
-		if err == nil { // ignore invalid host selector
-			reqs = append(reqs, *r)
+		if err != nil {
+			return labelSelector, err
 		}
+		reqs = append(reqs, *r)
 	}
 	for _, req := range deviceSelector.MatchExpressions {
 		lowercaseOperator := selection.Operator(strings.ToLower(string(req.Operator)))
 		r, err := labels.NewRequirement(req.Key, lowercaseOperator, req.Values)
-		if err == nil { // ignore invalid host selector
-			reqs = append(reqs, *r)
+		if err != nil {
+			return labelSelector, err
 		}
+		reqs = append(reqs, *r)
 	}
 
-	return labelSelector.Add(reqs...)
+	return labelSelector.Add(reqs...), nil
 }
 
 // actionVerifyAssociate verifies that the HV device has actually been associated to this machine and only this.

@@ -27,7 +27,10 @@ import (
 	"github.com/hivelocity/cluster-api-provider-hivelocity/pkg/services/hivelocity/hvtag"
 	hv "github.com/hivelocity/hivelocity-client-go/client"
 	"golang.org/x/exp/slices"
+	"k8s.io/apimachinery/pkg/util/validation"
 )
+
+const labelPrefix = "caphvlabel:deviceType="
 
 func main() {
 	apiKey := os.Getenv("HIVELOCITY_API_KEY")
@@ -38,7 +41,8 @@ func main() {
 		Key: apiKey,
 	})
 	if len(os.Args) < 2 {
-		log.Fatalln("please provide one more device types (like caphvlabel:deviceType=hvControlPlane)")
+		log.Fatalf(`please provide one more device types (like hvControlPlane).
+		The machines must have a corresponding label. Example: %shvControlPlane`, labelPrefix)
 	}
 	apiClient := hv.NewAPIClient(hv.NewConfiguration())
 	allDevices, _, err := apiClient.BareMetalDevicesApi.GetBareMetalDeviceResource(ctx, nil)
@@ -49,13 +53,15 @@ func main() {
 	var done []string
 	for i := 1; i < len(os.Args); i++ {
 		tag := os.Args[i]
+		errs := validation.IsValidLabelValue(tag)
+		if len(errs) != 0 {
+			log.Fatalf("IsValidLabelValue failed: %q %+v", tag, errs)
+		}
+		tag = labelPrefix + tag
 		if slices.Contains(done, tag) {
 			continue
 		}
 		done = append(done, tag)
-		if !strings.HasPrefix(tag, "caphvlabel:deviceType=") {
-			log.Fatalln("tag must start with caphvlabel:deviceType=")
-		}
 		err := releaseOldMachines(ctx, apiClient, tag, allDevices)
 		if err != nil {
 			log.Fatalln(err)

@@ -219,12 +219,13 @@ env-vars-for-wl-cluster:
 	@./hack/ensure-env-variables.sh CLUSTER_NAME CONTROL_PLANE_MACHINE_COUNT HIVELOCITY_CONTROL_PLANE_MACHINE_TYPE \
 	HIVELOCITY_API_KEY HIVELOCITY_SSH_KEY HIVELOCITY_WORKER_MACHINE_TYPE KUBERNETES_VERSION WORKER_MACHINE_COUNT \
 	HIVELOCITY_IMAGE_NAME HIVELOCITY_REGION
-	@if [[ ! $$HIVELOCITY_WORKER_MACHINE_TYPE == "caphvlabel:deviceType="* ]]; then \
-		echo "HIVELOCITY_WORKER_MACHINE_TYPE=$$HIVELOCITY_WORKER_MACHINE_TYPE needs to start with caphvlabel:deviceType=" ;\
+
+	@regex="^[-A-Za-z0-9_.]*$$"; if [[ ! $$HIVELOCITY_WORKER_MACHINE_TYPE =~ $$regex ]]; then \
+		echo "HIVELOCITY_WORKER_MACHINE_TYPE=$$HIVELOCITY_WORKER_MACHINE_TYPE needs to be a valid Kubernetes label value." ;\
 		exit 1 ;\
 	fi
-	@if [[ ! $$HIVELOCITY_CONTROL_PLANE_MACHINE_TYPE == "caphvlabel:deviceType="* ]]; then \
-		echo "HIVELOCITY_CONTROL_PLANE_MACHINE_TYPE=$$HIVELOCITY_CONTROL_PLANE_MACHINE_TYPE needs to start with caphvlabel:deviceType=" ;\
+	@regex="^[-A-Za-z0-9_.]*$$"; if [[ ! $$HIVELOCITY_CONTROL_PLANE_MACHINE_TYPE =~ $$regex ]]; then \
+		echo "HIVELOCITY_CONTROL_PLANE_MACHINE_TYPE=$$HIVELOCITY_CONTROL_PLANE_MACHINE_TYPE needs to be a valid Kubernetes label value." ;\
 		exit 1 ;\
 	fi
 

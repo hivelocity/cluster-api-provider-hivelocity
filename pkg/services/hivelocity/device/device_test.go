@@ -66,7 +66,6 @@ func Test_findAvailableDeviceFromList(t *testing.T) {
 			description: "selects device which has all the tags",
 			devices: []hv.BareMetalDevice{
 				mockclient.MultiLabelsDevice,
-				mockclient.FreeDevice,
 			},
 			deviceType: infrav1.DeviceSelector{
 				MatchLabels: map[string]string{
@@ -81,15 +80,27 @@ func Test_findAvailableDeviceFromList(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.description, func(t *testing.T) {
-			device, _ := findAvailableDeviceFromList(test.devices, test.deviceType, "my-cluster")
-
+			device, _, err := findAvailableDeviceFromList(test.devices, test.deviceType, "my-cluster")
+			require.Nil(t, err)
 			if test.shouldNil {
 				require.Nil(t, device)
 			} else {
-				require.NotNil(t, device)
 				require.Equal(t, test.wantMachine, device)
+				require.NotNil(t, device)
 			}
 		})
+	}
+}
+
+func Test_findAvailableDeviceFromListWithInvalidSelector(t *testing.T) {
+	deviceType := infrav1.DeviceSelector{
+		MatchLabels: map[string]string{
+			"deviceType": "foo:bar",
+		},
+	}
+	device, reason, err := findAvailableDeviceFromList(nil, deviceType, "my-cluster")
+	if err == nil {
+		t.Fatalf("findAvailableDeviceFromList should return an error %+v %+v", device, reason)
 	}
 }
 

@@ -125,8 +125,8 @@ variables:
   HIVELOCITY_SSH_PUB: "secret"
   HIVELOCITY_IMAGE_NAME: ${HIVELOCITY_IMAGE_NAME:-}
   HIVELOCITY_REGION: LAX2
-  HIVELOCITY_CONTROL_PLANE_MACHINE_TYPE: caphvlabel:deviceType=e2eControlPlane
-  HIVELOCITY_WORKER_MACHINE_TYPE: caphvlabel:deviceType=e2eWorker
+  HIVELOCITY_CONTROL_PLANE_MACHINE_TYPE: qaControlPlane
+  HIVELOCITY_WORKER_MACHINE_TYPE: qaWorker
   REDACT_LOG_SCRIPT: "../../hack/log/redact.sh"
 
 intervals:

@@ -2,5 +2,7 @@
 export HIVELOCITY_API_KEY=...
 export KUBECONFIG=$PWD/.mgt-cluster-kubeconfig.yaml
 export CLUSTER_NAME="hvtest-$USER"
-export HIVELOCITY_CONTROL_PLANE_MACHINE_TYPE=caphvlabel:deviceType=${USER}-controlplane
-export HIVELOCITY_WORKER_MACHINE_TYPE=caphvlabel:deviceType=${USER}-worker
+
+# Set the hivelocity tag of the machine to: caphvlabel:deviceType=${USER}-...
+export HIVELOCITY_CONTROL_PLANE_MACHINE_TYPE=${USER}-controlplane
+export HIVELOCITY_WORKER_MACHINE_TYPE=${USER}-worker
