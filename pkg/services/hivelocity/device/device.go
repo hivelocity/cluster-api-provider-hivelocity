@@ -682,12 +682,11 @@ func (s *Service) actionDeviceProvisioned(ctx context.Context) actionResult {
 	conditions.MarkTrue(s.scope.HivelocityMachine, infrav1.HivelocityMachineReadyCondition)
 	s.scope.HivelocityMachine.Status.Ready = true
 
-	log.V(1).Info("Completed function",
+	log.V(1).Info("Completed function. This is the final state. The machine is provisioned.",
 		"DeviceId", device.DeviceId,
 		"PowerStatus", device.PowerStatus,
 		"script", utils.FirstN(device.Script, 50))
 
-	// This is the final state, if the machine is provisioned and everything is fine.
 	return actionComplete{}
 }
 
