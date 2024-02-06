@@ -6,3 +6,5 @@ export CLUSTER_NAME="hvtest-$USER"
 # Set the hivelocity tag of the machine to: caphvlabel:deviceType=${USER}-...
 export HIVELOCITY_CONTROL_PLANE_MACHINE_TYPE=${USER}-controlplane
 export HIVELOCITY_WORKER_MACHINE_TYPE=${USER}-worker
+
+export KUBERNETES_VERSION="v1.28.6"
