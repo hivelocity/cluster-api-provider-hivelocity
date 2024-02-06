@@ -27,7 +27,10 @@ import (
 	"github.com/hivelocity/cluster-api-provider-hivelocity/pkg/services/hivelocity/hvtag"
 	hv "github.com/hivelocity/hivelocity-client-go/client"
 	"golang.org/x/exp/slices"
+	"k8s.io/apimachinery/pkg/util/validation"
 )
+
+const labelPrefix = "caphvlabel:deviceType="
 
 func main() {
 	apiKey := os.Getenv("HIVELOCITY_API_KEY")
@@ -38,7 +41,8 @@ func main() {
 		Key: apiKey,
 	})
 	if len(os.Args) < 2 {
-		log.Fatalln("please provide one more device types (like hvControlPlane)")
+		log.Fatalf(`please provide one more device types (like hvControlPlane).
+		The machines must have a corresponding label. Example: %shvControlPlane`, labelPrefix)
 	}
 	apiClient := hv.NewAPIClient(hv.NewConfiguration())
 	allDevices, _, err := apiClient.BareMetalDevicesApi.GetBareMetalDeviceResource(ctx, nil)
@@ -46,8 +50,18 @@ func main() {
 		log.Fatalln(err)
 	}
 
+	var done []string
 	for i := 1; i < len(os.Args); i++ {
 		tag := os.Args[i]
+		errs := validation.IsValidLabelValue(tag)
+		if len(errs) != 0 {
+			log.Fatalf("IsValidLabelValue failed: %q %+v", tag, errs)
+		}
+		tag = labelPrefix + tag
+		if slices.Contains(done, tag) {
+			continue
+		}
+		done = append(done, tag)
 		err := releaseOldMachines(ctx, apiClient, tag, allDevices)
 		if err != nil {
 			log.Fatalln(err)
@@ -56,7 +70,8 @@ func main() {
 }
 
 func releaseOldMachines(ctx context.Context, apiClient *hv.APIClient, tag string,
-	allDevices []hv.BareMetalDevice) error {
+	allDevices []hv.BareMetalDevice,
+) error {
 	devicesWithTag := make([]hv.BareMetalDevice, 0)
 
 	for _, device := range allDevices {
@@ -84,7 +99,8 @@ func releaseOldMachines(ctx context.Context, apiClient *hv.APIClient, tag string
 		fmt.Printf("    resetting labels of device %d\n", device.DeviceId)
 		newTags := hvtag.RemoveEphemeralTags(device.Tags)
 		_, _, err := apiClient.DeviceApi.PutDeviceTagIdResource(ctx, device.DeviceId, hv.DeviceTag{
-			Tags: newTags}, nil)
+			Tags: newTags,
+		}, nil)
 		if err != nil {
 			return err
 		}

@@ -16,35 +16,9 @@ limitations under the License.
 
 package secretutil
 
-import (
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/labels"
-	"sigs.k8s.io/controller-runtime/pkg/cache"
-)
-
 const (
 	// LabelEnvironmentName is used as key of the label for secrets that should be included in cache.
 	LabelEnvironmentName = "caphv.environment"
 	// LabelEnvironmentValue is the value of the label for secrets that should be included in cache.
 	LabelEnvironmentValue = "owned"
 )
-
-// AddSecretSelector adds a selector to a cache.SelectorsByObject that filters
-// Secrets so that only those labelled as part of the environment get
-// cached. The input may be nil.
-func AddSecretSelector(selectors cache.SelectorsByObject) cache.SelectorsByObject {
-	secret := &corev1.Secret{}
-	newSelectors := cache.SelectorsByObject{
-		secret: {
-			Label: labels.SelectorFromSet(
-				labels.Set{
-					LabelEnvironmentName: LabelEnvironmentValue,
-				}),
-		},
-	}
-	if selectors == nil {
-		return newSelectors
-	}
-	selectors[secret] = newSelectors[secret]
-	return selectors
-}

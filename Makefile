@@ -216,18 +216,21 @@ add-ssh-pub-key:
 	go run ./cmd upload-ssh-pub-key $$HIVELOCITY_SSH_KEY $(HOME)/.ssh/$(INFRA_PROVIDER).pub
 
 env-vars-for-wl-cluster:
-	@./hack/ensure-env-variables.sh CLUSTER_NAME CONTROL_PLANE_MACHINE_COUNT HIVELOCITY_CONTROL_PLANE_MACHINE_TYPE \
-	HIVELOCITY_API_KEY HIVELOCITY_SSH_KEY HIVELOCITY_WORKER_MACHINE_TYPE KUBERNETES_VERSION WORKER_MACHINE_COUNT \
+	@if [ -n "$$HIVELOCITY_WORKER_MACHINE_TYPE" ]; then echo "please rename HIVELOCITY_WORKER_MACHINE_TYPE to HIVELOCITY_WORKER_DEVICE_TYPE"; exit 1; fi
+	@if [ -n "$$HIVELOCITY_CONTROL_PLANE_MACHINE_TYPE" ]; then echo "please rename HIVELOCITY_CONTROL_PLANE_MACHINE_TYPE to HIVELOCITY_CONTROL_PLANE_DEVICE_TYPE"; exit 1; fi
+
+	@./hack/ensure-env-variables.sh CLUSTER_NAME CONTROL_PLANE_MACHINE_COUNT HIVELOCITY_CONTROL_PLANE_DEVICE_TYPE \
+	HIVELOCITY_API_KEY HIVELOCITY_SSH_KEY HIVELOCITY_WORKER_DEVICE_TYPE KUBERNETES_VERSION WORKER_MACHINE_COUNT \
 	HIVELOCITY_REGION
 	@hack/check-kubernetes-version.sh
 
 
-	@regex="^[-A-Za-z0-9_.]*$$"; if [[ ! $$HIVELOCITY_WORKER_MACHINE_TYPE =~ $$regex ]]; then \
-		echo "HIVELOCITY_WORKER_MACHINE_TYPE=$$HIVELOCITY_WORKER_MACHINE_TYPE needs to be a valid Kubernetes label value." ;\
+	@regex="^[-A-Za-z0-9_.]*$$"; if [[ ! $$HIVELOCITY_WORKER_DEVICE_TYPE =~ $$regex ]]; then \
+		echo "HIVELOCITY_WORKER_DEVICE_TYPE=$$HIVELOCITY_WORKER_DEVICE_TYPE needs to be a valid Kubernetes label value." ;\
 		exit 1 ;\
 	fi
-	@regex="^[-A-Za-z0-9_.]*$$"; if [[ ! $$HIVELOCITY_CONTROL_PLANE_MACHINE_TYPE =~ $$regex ]]; then \
-		echo "HIVELOCITY_CONTROL_PLANE_MACHINE_TYPE=$$HIVELOCITY_CONTROL_PLANE_MACHINE_TYPE needs to be a valid Kubernetes label value." ;\
+	@regex="^[-A-Za-z0-9_.]*$$"; if [[ ! $$HIVELOCITY_CONTROL_PLANE_DEVICE_TYPE =~ $$regex ]]; then \
+		echo "HIVELOCITY_CONTROL_PLANE_DEVICE_TYPE=$$HIVELOCITY_CONTROL_PLANE_DEVICE_TYPE needs to be a valid Kubernetes label value." ;\
 		exit 1 ;\
 	fi
 
@@ -240,7 +243,7 @@ create-workload-cluster: env-vars-for-wl-cluster $(HOME)/.ssh/$(INFRA_PROVIDER).
 	# and the user wants to connect to the running cluster.
 	# In this case, don't remove the labels from the machines, otherwise the running cluster will be broken.
 	$(KUBECTL) get secret $(INFRA_PROVIDER) >/dev/null 2>&1 || \
-	 	go run ./test/claim-devices-or-fail $$HIVELOCITY_CONTROL_PLANE_MACHINE_TYPE $$HIVELOCITY_WORKER_MACHINE_TYPE
+	 	go run ./test/claim-devices-or-fail $$HIVELOCITY_CONTROL_PLANE_DEVICE_TYPE $$HIVELOCITY_WORKER_DEVICE_TYPE
 
 	$(KUBECTL) create secret generic $(INFRA_PROVIDER) --from-literal=$(INFRA_PROVIDER)=$(HIVELOCITY_API_KEY) --save-config --dry-run=client -o yaml | $(KUBECTL) apply -f -
 	$(KUSTOMIZE) build templates/cluster-templates/$(INFRA_PROVIDER) --load-restrictor LoadRestrictionsNone  > templates/cluster-templates/cluster-template-$(INFRA_PROVIDER).yaml

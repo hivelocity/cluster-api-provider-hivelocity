@@ -40,7 +40,7 @@ const (
 	// DeviceTagKeyPermanentError is the key for machines which need a manual reset by a Hivelocity admin.
 	DeviceTagKeyPermanentError DeviceTagKey = "caphv-permanent-error"
 
-	// DeviceTagKeyClusterUse is the key to allow device use by CAPI cluster.
+	// DeviceTagKeyCAPHVUseAllowed is the key to allow device use by CAPI cluster.
 	DeviceTagKeyCAPHVUseAllowed DeviceTagKey = "caphv-use"
 
 	// Attention: If you add a new DeviceTagKey, then extend the method IsValid()!
@@ -108,13 +108,13 @@ func DeviceTagFromList(key DeviceTagKey, tagList []string) (DeviceTag, error) {
 
 		// Check whether a correct DeviceTag has been found already. If so, return with error.
 		if found {
-			return DeviceTag{}, ErrMultipleDeviceTagsFound
+			return DeviceTag{}, fmt.Errorf("%s: %w", key, ErrMultipleDeviceTagsFound)
 		}
 		found = true
 	}
 
 	if !found {
-		return DeviceTag{}, ErrDeviceTagNotFound
+		return DeviceTag{}, fmt.Errorf("%s: %w", key, ErrDeviceTagNotFound)
 	}
 
 	return deviceTag, nil
