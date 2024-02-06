@@ -25,6 +25,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
+	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
 // log is for logging in this package.
@@ -48,27 +49,27 @@ func (r *HivelocityClusterTemplate) Default() {}
 var _ webhook.Validator = &HivelocityClusterTemplate{}
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type.
-func (r *HivelocityClusterTemplate) ValidateCreate() error {
+func (r *HivelocityClusterTemplate) ValidateCreate() (admission.Warnings, error) {
 	hivelocityclustertemplatelog.V(1).Info("validate create", "name", r.Name)
-	return nil
+	return nil, nil
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type.
-func (r *HivelocityClusterTemplate) ValidateUpdate(oldRaw runtime.Object) error {
+func (r *HivelocityClusterTemplate) ValidateUpdate(oldRaw runtime.Object) (admission.Warnings, error) {
 	hivelocityclustertemplatelog.V(1).Info("validate update", "name", r.Name)
 	old, ok := oldRaw.(*HivelocityClusterTemplate)
 	if !ok {
-		return apierrors.NewBadRequest(fmt.Sprintf("expected an HivelocityClusterTemplate but got a %T", oldRaw))
+		return nil, apierrors.NewBadRequest(fmt.Sprintf("expected an HivelocityClusterTemplate but got a %T", oldRaw))
 	}
 
 	if !reflect.DeepEqual(r.Spec, old.Spec) {
-		return apierrors.NewBadRequest("HivelocityClusterTemplate.Spec is immutable")
+		return nil, apierrors.NewBadRequest("HivelocityClusterTemplate.Spec is immutable")
 	}
-	return nil
+	return nil, nil
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type.
-func (r *HivelocityClusterTemplate) ValidateDelete() error {
+func (r *HivelocityClusterTemplate) ValidateDelete() (admission.Warnings, error) {
 	hivelocityclustertemplatelog.V(1).Info("validate delete", "name", r.Name)
-	return nil
+	return nil, nil
 }

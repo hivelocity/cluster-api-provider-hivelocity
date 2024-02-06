@@ -10,8 +10,8 @@
 package swagger
 
 type PrimaryInterface struct {
-	Ip         string   `json:"ip,omitempty"`
 	Subnet     string   `json:"subnet,omitempty"`
 	Gateway    string   `json:"gateway,omitempty"`
 	DnsServers []string `json:"dnsServers,omitempty"`
+	Ip         string   `json:"ip,omitempty"`
 }

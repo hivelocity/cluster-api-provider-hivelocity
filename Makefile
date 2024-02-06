@@ -20,7 +20,7 @@ IMAGE_PREFIX ?= ghcr.io/hivelocity
 INFRA_PROVIDER = hivelocity
 
 STAGING_IMAGE = $(INFRA_SHORT)-staging
-BUILDER_IMAGE = ghcr.io/syself/$(INFRA_SHORT)-builder
+BUILDER_IMAGE = ghcr.io/hivelocity/$(INFRA_SHORT)-builder
 BUILDER_IMAGE_VERSION = $(shell cat .builder-image-version.txt)
 
 SHELL = /usr/bin/env bash -o pipefail
@@ -111,23 +111,23 @@ $(ENVSUBST): # Build envsubst from tools folder.
 SETUP_ENVTEST := $(abspath $(TOOLS_BIN_DIR)/setup-envtest)
 setup-envtest: $(SETUP_ENVTEST) ## Build a local copy of setup-envtest
 $(SETUP_ENVTEST): # Build setup-envtest from tools folder.
-	go install sigs.k8s.io/controller-runtime/tools/setup-envtest@v0.0.0-20230620070423-a784ee78d04b
+	go install sigs.k8s.io/controller-runtime/tools/setup-envtest@v0.0.0-20231206145619-1ea2be573f78
 
 CTLPTL := $(abspath $(TOOLS_BIN_DIR)/ctlptl)
 ctlptl: $(CTLPTL) ## Build a local copy of ctlptl
 $(CTLPTL):
-	go install github.com/tilt-dev/ctlptl/cmd/ctlptl@v0.8.20
+	go install github.com/tilt-dev/ctlptl/cmd/ctlptl@v0.8.25
 
 CLUSTERCTL := $(abspath $(TOOLS_BIN_DIR)/clusterctl)
 clusterctl: $(CLUSTERCTL) ## Build a local copy of clusterctl
 $(CLUSTERCTL):
-	curl -sSLf https://github.com/kubernetes-sigs/cluster-api/releases/download/v1.5.3/clusterctl-$$(go env GOOS)-$$(go env GOARCH) -o $(CLUSTERCTL)
+	curl -sSLf https://github.com/kubernetes-sigs/cluster-api/releases/download/v1.6.0/clusterctl-$$(go env GOOS)-$$(go env GOARCH) -o $(CLUSTERCTL)
 	chmod a+rx $(CLUSTERCTL)
 
 HELM := $(abspath $(TOOLS_BIN_DIR)/helm)
 helm: $(HELM) ## Build a local copy of helm
 $(HELM):
-	curl -sSL https://get.helm.sh/helm-v3.13.1-linux-amd64.tar.gz | tar xz -C $(TOOLS_BIN_DIR) --strip-components=1 linux-amd64/helm
+	curl -sSL https://get.helm.sh/helm-v3.13.2-linux-amd64.tar.gz | tar xz -C $(TOOLS_BIN_DIR) --strip-components=1 linux-amd64/helm
 	chmod a+rx $(HELM)
 KIND := $(abspath $(TOOLS_BIN_DIR)/kind)
 kind: $(KIND) ## Build a local copy of kind
@@ -153,7 +153,7 @@ $(go-cover-treemap):
 GOTESTSUM := $(abspath $(TOOLS_BIN_DIR)/gotestsum)
 gotestsum: $(GOTESTSUM) # Build gotestsum from tools folder.
 $(GOTESTSUM):
-	go install gotest.tools/gotestsum@v1.10.0
+	go install gotest.tools/gotestsum@v1.11.0
 
 VIDDY := $(abspath $(TOOLS_BIN_DIR)/viddy)
 viddy: $(VIDDY)
@@ -191,13 +191,13 @@ wait-and-get-secret:
 	${TIMEOUT} --foreground 5m bash -c "while ! $(KUBECTL) get secrets | grep $(CLUSTER_NAME)-kubeconfig; do sleep 1; done"
 	# Get kubeconfig and store it locally.
 	$(KUBECTL) get secrets $(CLUSTER_NAME)-kubeconfig -o json | jq -r .data.value | base64 --decode > $(WORKER_CLUSTER_KUBECONFIG)
-	${TIMEOUT} --foreground 15m bash -c "while ! $(KUBECTL) --kubeconfig=$(WORKER_CLUSTER_KUBECONFIG) get nodes | grep control-plane; do sleep 1; done"
+	${TIMEOUT} --foreground 22m bash -c "while ! $(KUBECTL) --kubeconfig=$(WORKER_CLUSTER_KUBECONFIG) get nodes | grep control-plane; do sleep 5; done"
 
-install-cilium-in-wl-cluster:
+install-cilium-in-wl-cluster: $(HELM)
 	# Deploy cilium
 	$(HELM) repo add cilium https://helm.cilium.io/
 	$(HELM) repo update cilium
-	KUBECONFIG=$(WORKER_CLUSTER_KUBECONFIG) $(HELM) upgrade --install cilium cilium/cilium --version 1.12.2 \
+	KUBECONFIG=$(WORKER_CLUSTER_KUBECONFIG) $(HELM) upgrade --install cilium cilium/cilium --version 1.14.4 \
   	--namespace kube-system \
 	-f templates/cilium/cilium.yaml
 
@@ -218,17 +218,34 @@ add-ssh-pub-key:
 env-vars-for-wl-cluster:
 	@./hack/ensure-env-variables.sh CLUSTER_NAME CONTROL_PLANE_MACHINE_COUNT HIVELOCITY_CONTROL_PLANE_MACHINE_TYPE \
 	HIVELOCITY_API_KEY HIVELOCITY_SSH_KEY HIVELOCITY_WORKER_MACHINE_TYPE KUBERNETES_VERSION WORKER_MACHINE_COUNT \
-	HIVELOCITY_IMAGE_NAME HIVELOCITY_REGION
+	HIVELOCITY_REGION
+	@hack/check-kubernetes-version.sh
+
+
+	@regex="^[-A-Za-z0-9_.]*$$"; if [[ ! $$HIVELOCITY_WORKER_MACHINE_TYPE =~ $$regex ]]; then \
+		echo "HIVELOCITY_WORKER_MACHINE_TYPE=$$HIVELOCITY_WORKER_MACHINE_TYPE needs to be a valid Kubernetes label value." ;\
+		exit 1 ;\
+	fi
+	@regex="^[-A-Za-z0-9_.]*$$"; if [[ ! $$HIVELOCITY_CONTROL_PLANE_MACHINE_TYPE =~ $$regex ]]; then \
+		echo "HIVELOCITY_CONTROL_PLANE_MACHINE_TYPE=$$HIVELOCITY_CONTROL_PLANE_MACHINE_TYPE needs to be a valid Kubernetes label value." ;\
+		exit 1 ;\
+	fi
 
 create-workload-cluster: env-vars-for-wl-cluster $(HOME)/.ssh/$(INFRA_PROVIDER).pub $(CLUSTERCTL) $(KUSTOMIZE) $(ENVSUBST) install-crds ## Creates a workload-cluster.
 	# Create workload Cluster.
 	rm -f $(WORKER_CLUSTER_KUBECONFIG)
 	go run ./cmd upload-ssh-pub-key $$HIVELOCITY_SSH_KEY $(HOME)/.ssh/$(INFRA_PROVIDER).pub
-	go run ./test/claim-devices-or-fail $$HIVELOCITY_CONTROL_PLANE_MACHINE_TYPE $$HIVELOCITY_WORKER_MACHINE_TYPE
-	$(KUBECTL)  create secret generic $(INFRA_PROVIDER) --from-literal=$(INFRA_PROVIDER)=$(HIVELOCITY_API_KEY) --save-config --dry-run=client -o yaml | $(KUBECTL) apply -f -
+
+	# If the secret already exists, then it is likely that the cluster is already running,
+	# and the user wants to connect to the running cluster.
+	# In this case, don't remove the labels from the machines, otherwise the running cluster will be broken.
+	$(KUBECTL) get secret $(INFRA_PROVIDER) >/dev/null 2>&1 || \
+	 	go run ./test/claim-devices-or-fail $$HIVELOCITY_CONTROL_PLANE_MACHINE_TYPE $$HIVELOCITY_WORKER_MACHINE_TYPE
+
+	$(KUBECTL) create secret generic $(INFRA_PROVIDER) --from-literal=$(INFRA_PROVIDER)=$(HIVELOCITY_API_KEY) --save-config --dry-run=client -o yaml | $(KUBECTL) apply -f -
 	$(KUSTOMIZE) build templates/cluster-templates/$(INFRA_PROVIDER) --load-restrictor LoadRestrictionsNone  > templates/cluster-templates/cluster-template-$(INFRA_PROVIDER).yaml
 	cat templates/cluster-templates/cluster-template-$(INFRA_PROVIDER).yaml | $(ENVSUBST) - > templates/cluster-templates/cluster-template-$(INFRA_PROVIDER).yaml.apply
-	$(KUBECTL)  apply -f templates/cluster-templates/cluster-template-$(INFRA_PROVIDER).yaml.apply
+	$(KUBECTL) apply -f templates/cluster-templates/cluster-template-$(INFRA_PROVIDER).yaml.apply
 	$(MAKE) wait-and-get-secret
 	$(MAKE) install-cilium-in-wl-cluster
 	$(MAKE) install-ccm-in-wl-cluster
@@ -244,7 +261,7 @@ delete-workload-cluster: ## Deletes the example workload Kubernetes cluster
 	@echo 'Your workload cluster will now be deleted, this can take up to 20 minutes'
 	$(KUBECTL) patch cluster $(CLUSTER_NAME) --type=merge -p '{"spec":{"paused": false}}'
 	$(KUBECTL) delete cluster $(CLUSTER_NAME)
-	${TIMEOUT} --foreground 15m bash -c "while $(KUBECTL) get cluster | grep $(NAME); do sleep 1; done"
+	${TIMEOUT} --foreground 22m bash -c "while $(KUBECTL) get cluster | grep $(NAME); do sleep 1; done"
 	@echo 'Cluster deleted'
 
 create-mgt-cluster: $(CLUSTERCTL) $(KUBECTL) cluster ## Start a mgt-cluster with the latest version of all capi components and the infra provider.
@@ -562,7 +579,7 @@ ifeq ($(BUILD_IN_CONTAINER),true)
 else
 	go version
 	golangci-lint version
-	golangci-lint run -v --fix
+	golangci-lint run --fix
 endif
 
 .PHONY: format-starlark
@@ -595,7 +612,7 @@ ifeq ($(BUILD_IN_CONTAINER),true)
 else
 	go version
 	golangci-lint version
-	golangci-lint run -v
+	golangci-lint run
 endif
 
 .PHONY: lint-golang-ci
@@ -608,7 +625,7 @@ ifeq ($(BUILD_IN_CONTAINER),true)
 else
 	go version
 	golangci-lint version
-	golangci-lint run -v --out-format=github-actions
+	golangci-lint run --out-format=github-actions
 endif
 
 .PHONY: lint-yaml

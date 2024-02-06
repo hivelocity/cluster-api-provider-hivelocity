@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/go-logr/logr"
 	infrav1 "github.com/hivelocity/cluster-api-provider-hivelocity/api/v1alpha1"
 	"github.com/hivelocity/cluster-api-provider-hivelocity/pkg/scope"
 	secretutil "github.com/hivelocity/cluster-api-provider-hivelocity/pkg/secrets"
@@ -40,6 +39,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 )
@@ -61,9 +61,9 @@ type HivelocityMachineReconciler struct {
 
 // Reconcile manages the lifecycle of an Hivelocity machine object.
 func (r *HivelocityMachineReconciler) Reconcile(ctx context.Context, req ctrl.Request) (_ ctrl.Result, reterr error) {
-	log := ctrl.LoggerFrom(ctx)
+	logger := ctrl.LoggerFrom(ctx)
 
-	log.Info("Reconcile HivelocityMachine")
+	logger.Info("Reconcile HivelocityMachine")
 
 	// Fetch the HivelocityMachine.
 	hivelocityMachine := &infrav1.HivelocityMachine{}
@@ -75,34 +75,34 @@ func (r *HivelocityMachineReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		return ctrl.Result{}, err
 	}
 
-	log = log.WithValues("HivelocityMachine", klog.KObj(hivelocityMachine), "providerID", hivelocityMachine.Spec.ProviderID)
+	logger = logger.WithValues("HivelocityMachine", klog.KObj(hivelocityMachine), "providerID", hivelocityMachine.Spec.ProviderID)
 
 	// Fetch the Machine.
 	machine, err := util.GetOwnerMachine(ctx, r.Client, hivelocityMachine.ObjectMeta)
 	if err != nil {
-		log.Error(err, "GetOwnerMachine failed")
+		logger.Error(err, "GetOwnerMachine failed")
 		return ctrl.Result{}, err
 	}
 	if machine == nil {
-		log.Info("Machine Controller has not yet set OwnerRef")
+		logger.Info("Machine Controller has not yet set OwnerRef")
 		return ctrl.Result{}, nil
 	}
 
-	log = log.WithValues("Machine", klog.KObj(machine))
+	logger = logger.WithValues("Machine", klog.KObj(machine))
 
 	// Fetch the Cluster.
 	cluster, err := util.GetClusterFromMetadata(ctx, r.Client, machine.ObjectMeta)
 	if err != nil {
-		log.Info("Machine is missing cluster label or cluster does not exist", "error", err)
+		logger.Info("Machine is missing cluster label or cluster does not exist", "error", err)
 		return ctrl.Result{}, nil
 	}
 
 	if annotations.IsPaused(cluster, hivelocityMachine) {
-		log.Info("HivelocityMachine or linked Cluster is marked as paused. Won't reconcile")
+		logger.Info("HivelocityMachine or linked Cluster is marked as paused. Won't reconcile")
 		return ctrl.Result{}, nil
 	}
 
-	log = log.WithValues("Cluster", klog.KObj(cluster))
+	logger = logger.WithValues("Cluster", klog.KObj(cluster))
 
 	hvCluster := &infrav1.HivelocityCluster{}
 
@@ -111,15 +111,15 @@ func (r *HivelocityMachineReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		Name:      cluster.Spec.InfrastructureRef.Name,
 	}
 	if err := r.Client.Get(ctx, hvClusterName, hvCluster); err != nil {
-		log.Info("HivelocityCluster is not available yet", "error", err)
+		logger.Info("HivelocityCluster is not available yet", "error", err)
 		return reconcile.Result{}, nil
 	}
 
-	log = log.WithValues("HivelocityCluster", klog.KObj(hvCluster))
-	ctx = ctrl.LoggerInto(ctx, log)
+	logger = logger.WithValues("HivelocityCluster", klog.KObj(hvCluster))
+	ctx = ctrl.LoggerInto(ctx, logger)
 
 	// Create the scope.
-	secretManager := secretutil.NewSecretManager(log, r.Client, r.APIReader)
+	secretManager := secretutil.NewSecretManager(logger, r.Client, r.APIReader)
 	hvAPIKey, _, err := getAndValidateHivelocityAPIKey(ctx, req.Namespace, hvCluster, secretManager)
 	if err != nil {
 		conditions.MarkFalse(hvCluster, infrav1.CredentialsAvailableCondition, infrav1.HivelocityWrongAPIKeyReason, clusterv1.ConditionSeverityError, err.Error())
@@ -131,7 +131,7 @@ func (r *HivelocityMachineReconciler) Reconcile(ctx context.Context, req ctrl.Re
 	machineScope, err := scope.NewMachineScope(ctx, scope.MachineScopeParams{
 		ClusterScopeParams: scope.ClusterScopeParams{
 			Client:            r.Client,
-			Logger:            log,
+			Logger:            logger,
 			Cluster:           cluster,
 			HivelocityCluster: hvCluster,
 			HVClient:          hvClient,
@@ -165,22 +165,22 @@ func (r *HivelocityMachineReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		switch hivelocityMachine.Spec.Status.ProvisioningState {
 		case infrav1.StateDeleteDevice:
 			// Device has been removed from cluster - machine can be deleted.
-			log.Info(baseMsg + " do: RemoveFinalizer")
+			logger.Info(baseMsg + " do: RemoveFinalizer")
 			controllerutil.RemoveFinalizer(machineScope.HivelocityMachine, infrav1.MachineFinalizer)
 			return reconcile.Result{}, nil
 		case infrav1.StateNone, infrav1.StateAssociateDevice, infrav1.StateVerifyAssociate:
 			// if device is not yet provisioned, we can just dissociate the device from the machine by deleting the tags.
-			log.Info(baseMsg + " do: ProvisioningState = StateDeleteDeviceDissociate")
+			logger.Info(baseMsg + " do: ProvisioningState = StateDeleteDeviceDissociate")
 			hivelocityMachine.Spec.Status.ProvisioningState = infrav1.StateDeleteDeviceDissociate
 			return ctrl.Result{}, nil
 		case infrav1.StateDeviceProvisioned, infrav1.StateProvisionDevice:
-			log.Info(baseMsg + " do: ProvisioningState = StateDeleteDeviceDeProvision")
+			logger.Info(baseMsg + " do: ProvisioningState = StateDeleteDeviceDeProvision")
 			hivelocityMachine.Spec.Status.ProvisioningState = infrav1.StateDeleteDeviceDeProvision
 			return ctrl.Result{}, nil
 		case infrav1.StateDeleteDeviceDeProvision:
-			log.Info(baseMsg + " waiting for deprovisioning to finish.")
+			logger.Info(baseMsg + " waiting for deprovisioning to finish.")
 		default:
-			log.Info(baseMsg + " do: nothing?")
+			logger.Info(baseMsg + " do: nothing?")
 		}
 	}
 
@@ -215,26 +215,26 @@ func (r *HivelocityMachineReconciler) SetupWithManager(ctx context.Context, mgr 
 		For(&infrav1.HivelocityMachine{}).
 		WithEventFilter(predicates.ResourceNotPausedAndHasFilterLabel(log, r.WatchFilterValue)).
 		Watches(
-			&source.Kind{Type: &clusterv1.Machine{}},
+			&clusterv1.Machine{},
 			handler.EnqueueRequestsFromMapFunc(util.MachineToInfrastructureMapFunc(infrav1.GroupVersion.WithKind("HivelocityMachine"))),
 		).
 		Watches(
-			&source.Kind{Type: &infrav1.HivelocityCluster{}},
-			handler.EnqueueRequestsFromMapFunc(r.HivelocityClusterToHivelocityMachines(ctx, log)),
+			&infrav1.HivelocityCluster{},
+			handler.EnqueueRequestsFromMapFunc(r.HivelocityClusterToHivelocityMachines(ctx)),
 		).
 		Build(r)
 	if err != nil {
 		return fmt.Errorf("error creating controller: %w", err)
 	}
 
-	clusterToObjectFunc, err := util.ClusterToObjectsMapper(r.Client, &infrav1.HivelocityMachineList{}, mgr.GetScheme())
+	clusterToObjectFunc, err := util.ClusterToTypedObjectsMapper(r.Client, &infrav1.HivelocityMachineList{}, mgr.GetScheme())
 	if err != nil {
 		return fmt.Errorf("failed to create mapper for Cluster to HivelocityMachines: %w", err)
 	}
 
 	// Add a watch on clusterv1.Cluster object for unpause & ready notifications.
 	if err := c.Watch(
-		&source.Kind{Type: &clusterv1.Cluster{}},
+		source.Kind(mgr.GetCache(), &clusterv1.Cluster{}),
 		handler.EnqueueRequestsFromMapFunc(clusterToObjectFunc),
 		predicates.ClusterUnpausedAndInfrastructureReady(log),
 	); err != nil {
@@ -246,9 +246,11 @@ func (r *HivelocityMachineReconciler) SetupWithManager(ctx context.Context, mgr 
 
 // HivelocityClusterToHivelocityMachines is a handler.ToRequestsFunc to be used to enqeue requests for reconciliation
 // of HivelocityMachines.
-func (r *HivelocityMachineReconciler) HivelocityClusterToHivelocityMachines(ctx context.Context, log logr.Logger) handler.MapFunc {
-	return func(o client.Object) []ctrl.Request {
+func (r *HivelocityMachineReconciler) HivelocityClusterToHivelocityMachines(_ context.Context) handler.MapFunc {
+	return func(ctx context.Context, o client.Object) []ctrl.Request {
 		result := []ctrl.Request{}
+
+		log := log.FromContext(ctx)
 
 		c, ok := o.(*infrav1.HivelocityCluster)
 		if !ok {

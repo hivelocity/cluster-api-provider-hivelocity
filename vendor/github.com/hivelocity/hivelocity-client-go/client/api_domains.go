@@ -1225,7 +1225,7 @@ func (a *DomainsApiService) GetMxRecordResource(ctx context.Context, domainID in
 }
 
 /*
-DomainsApiService
+DomainsApiService Get PTR record by ID and name
  * @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
  * @param recordId
  * @param optional nil or *DomainsApiGetPtrRecordIdResourceOpts - Optional Parameters:
@@ -2229,7 +2229,7 @@ func (a *DomainsApiService) PutMxRecordIdResource(ctx context.Context, domainID 
 }
 
 /*
-DomainsApiService
+DomainsApiService Update PTR record
  * @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
  * @param recordId
  * @param payload

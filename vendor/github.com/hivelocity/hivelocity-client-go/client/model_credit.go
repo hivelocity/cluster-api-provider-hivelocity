@@ -10,13 +10,24 @@
 package swagger
 
 type Credit struct {
-	Id            int32   `json:"id,omitempty"`
-	Amount        float32 `json:"amount,omitempty"`
-	Balance       float32 `json:"balance,omitempty"`
-	ClientId      int32   `json:"clientId,omitempty"`
-	Created       int32   `json:"created,omitempty"`
-	OrderId       int32   `json:"orderId,omitempty"`
-	Reason        string  `json:"reason,omitempty"`
-	Status        string  `json:"status,omitempty"`
-	BillingInfoId int32   `json:"billingInfoId,omitempty"`
+	// The ID corresponding to a particular credit
+	Id int32 `json:"id,omitempty"`
+	// The amount of credit associated with the credit ID
+	Amount float32 `json:"amount,omitempty"`
+	// The amount of credit available for use associated with the credit ID
+	Balance float32 `json:"balance,omitempty"`
+	// The client ID associated with the credit ID
+	ClientId int32 `json:"clientId,omitempty"`
+	// The created date/time of the credit
+	Created int32 `json:"created,omitempty"`
+	// The order ID associated with the credit ID
+	OrderId int32 `json:"orderId,omitempty"`
+	// The reason code for the creation of the credit
+	Reason string `json:"reason,omitempty"`
+	// The status of the credit
+	Status string `json:"status,omitempty"`
+	// If credit is for hourly billing
+	IsHourly bool `json:"isHourly,omitempty"`
+	// The Billing Info ID used to purchase the credits on this account
+	BillingInfoId int32 `json:"billingInfoId,omitempty"`
 }

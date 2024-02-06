@@ -7,5 +7,5 @@ spec:
     spec:
       deviceSelector:
         matchLabels:
-          deviceType: e2eControlPlane
+          deviceType: ${HIVELOCITY_CONTROL_PLANE_MACHINE_TYPE}
       imageName: "ubuntu-22.04"

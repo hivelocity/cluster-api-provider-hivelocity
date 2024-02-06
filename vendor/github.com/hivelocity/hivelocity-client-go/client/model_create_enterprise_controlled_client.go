@@ -10,7 +10,10 @@
 package swagger
 
 type CreateEnterpriseControlledClient struct {
-	Company  string `json:"company"`
-	Email    string `json:"email"`
+	// The company to be asociated with the client account
+	Company string `json:"company"`
+	// The email to be associated with the client account
+	Email string `json:"email"`
+	// The client account password to be used
 	Password string `json:"password,omitempty"`
 }

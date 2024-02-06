@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"os"
 	"sync"
+	"time"
 
 	infrav1 "github.com/hivelocity/cluster-api-provider-hivelocity/api/v1alpha1"
 	"github.com/hivelocity/cluster-api-provider-hivelocity/controllers"
@@ -37,8 +38,11 @@ import (
 	bootstrapv1 "sigs.k8s.io/cluster-api/bootstrap/kubeadm/api/v1beta1"
 	"sigs.k8s.io/cluster-api/util/record"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
+	"sigs.k8s.io/controller-runtime/pkg/webhook"
 )
 
 var (
@@ -64,6 +68,7 @@ var (
 	hivelocityClusterConcurrency int
 	hivelocityMachineConcurrency int
 	logLevel                     string
+	syncPeriod                   time.Duration
 )
 
 func main() {
@@ -78,6 +83,7 @@ func main() {
 	fs.StringVar(&watchFilterValue, "watch-filter", "", fmt.Sprintf("Label value that the controller watches to reconcile cluster-api objects. Label key is always %s. If unspecified, the controller watches for all cluster-api objects.", clusterv1.WatchLabel))
 	fs.StringVar(&watchNamespace, "namespace", "", "Namespace that the controller watches to reconcile cluster-api objects. If unspecified, the controller watches for cluster-api objects across all namespaces.")
 	fs.StringVar(&logLevel, "log-level", "debug", "Specifies log level. Options are 'debug', 'info' and 'error'")
+	fs.DurationVar(&syncPeriod, "sync-period", 3*time.Minute, "The minimum interval at which watched resources are reconciled (e.g. 3m)")
 
 	pflag.CommandLine.AddGoFlagSet(flag.CommandLine)
 
@@ -85,17 +91,29 @@ func main() {
 
 	ctrl.SetLogger(utils.GetDefaultLogger(logLevel))
 
+	var watchNamespaces map[string]cache.Config
+	if watchNamespace != "" {
+		watchNamespaces = map[string]cache.Config{
+			watchNamespace: {},
+		}
+	}
+
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
-		Scheme:                        scheme,
-		MetricsBindAddress:            metricsAddr,
-		Port:                          9443,
-		HealthProbeBindAddress:        probeAddr,
+		Scheme:                 scheme,
+		Metrics:                metricsserver.Options{BindAddress: metricsAddr},
+		HealthProbeBindAddress: probeAddr,
+		WebhookServer: webhook.NewServer(webhook.Options{
+			Port: 9443,
+		}),
 		LeaderElection:                enableLeaderElection,
 		LeaderElectionNamespace:       leaderElectionNamespace,
 		LeaderElectionID:              "hivelocity.cluster.x-k8s.io",
 		LeaderElectionResourceLock:    "leases",
 		LeaderElectionReleaseOnCancel: true,
-		Namespace:                     watchNamespace,
+		Cache: cache.Options{
+			SyncPeriod:        &syncPeriod,
+			DefaultNamespaces: watchNamespaces,
+		},
 	})
 	if err != nil {
 		setupLog.Error(err, "unable to start manager")

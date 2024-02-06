@@ -432,7 +432,7 @@ func (a *ContactApiService) PostContactResource(ctx context.Context, payload Con
 }
 
 /*
-ContactApiService Recieve a request to reset password, and send a link by email with token
+ContactApiService Receive a request to reset password, and send a link by email with token
   - @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
   - @param payload
 */
@@ -624,7 +624,7 @@ func (a *ContactApiService) PutContactIdResource(ctx context.Context, contactId 
 }
 
 /*
-ContactApiService Recieve a token and password, verify the user and reset your password
+ContactApiService Receive a token and password, verify the user and reset your password
   - @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
   - @param payload
 */

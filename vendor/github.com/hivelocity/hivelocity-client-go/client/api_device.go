@@ -2596,7 +2596,7 @@ func (a *DeviceApiService) PostDeviceReloadResource(ctx context.Context, deviceI
 DeviceApiService Update power status
  * @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
  * @param deviceId ID of Device to View / Update
- * @param action Must be one of boot|reboot|shutdown
+ * @param action power action to either boot, reboot, or shutdown
  * @param optional nil or *DeviceApiPostPowerResourceOpts - Optional Parameters:
      * @param "XFields" (optional.String) -  An optional fields mask
 

@@ -9,9 +9,17 @@
 
 package swagger
 
+import (
+	"time"
+)
+
 type PublicApiHideTokenDump struct {
+	TimeCreated time.Time         `json:"timeCreated,omitempty"`
+	Token       string            `json:"token"`
+	IpAddresses *PublicApiTokenIp `json:"ipAddresses,omitempty"`
+	TimeUpdated time.Time         `json:"timeUpdated,omitempty"`
 	Name        string            `json:"name,omitempty"`
 	ApiTokenId  string            `json:"apiTokenId,omitempty"`
-	IpAddresses *PublicApiTokenIp `json:"ipAddresses,omitempty"`
-	Token       string            `json:"token"`
+	// Token expiration datetime in UTC format.
+	TimeExpiration time.Time `json:"timeExpiration"`
 }

@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"os/exec"
 	"path"
 	goruntime "runtime"
 	"sync"
@@ -29,6 +30,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	pkgerrors "github.com/pkg/errors"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -42,7 +44,7 @@ import (
 
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	expv1 "sigs.k8s.io/cluster-api/exp/api/v1beta1"
-	"sigs.k8s.io/cluster-api/test/framework/exec"
+	testexec "sigs.k8s.io/cluster-api/test/framework/exec"
 	"sigs.k8s.io/cluster-api/test/framework/internal/log"
 	"sigs.k8s.io/cluster-api/test/infrastructure/container"
 )
@@ -91,9 +93,9 @@ type ClusterProxy interface {
 	Apply(ctx context.Context, resources []byte, args ...string) error
 
 	// GetWorkloadCluster returns a proxy to a workload cluster defined in the Kubernetes cluster.
-	GetWorkloadCluster(ctx context.Context, namespace, name string) ClusterProxy
+	GetWorkloadCluster(ctx context.Context, namespace, name string, options ...Option) ClusterProxy
 
-	// CollectWorkloadClusterLogs collects machines logs from the workload cluster.
+	// CollectWorkloadClusterLogs collects machines and infrastructure logs from the workload cluster.
 	CollectWorkloadClusterLogs(ctx context.Context, namespace, name, outputPath string)
 
 	// Dispose proxy's internal resources (the operation does not affects the Kubernetes cluster).
@@ -107,6 +109,8 @@ type ClusterLogCollector interface {
 	// TODO: describe output folder struct
 	CollectMachineLog(ctx context.Context, managementClusterClient client.Client, m *clusterv1.Machine, outputPath string) error
 	CollectMachinePoolLog(ctx context.Context, managementClusterClient client.Client, m *expv1.MachinePool, outputPath string) error
+	// CollectInfrastructureLogs collects log from the infrastructure.
+	CollectInfrastructureLogs(ctx context.Context, managementClusterClient client.Client, c *clusterv1.Cluster, outputPath string) error
 }
 
 // Option is a configuration option supplied to NewClusterProxy.
@@ -154,7 +158,7 @@ func NewClusterProxy(name string, kubeconfigPath string, scheme *runtime.Scheme,
 }
 
 // newFromAPIConfig returns a clusterProxy given a api.Config and the scheme defining the types hosted in the cluster.
-func newFromAPIConfig(name string, config *api.Config, scheme *runtime.Scheme) ClusterProxy {
+func newFromAPIConfig(name string, config *api.Config, scheme *runtime.Scheme, options ...Option) ClusterProxy {
 	// NB. the ClusterProvider is responsible for the cleanup of this file
 	f, err := os.CreateTemp("", "e2e-kubeconfig")
 	Expect(err).ToNot(HaveOccurred(), "Failed to create kubeconfig file for the kind cluster %q")
@@ -163,12 +167,16 @@ func newFromAPIConfig(name string, config *api.Config, scheme *runtime.Scheme) C
 	err = clientcmd.WriteToFile(*config, kubeconfigPath)
 	Expect(err).ToNot(HaveOccurred(), "Failed to write kubeconfig for the kind cluster to a file %q")
 
-	return &clusterProxy{
+	proxy := &clusterProxy{
 		name:                    name,
 		kubeconfigPath:          kubeconfigPath,
 		scheme:                  scheme,
 		shouldCleanupKubeconfig: true,
 	}
+	for _, o := range options {
+		o(proxy)
+	}
+	return proxy
 }
 
 // GetName returns the name of the cluster.
@@ -192,7 +200,7 @@ func (p *clusterProxy) GetClient() client.Client {
 
 	var c client.Client
 	var newClientErr error
-	err := wait.PollImmediate(retryableOperationInterval, retryableOperationTimeout, func() (bool, error) {
+	err := wait.PollUntilContextTimeout(context.TODO(), retryableOperationInterval, retryableOperationTimeout, true, func(ctx context.Context) (bool, error) {
 		c, newClientErr = client.New(config, client.Options{Scheme: p.scheme})
 		if newClientErr != nil {
 			return false, nil //nolint:nilerr
@@ -244,7 +252,15 @@ func (p *clusterProxy) Apply(ctx context.Context, resources []byte, args ...stri
 	Expect(ctx).NotTo(BeNil(), "ctx is required for Apply")
 	Expect(resources).NotTo(BeNil(), "resources is required for Apply")
 
-	return exec.KubectlApply(ctx, p.kubeconfigPath, resources, args...)
+	if err := testexec.KubectlApply(ctx, p.kubeconfigPath, resources, args...); err != nil {
+		var exitErr *exec.ExitError
+		if errors.As(err, &exitErr) {
+			return pkgerrors.New(fmt.Sprintf("%s: stderr: %s", err.Error(), exitErr.Stderr))
+		}
+		return err
+	}
+
+	return nil
 }
 
 func (p *clusterProxy) GetRESTConfig() *rest.Config {
@@ -263,7 +279,7 @@ func (p *clusterProxy) GetLogCollector() ClusterLogCollector {
 }
 
 // GetWorkloadCluster returns ClusterProxy for the workload cluster.
-func (p *clusterProxy) GetWorkloadCluster(ctx context.Context, namespace, name string) ClusterProxy {
+func (p *clusterProxy) GetWorkloadCluster(ctx context.Context, namespace, name string, options ...Option) ClusterProxy {
 	Expect(ctx).NotTo(BeNil(), "ctx is required for GetWorkloadCluster")
 	Expect(namespace).NotTo(BeEmpty(), "namespace is required for GetWorkloadCluster")
 	Expect(name).NotTo(BeEmpty(), "name is required for GetWorkloadCluster")
@@ -277,12 +293,13 @@ func (p *clusterProxy) GetWorkloadCluster(ctx context.Context, namespace, name s
 		p.fixConfig(ctx, name, config)
 	}
 
-	return newFromAPIConfig(name, config, p.scheme)
+	return newFromAPIConfig(name, config, p.scheme, options...)
 }
 
-// CollectWorkloadClusterLogs collects machines logs from the workload cluster.
+// CollectWorkloadClusterLogs collects machines and infrastructure logs and from the workload cluster.
 func (p *clusterProxy) CollectWorkloadClusterLogs(ctx context.Context, namespace, name, outputPath string) {
 	if p.logCollector == nil {
+		fmt.Printf("Unable to get logs for workload Cluster %s: log collector is nil.\n", klog.KRef(namespace, name))
 		return
 	}
 
@@ -313,8 +330,25 @@ func (p *clusterProxy) CollectWorkloadClusterLogs(ctx context.Context, namespace
 		mp := &machinePools.Items[i]
 		err := p.logCollector.CollectMachinePoolLog(ctx, p.GetClient(), mp, path.Join(outputPath, "machine-pools", mp.GetName()))
 		if err != nil {
-			// NB. we are treating failures in collecting logs as a non blocking operation (best effort)
+			// NB. we are treating failures in collecting logs as a non-blocking operation (best effort)
 			fmt.Printf("Failed to get logs for MachinePool %s, Cluster %s: %v\n", mp.GetName(), klog.KRef(namespace, name), err)
+		}
+	}
+
+	cluster := &clusterv1.Cluster{}
+	Eventually(func() error {
+		key := client.ObjectKey{
+			Namespace: namespace,
+			Name:      name,
+		}
+		return client.IgnoreNotFound(p.GetClient().Get(ctx, key, cluster))
+	}, retryableOperationTimeout, retryableOperationInterval).Should(Succeed(), "Failed to get Cluster %s", klog.KRef(namespace, name))
+
+	if cluster != nil {
+		err := p.logCollector.CollectInfrastructureLogs(ctx, p.GetClient(), cluster, path.Join(outputPath, "infrastructure"))
+		if err != nil {
+			// NB. we are treating failures in collecting logs as a non blocking operation (best effort)
+			fmt.Printf("Failed to get infrastructure logs for Cluster %s: %v\n", klog.KRef(namespace, name), err)
 		}
 	}
 }

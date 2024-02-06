@@ -26,6 +26,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
+	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
 // log is for logging in this package.
@@ -49,17 +50,17 @@ func (r *HivelocityMachine) Default() {}
 var _ webhook.Validator = &HivelocityMachine{}
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type.
-func (r *HivelocityMachine) ValidateCreate() error {
+func (r *HivelocityMachine) ValidateCreate() (admission.Warnings, error) {
 	hivelocitymachinelog.V(1).Info("validate create", "name", r.Name)
-	return nil
+	return nil, nil
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type.
-func (r *HivelocityMachine) ValidateUpdate(oldRaw runtime.Object) error {
+func (r *HivelocityMachine) ValidateUpdate(oldRaw runtime.Object) (admission.Warnings, error) {
 	hivelocitymachinelog.V(1).Info("validate update", "name", r.Name)
 	old, ok := oldRaw.(*HivelocityMachine)
 	if !ok {
-		return apierrors.NewBadRequest(fmt.Sprintf("expected an HivelocityMachine but got a %T", oldRaw))
+		return nil, apierrors.NewBadRequest(fmt.Sprintf("expected an HivelocityMachine but got a %T", oldRaw))
 	}
 
 	var allErrs field.ErrorList
@@ -78,11 +79,11 @@ func (r *HivelocityMachine) ValidateUpdate(oldRaw runtime.Object) error {
 		)
 	}
 
-	return aggregateObjErrors(r.GroupVersionKind().GroupKind(), r.Name, allErrs)
+	return nil, aggregateObjErrors(r.GroupVersionKind().GroupKind(), r.Name, allErrs)
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type.
-func (r *HivelocityMachine) ValidateDelete() error {
+func (r *HivelocityMachine) ValidateDelete() (admission.Warnings, error) {
 	hivelocitymachinelog.V(1).Info("validate delete", "name", r.Name)
-	return nil
+	return nil, nil
 }

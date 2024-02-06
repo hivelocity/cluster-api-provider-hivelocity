@@ -21,6 +21,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
+	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
 // log is for logging in this package.
@@ -44,19 +45,19 @@ func (r *HivelocityCluster) Default() {}
 var _ webhook.Validator = &HivelocityCluster{}
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type.
-func (r *HivelocityCluster) ValidateCreate() error {
+func (r *HivelocityCluster) ValidateCreate() (admission.Warnings, error) {
 	hivelocityclusterlog.V(1).Info("validate create", "name", r.Name)
-	return nil
+	return nil, nil
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type.
-func (r *HivelocityCluster) ValidateUpdate(_ runtime.Object) error {
+func (r *HivelocityCluster) ValidateUpdate(_ runtime.Object) (admission.Warnings, error) {
 	hivelocityclusterlog.V(1).Info("validate update", "name", r.Name)
-	return nil
+	return nil, nil
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type.
-func (r *HivelocityCluster) ValidateDelete() error {
+func (r *HivelocityCluster) ValidateDelete() (admission.Warnings, error) {
 	hivelocityclusterlog.V(1).Info("validate delete", "name", r.Name)
-	return nil
+	return nil, nil
 }

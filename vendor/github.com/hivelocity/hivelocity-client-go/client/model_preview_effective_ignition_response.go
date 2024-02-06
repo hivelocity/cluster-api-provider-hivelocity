@@ -10,7 +10,7 @@
 package swagger
 
 type PreviewEffectiveIgnitionResponse struct {
+	Original      interface{}    `json:"original,omitempty"`
 	Modifications []Modification `json:"modifications,omitempty"`
 	Result        interface{}    `json:"result,omitempty"`
-	Original      interface{}    `json:"original,omitempty"`
 }

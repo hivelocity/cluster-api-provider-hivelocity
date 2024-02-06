@@ -27,7 +27,7 @@ var (
 type IgnitionApiService service
 
 /*
-IgnitionApiService
+IgnitionApiService Delete an Ignition configuration by ID
  * @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
  * @param ignitionId
  * @param optional nil or *IgnitionApiDeleteIgnitionResourceIdOpts - Optional Parameters:
@@ -118,7 +118,7 @@ func (a *IgnitionApiService) DeleteIgnitionResourceId(ctx context.Context, ignit
 }
 
 /*
-IgnitionApiService Gets an Ignition configuration
+IgnitionApiService Return all Ignition configurations
  * @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
  * @param optional nil or *IgnitionApiGetIgnitionResourceOpts - Optional Parameters:
      * @param "XFields" (optional.String) -  An optional fields mask
@@ -225,7 +225,7 @@ func (a *IgnitionApiService) GetIgnitionResource(ctx context.Context, localVarOp
 }
 
 /*
-IgnitionApiService
+IgnitionApiService Return an Ignition configuration by ID
  * @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
  * @param ignitionId
  * @param optional nil or *IgnitionApiGetIgnitionResourceIdOpts - Optional Parameters:
@@ -444,7 +444,7 @@ func (a *IgnitionApiService) PostIgnitionResource(ctx context.Context, payload C
 }
 
 /*
-IgnitionApiService
+IgnitionApiService Update an Ignition configuration by ID
  * @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
  * @param ignitionId
  * @param payload

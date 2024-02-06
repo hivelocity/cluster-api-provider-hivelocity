@@ -10,6 +10,7 @@
 package swagger
 
 type SshKey struct {
-	Name      string `json:"name"`
+	// Public key content (RSA or Ed25519 supported)
 	PublicKey string `json:"publicKey"`
+	Name      string `json:"name"`
 }
