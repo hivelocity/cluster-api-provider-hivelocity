@@ -238,7 +238,7 @@ typo in the docs, please tell us how we can improve the project!</p>
 <h2 id="what-is-cluster-api-provider-hivelocity"><a class="header" href="#what-is-cluster-api-provider-hivelocity">What is Cluster API Provider Hivelocity?</a></h2>
 <p>Cluster API Hivelocity adds the infrastructure provider Hivelocity to the list of supported providers. Other providers supported by Cluster API are: AWS, Azure, Google Cloud Platform, OpenStack … (See <a href="https://cluster-api.sigs.k8s.io/reference/providers.html#infrastructure">complete list</a>)</p>
 <h2 id="setup"><a class="header" href="#setup">Setup</a></h2>
-<p>At this moment we only support cluster management with tilt. So follow below instructions to create management and workload cluster.</p>
+<p>At this moment we only support cluster management with Tilt. So follow below instructions to create management and workload cluster.</p>
 <h3 id="create-a-management-cluster"><a class="header" href="#create-a-management-cluster">Create a management cluster</a></h3>
 <p>Please run below command and this will use <code>tilt-provider.yaml</code> to create the provider and
 <code>.envrc</code> to get all the environment variables.</p>
@@ -246,10 +246,10 @@ typo in the docs, please tell us how we can improve the project!</p>
 make tilt-up
 </code></pre>
 <h3 id="create-workload-cluster"><a class="header" href="#create-workload-cluster">Create workload cluster</a></h3>
-<p>There is a button in top right corner of the tilt console to create the workload cluster.
+<p>There is a button in top right corner of the Tilt console to create the workload cluster.
 <img src="user/./create_workload.jpg" alt="Screenshot of Tilt" /></p>
 <h3 id="tear-down-resources"><a class="header" href="#tear-down-resources">Tear down resources</a></h3>
-<p>There is a button in top right corner of the tilt console to create the workload cluster.
+<p>There is a button in top right corner of the Tilt console to create the workload cluster.
 <img src="user/./delete_workload.jpg" alt="Screenshot of Tilt" /></p>
 <p>Once done delete management cluster by -</p>
 <pre><code class="language-shell">make delete-mgt-cluster
@@ -281,12 +281,12 @@ need to reset the machine.</p>
 <p>When starting a cluster you define a worker-machine-type and a control-plane-machine-type. Both values can be equal, when you don’t want to differentiate between both types.</p>
 <p>Before you create your cluster you need to tag the devices accordingly.</p>
 <p>The devices must have <code>caphv-use=allow</code> tag so that the controller can use them.</p>
-<p>For example you set tags “caphv-device-type=hvControlPlane” on all machines which should become control planes, and “caphv-device-type=hvWorker” on all machines which should become worker nodes.</p>
+<p>For example you set tags “caphvlabel:deviceType=hvControlPlane” on all machines which should become control planes, and “caphvlabel:deviceType=hvWorker” on all machines which should become worker nodes.</p>
 <p>You can use the web-GUI of Hivelocity for this.</p>
 <p>Then the CAPHV controller is able to select machines, and then provision them to become Kubernetes nodes.</p>
 <p>The CAPHV controller uses <a href="https://cluster-api.sigs.k8s.io/tasks/bootstrap/kubeadm-bootstrap.html">Cluster API bootstrap provider kubeadm</a> to provision the machines.</p>
 <p>⚠ If you create a cluster with <code>make tilt-up</code> or other Makefile targets, then all machines having a
-corresponding <code>caphv-device-type</code> will get all their tags cleared. This means the machine is free to use,
+corresponding <code>caphvlabel:deviceType=</code> will get all their tags cleared. This means the machine is free to use,
 and it is likely to become automatically provisioned. This means all data on this machine gets lost.</p>
 <p>TODO: https://github.com/hivelocity/cluster-api-provider-hivelocity/issues/73</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="environment-variables"><a class="header" href="#environment-variables">Environment Variables</a></h1>
@@ -449,7 +449,7 @@ binaries (<code>envsubst</code> and <code>kustomize</code>) which are needed to 
 <p>We use <a href="https://tilt.dev/">Tilt</a> to start a development cluster.</p>
 <h2 id="setting-tilt-up"><a class="header" href="#setting-tilt-up">Setting Tilt up</a></h2>
 <p>You need to create a <code>.envrc</code> file and specify the values you need. In the git repo is already a file. You can adapt it to your needs.</p>
-<p>Machines with the corresponding <code>caphv-device-type</code> tag will get conditionless provisioned. Be sure that you don’t provision machines which run valuable workload!</p>
+<p>Machines with the corresponding <code>caphvlabel:deviceType=</code> tag will get conditionless provisioned. Be sure that you don’t provision machines which run valuable workload!</p>
 <p>We recommend to use custom device tags for testing.</p>
 <p>More about this topic: <a href="developer/../topics/provisioning-machines.html">Provisioning Machines</a></p>
 <h2 id="starting-tilt"><a class="header" href="#starting-tilt">Starting Tilt</a></h2>
@@ -473,9 +473,9 @@ to create a new workload cluster.</p>
 <p>Working with baremetal servers takes time. It takes roughly 20 minutes
 until the ssh port of the first control plane is reachable.</p>
 <div style="break-before: page; page-break-before: always;"></div><h1 id="developing-cluster-api-provider-hivelocity"><a class="header" href="#developing-cluster-api-provider-hivelocity">Developing Cluster API Provider Hivelocity</a></h1>
-<p>Developing our provider is quite easy. First, you need to install some base requirements. Second, you need to follow the quickstart documents to set up everything related to Hivelocity. Third, you need to configure your tilt set-up. After having done those three steps, you can start developing with the local Kind cluster and the Tilt UI to create one of the different workload clusters that are already pre-configured.</p>
+<p>Developing our provider is quite easy. First, you need to install some base requirements. Second, you need to follow the quickstart documents to set up everything related to Hivelocity. Third, you need to configure your Tilt set-up. After having done those three steps, you can start developing with the local Kind cluster and the Tilt UI to create one of the different workload clusters that are already pre-configured.</p>
 <h2 id="why-tilt"><a class="header" href="#why-tilt">Why Tilt</a></h2>
-<p>Provider Integration development requires a lot of iteration, and the “build, tag, push, update deployment” workflow can be very tedious. </p>
+<p>Provider Integration development requires a lot of iteration, and the “build, tag, push, update deployment” workflow can be very tedious.</p>
 <p>Tilt makes this process much simpler by watching for updates and automatically building and deploying them.</p>
 <p>You just need to update the Go code, and if it compiles, the caphv-controller-manager will get updated.</p>
 <h2 id="updating-the-api-of-the-crds"><a class="header" href="#updating-the-api-of-the-crds">Updating the API of the CRDs</a></h2>

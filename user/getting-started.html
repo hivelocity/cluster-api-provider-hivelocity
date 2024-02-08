@@ -167,7 +167,7 @@
 <h2 id="what-is-cluster-api-provider-hivelocity"><a class="header" href="#what-is-cluster-api-provider-hivelocity">What is Cluster API Provider Hivelocity?</a></h2>
 <p>Cluster API Hivelocity adds the infrastructure provider Hivelocity to the list of supported providers. Other providers supported by Cluster API are: AWS, Azure, Google Cloud Platform, OpenStack … (See <a href="https://cluster-api.sigs.k8s.io/reference/providers.html#infrastructure">complete list</a>)</p>
 <h2 id="setup"><a class="header" href="#setup">Setup</a></h2>
-<p>At this moment we only support cluster management with tilt. So follow below instructions to create management and workload cluster.</p>
+<p>At this moment we only support cluster management with Tilt. So follow below instructions to create management and workload cluster.</p>
 <h3 id="create-a-management-cluster"><a class="header" href="#create-a-management-cluster">Create a management cluster</a></h3>
 <p>Please run below command and this will use <code>tilt-provider.yaml</code> to create the provider and
 <code>.envrc</code> to get all the environment variables.</p>
@@ -175,10 +175,10 @@
 make tilt-up
 </code></pre>
 <h3 id="create-workload-cluster"><a class="header" href="#create-workload-cluster">Create workload cluster</a></h3>
-<p>There is a button in top right corner of the tilt console to create the workload cluster.
+<p>There is a button in top right corner of the Tilt console to create the workload cluster.
 <img src="./create_workload.jpg" alt="Screenshot of Tilt" /></p>
 <h3 id="tear-down-resources"><a class="header" href="#tear-down-resources">Tear down resources</a></h3>
-<p>There is a button in top right corner of the tilt console to create the workload cluster.
+<p>There is a button in top right corner of the Tilt console to create the workload cluster.
 <img src="./delete_workload.jpg" alt="Screenshot of Tilt" /></p>
 <p>Once done delete management cluster by -</p>
 <pre><code class="language-shell">make delete-mgt-cluster

@@ -153,12 +153,12 @@
 <p>When starting a cluster you define a worker-machine-type and a control-plane-machine-type. Both values can be equal, when you don’t want to differentiate between both types.</p>
 <p>Before you create your cluster you need to tag the devices accordingly.</p>
 <p>The devices must have <code>caphv-use=allow</code> tag so that the controller can use them.</p>
-<p>For example you set tags “caphv-device-type=hvControlPlane” on all machines which should become control planes, and “caphv-device-type=hvWorker” on all machines which should become worker nodes.</p>
+<p>For example you set tags “caphvlabel:deviceType=hvControlPlane” on all machines which should become control planes, and “caphvlabel:deviceType=hvWorker” on all machines which should become worker nodes.</p>
 <p>You can use the web-GUI of Hivelocity for this.</p>
 <p>Then the CAPHV controller is able to select machines, and then provision them to become Kubernetes nodes.</p>
 <p>The CAPHV controller uses <a href="https://cluster-api.sigs.k8s.io/tasks/bootstrap/kubeadm-bootstrap.html">Cluster API bootstrap provider kubeadm</a> to provision the machines.</p>
 <p>⚠ If you create a cluster with <code>make tilt-up</code> or other Makefile targets, then all machines having a
-corresponding <code>caphv-device-type</code> will get all their tags cleared. This means the machine is free to use,
+corresponding <code>caphvlabel:deviceType=</code> will get all their tags cleared. This means the machine is free to use,
 and it is likely to become automatically provisioned. This means all data on this machine gets lost.</p>
 <p>TODO: https://github.com/hivelocity/cluster-api-provider-hivelocity/issues/73</p>
 
