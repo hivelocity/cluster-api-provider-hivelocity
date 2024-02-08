@@ -39,7 +39,7 @@ Cluster API Hivelocity adds the infrastructure provider Hivelocity to the list o
 
 ## Setup
 
-At this moment we only support cluster management with tilt. So follow below instructions to create management and workload cluster.
+At this moment we only support cluster management with Tilt. So follow below instructions to create management and workload cluster.
 
 ### Create a management cluster
 
@@ -52,12 +52,12 @@ make tilt-up
 
 ### Create workload cluster
 
-There is a button in top right corner of the tilt console to create the workload cluster.
+There is a button in top right corner of the Tilt console to create the workload cluster.
 ![Screenshot of Tilt](./create_workload.jpg)
 
 ### Tear down resources
 
-There is a button in top right corner of the tilt console to create the workload cluster.
+There is a button in top right corner of the Tilt console to create the workload cluster.
 ![Screenshot of Tilt](./delete_workload.jpg)
 
 Once done delete management cluster by -

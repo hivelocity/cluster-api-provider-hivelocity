@@ -95,6 +95,8 @@ type APIClient struct {
 
 	VLANApi *VLANApiService
 
+	VPSApi *VPSApiService
+
 	WebhookApi *WebhookApiService
 }
 
@@ -139,6 +141,7 @@ func NewAPIClient(cfg *Configuration) *APIClient {
 	c.TicketApi = (*TicketApiService)(&c.common)
 	c.TokenApi = (*TokenApiService)(&c.common)
 	c.VLANApi = (*VLANApiService)(&c.common)
+	c.VPSApi = (*VPSApiService)(&c.common)
 	c.WebhookApi = (*WebhookApiService)(&c.common)
 
 	return c

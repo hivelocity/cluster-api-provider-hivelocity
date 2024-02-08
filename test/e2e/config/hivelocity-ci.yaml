@@ -13,8 +13,8 @@ providers:
   - name: cluster-api
     type: CoreProvider
     versions:
-      - name: v1.4.1
-        value: "https://github.com/kubernetes-sigs/cluster-api/releases/download/v1.4.1/core-components.yaml"
+      - name: v1.6.0
+        value: "https://github.com/kubernetes-sigs/cluster-api/releases/download/v1.6.0/core-components.yaml"
         type: "url"
         contract: v1beta1
         files:
@@ -30,8 +30,8 @@ providers:
   - name: kubeadm
     type: BootstrapProvider
     versions:
-      - name: v1.4.1
-        value: "https://github.com/kubernetes-sigs/cluster-api/releases/download/v1.4.1/bootstrap-components.yaml"
+      - name: v1.6.0
+        value: "https://github.com/kubernetes-sigs/cluster-api/releases/download/v1.6.0/bootstrap-components.yaml"
         type: "url"
         contract: "v1beta1"
         files:
@@ -43,12 +43,14 @@ providers:
             new: "--enable-leader-election=false"
           - old: --metrics-addr=127.0.0.1:8080
             new: --metrics-addr=:8080
+          - old: --metrics-addr=127.0.0.1:8080
+            new: --metrics-addr=:8080
 
   - name: kubeadm
     type: ControlPlaneProvider
     versions:
-      - name: v1.4.1
-        value: "https://github.com/kubernetes-sigs/cluster-api/releases/download/v1.4.1/control-plane-components.yaml"
+      - name: v1.6.0
+        value: "https://github.com/kubernetes-sigs/cluster-api/releases/download/v1.6.0/control-plane-components.yaml"
         type: "url"
         files:
           - sourcePath: "../data/shared/v1alpha1/metadata.yaml"
@@ -81,23 +83,23 @@ providers:
 
 variables:
   # Upgrade Test
-  KUBERNETES_VERSION_MANAGEMENT: "v1.25.2"
-  KUBERNETES_VERSION: "${KUBERNETES_VERSION:-v1.25.2}"
-  KUBERNETES_VERSION_UPGRADE_FROM: "v1.24.1"
-  KUBERNETES_VERSION_UPGRADE_TO: "v1.25.2"
+  KUBERNETES_VERSION_MANAGEMENT: "v1.28.6"
+  KUBERNETES_VERSION: "${KUBERNETES_VERSION:-v1.28.6}"
+  KUBERNETES_VERSION_UPGRADE_FROM: "v1.27.8"
+  KUBERNETES_VERSION_UPGRADE_TO: "v1.28.6"
   CONTROL_PLANE_MACHINE_TEMPLATE_UPGRADE_TO: "k8s-upgrade-control-plane"
   WORKERS_MACHINE_TEMPLATE_UPGRADE_TO: "k8s-upgrade-worker"
   KUBERNETES_IMAGE_UPGRADE_FROM: ${KUBERNETES_IMAGE_UPGRADE_FROM:-}
   KUBERNETES_IMAGE_UPGRADE_TO: ${KUBERNETES_IMAGE_UPGRADE_TO:-}
-  ETCD_VERSION_UPGRADE_TO: "3.5.3-0"
-  COREDNS_VERSION_UPGRADE_TO: "v1.8.6"
+  ETCD_VERSION_UPGRADE_TO: "3.5.9-0"
+  COREDNS_VERSION_UPGRADE_TO: "v1.10.1"
   IP_FAMILY: "IPv4"
 
   # NOTE: INIT_WITH_BINARY and INIT_WITH_KUBERNETES_VERSION are only used by the clusterctl upgrade test to initialize
   # the management cluster to be upgraded.
-  INIT_WITH_BINARY: "https://github.com/kubernetes-sigs/cluster-api/releases/download/v1.1.4/clusterctl-linux-amd64"
+  INIT_WITH_BINARY: "https://github.com/kubernetes-sigs/cluster-api/releases/download/v1.6.0/clusterctl-linux-amd64"
   INIT_WITH_PROVIDERS_CONTRACT: "v1beta1"
-  INIT_WITH_KUBERNETES_VERSION: "v1.25.2"
+  INIT_WITH_KUBERNETES_VERSION: "v1.28.6"
   INIT_WITH_INFRASTRUCTURE_PROVIDER_VERSION: ${CAPHV_LATEST_VERSION:-}
 
   # Cluster Addons
@@ -117,15 +119,14 @@ variables:
   # Provider Variables
   HIVELOCITY_API_KEY: "admin123"
   HIVELOCITY_SSH_PUB: "secret"
-  HIVELOCITY_IMAGE_NAME: ${HIVELOCITY_IMAGE_NAME:-}
   HIVELOCITY_REGION: LAX2
-  HIVELOCITY_CONTROL_PLANE_MACHINE_TYPE: caphvlabel:deviceType=e2eControlPlane
-  HIVELOCITY_WORKER_MACHINE_TYPE: caphvlabel:deviceType=e2eWorker
+  HIVELOCITY_CONTROL_PLANE_MACHINE_TYPE: e2eControlPlane
+  HIVELOCITY_WORKER_MACHINE_TYPE: e2eWorker
   REDACT_LOG_SCRIPT: "../../hack/log/redact.sh"
 
 intervals:
   default/wait-controllers: ["8m", "10s"] ## wait until initBootstrapCluster has finished.
   default/wait-cluster: ["5m", "10s"] ## wait until Infrastructure == ready and ControlPlaneEndpoint is valid
-  default/wait-control-plane: ["26m", "10s"] ## wait until first control plane is ready.
-  default/wait-worker-nodes: ["26m", "10s"] ## wait until all workers are ready from the moment when the control plane is ready
+  default/wait-control-plane: ["29m", "10s"] ## wait until first control plane is ready.
+  default/wait-worker-nodes: ["29m", "10s"] ## wait until all workers are ready from the moment when the control plane is ready
   default/wait-delete-cluster: ["5m", "10s"] ## wait until cluster is deleted

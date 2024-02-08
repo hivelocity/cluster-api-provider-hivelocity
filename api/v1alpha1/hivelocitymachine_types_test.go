@@ -23,7 +23,7 @@ import (
 	hv "github.com/hivelocity/hivelocity-client-go/client"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	capierrors "sigs.k8s.io/cluster-api/errors"
 )
@@ -232,14 +232,14 @@ var _ = Describe("Test SetProviderID", func() {
 			Expect(hvMachine.Spec.ProviderID).Should(Equal(tc.expectProviderID))
 		},
 		Entry("existing providerID", testCaseSetProviderID{
-			existingProviderID: pointer.String("hivelocity://42"),
+			existingProviderID: ptr.To[string]("hivelocity://42"),
 			deviceID:           1,
-			expectProviderID:   pointer.String("hivelocity://1"),
+			expectProviderID:   ptr.To[string]("hivelocity://1"),
 		}),
 		Entry("no existing status", testCaseSetProviderID{
 			existingProviderID: nil,
 			deviceID:           1,
-			expectProviderID:   pointer.String("hivelocity://1"),
+			expectProviderID:   ptr.To[string]("hivelocity://1"),
 		}),
 	)
 })

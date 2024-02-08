@@ -12,16 +12,16 @@ package swagger
 type DeviceReload struct {
 	// The unique ID of an Ignition File for FlatcarOS provisions.
 	IgnitionId int32 `json:"ignitionId,omitempty"`
+	// The unique ID of the operating system product option to provision on this device.
+	OperatingSystemId int32 `json:"operatingSystemId"`
 	// Custom IPXE script URL. If device was provisioned was one before and this field is omitted, the original custom iPXE script is used. Otherwise specifying the script will override.
 	CustomIPXEScriptUrl string `json:"customIPXEScriptUrl,omitempty"`
 	// Describe any special requests for custom devices.
 	Body string `json:"body,omitempty"`
+	// A Cloud-Init script or a post-install script (Bash for Linux or Powershell for Windows).
+	Script string `json:"script,omitempty"`
 	// The unique ID of the control panel product option to provision on this device. This is used only for custom devices.
 	ControlPanelId int32 `json:"controlPanelId,omitempty"`
 	// List of public ssh keys
 	PublicSshKeyIds []int32 `json:"publicSshKeyIds,omitempty"`
-	// A Cloud-Init script or a post-install script (Bash for Linux or Powershell for Windows).
-	Script string `json:"script,omitempty"`
-	// The unique ID of the operating system product option to provision on this device.
-	OperatingSystemId int32 `json:"operatingSystemId"`
 }

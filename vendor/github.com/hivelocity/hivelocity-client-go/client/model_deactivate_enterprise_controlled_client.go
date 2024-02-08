@@ -10,5 +10,6 @@
 package swagger
 
 type DeactivateEnterpriseControlledClient struct {
+	// ID of the controlled client account
 	ClientId int32 `json:"clientId"`
 }

@@ -1,6 +1,6 @@
 module github.com/hivelocity/cluster-api-provider-hivelocity/hack/tools
 
-go 1.20
+go 1.21
 
 require sigs.k8s.io/cluster-api/hack/tools v0.0.0-20220202124422-fe7656c044e1
 

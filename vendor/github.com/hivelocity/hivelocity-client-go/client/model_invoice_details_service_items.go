@@ -10,9 +10,9 @@
 package swagger
 
 type InvoiceDetailsServiceItems struct {
+	DateRange   interface{} `json:"dateRange,omitempty"`
+	ServiceId   int32       `json:"serviceId,omitempty"`
 	Quantity    int32       `json:"quantity,omitempty"`
 	Description string      `json:"description,omitempty"`
-	ServiceId   int32       `json:"serviceId,omitempty"`
-	DateRange   interface{} `json:"dateRange,omitempty"`
 	UnitPrice   float32     `json:"unitPrice,omitempty"`
 }

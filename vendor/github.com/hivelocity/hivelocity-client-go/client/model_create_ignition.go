@@ -10,6 +10,6 @@
 package swagger
 
 type CreateIgnition struct {
-	Name     string `json:"name,omitempty"`
 	Contents string `json:"contents,omitempty"`
+	Name     string `json:"name,omitempty"`
 }

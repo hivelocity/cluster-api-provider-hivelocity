@@ -10,30 +10,30 @@
 package swagger
 
 type BareMetalDeviceCreate struct {
-	// hourly|monthly|quarterly|semi-annually|annually|biennial|triennial
-	Period string `json:"period,omitempty"`
-	// The unique ID of an Ignition File for FlatcarOS provisions.
-	IgnitionId int32 `json:"ignitionId,omitempty"`
-	// The unique ID of the desired product to provision.
-	ProductId int32 `json:"productId"`
-	// If true, ensures the provisioned device supports port bonding. If false, ensures no bonding support.
-	BondingSupport bool `json:"bondingSupport,omitempty"`
-	// User specified values.
-	Tags   []string `json:"tags,omitempty"`
-	VlanId int32    `json:"vlanId,omitempty"`
-	// For users with reserved devices. The unique ID of the target device to provision.
-	ForceDeviceId int32 `json:"forceDeviceId,omitempty"`
-	// URL to download custom iPXE script if not supplying script in entirety
-	CustomIPXEScriptURL string `json:"customIPXEScriptURL,omitempty"`
 	// Contents of iPXE script if not supplying URL
 	CustomIPXEScriptContents string `json:"customIPXEScriptContents,omitempty"`
-	PublicSshKeyId           int32  `json:"publicSshKeyId,omitempty"`
-	// A FQDN for the device. For example: `example.hivelocity.net`
-	Hostname string `json:"hostname"`
 	// A facility code. For example `NYC1`.
 	LocationName string `json:"locationName"`
+	// User specified values.
+	Tags []string `json:"tags,omitempty"`
+	// The unique ID of an Ignition File for FlatcarOS provisions.
+	IgnitionId int32 `json:"ignitionId,omitempty"`
 	// The name of the Operating System to provision on this device. Must match name of an operating system product option.
 	OsName string `json:"osName"`
+	// A FQDN for the device. For example: `example.hivelocity.net`
+	Hostname string `json:"hostname"`
+	// hourly|monthly|quarterly|semi-annually|annually|biennial|triennial
+	Period         string `json:"period,omitempty"`
+	PublicSshKeyId int32  `json:"publicSshKeyId,omitempty"`
+	// If true, ensures the provisioned device supports port bonding. If false, ensures no bonding support.
+	BondingSupport bool  `json:"bondingSupport,omitempty"`
+	VlanId         int32 `json:"vlanId,omitempty"`
 	// A Cloud-Init script or a post-install script (Bash for Linux or Powershell for Windows).
 	Script string `json:"script,omitempty"`
+	// For users with reserved devices. The unique ID of the target device to provision.
+	ForceDeviceId int32 `json:"forceDeviceId,omitempty"`
+	// The unique ID of the desired product to provision.
+	ProductId int32 `json:"productId"`
+	// URL to download custom iPXE script if not supplying script in entirety
+	CustomIPXEScriptURL string `json:"customIPXEScriptURL,omitempty"`
 }

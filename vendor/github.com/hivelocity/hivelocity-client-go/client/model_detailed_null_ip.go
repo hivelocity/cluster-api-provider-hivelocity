@@ -10,8 +10,8 @@
 package swagger
 
 type DetailedNullIp struct {
-	// Valid public IPv4 Address (Cannot be RFC198 IP).
-	Ip string `json:"ip"`
 	// User comments about reason for null routing
 	Comments string `json:"comments,omitempty"`
+	// Valid public IPv4 Address (Cannot be RFC198 IP).
+	Ip string `json:"ip"`
 }

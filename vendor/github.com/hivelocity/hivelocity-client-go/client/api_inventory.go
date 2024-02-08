@@ -246,7 +246,7 @@ func (a *InventoryApiService) GetStockByProductResource(ctx context.Context, pro
 InventoryApiService Get all products
  * @param ctx context.Context - for authentication, logging, cancellation, deadlines, tracing, etc. Passed from http.Request or context.Background().
  * @param optional nil or *InventoryApiGetStockResourceOpts - Optional Parameters:
-     * @param "Location" (optional.String) -  Retrieve products by their location in the Hivelocity store:   MAIN: The main list of instant (and custom servers). MASSIVESTORAGE: Servers with up to 90 drives. GPU: Servers with GPUs. OUTLET: Discounted older hardware. LANDING: Periodic specials for events.
+     * @param "Location" (optional.String) -  Retrieve products by their location in the Hivelocity store:   MAIN: The main list of instant servers. CUSTOM_DISPLAY: The main list of custom servers. MASSIVESTORAGE: Servers with up to 90 drives. GPU: Servers with GPUs. OUTLET: Discounted older hardware. LANDING: Periodic specials for events.
      * @param "IncludeCustom" (optional.Bool) -  Include custom server products.
      * @param "BondingSupport" (optional.String) -  Filter by bonding support. Values are true/false. None will return a mix of both. *DEPRECATED:* Soon, all servers sold will have bonding support and this will be removed.
      * @param "GroupBy" (optional.String) -  Get results grouped by &#39;city&#39;, &#39;facility&#39;, or &#39;flat&#39;

@@ -10,6 +10,7 @@
 package swagger
 
 type SshKeyUpdate struct {
-	Name      string `json:"name,omitempty"`
+	// Public key content (RSA or Ed25519 supported)
 	PublicKey string `json:"publicKey,omitempty"`
+	Name      string `json:"name,omitempty"`
 }

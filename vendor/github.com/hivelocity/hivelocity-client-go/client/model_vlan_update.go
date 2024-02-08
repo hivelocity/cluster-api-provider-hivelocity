@@ -10,8 +10,8 @@
 package swagger
 
 type VlanUpdate struct {
-	// Unique IDs of IP Assignments.
-	IpIds []int32 `json:"ipIds,omitempty"`
 	// Unique IDs of ports or bonds.
 	PortIds []int32 `json:"portIds"`
+	// Unique IDs of IP Assignments.
+	IpIds []int32 `json:"ipIds,omitempty"`
 }
