@@ -189,6 +189,8 @@ fi
 # This switches of iPXE for this device. The next boot should be from the disc.
 curl -XPOST -sSL --fail "$finish_url"
 
+umount /mnt --force
+
 echo "Looks good!"
 echo "Restarting"
 
