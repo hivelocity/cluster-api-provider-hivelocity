@@ -194,10 +194,11 @@ if [ -z "$finish_url" ]; then
     cat /metadata.json
     exit 1
 fi
+
 # Tell Hivelocity API, that machine is provisioned
 # We hope to get out of the stuck endless reloading state like this.
 # This switches of iPXE for this device. The next boot should be from the disc.
-curl -XPOST -sSL --fail "$finish_url"
+curl -XPOST -sSL --fail "$finish_url" || true
 
 umount /mnt -fr || true
 
