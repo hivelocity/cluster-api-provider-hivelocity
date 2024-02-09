@@ -182,6 +182,10 @@ echo >> /root/bootlocal.log
 uname -a >> /root/bootlocal.log
 echo "######################################" >> /root/bootlocal.log
 rm -rf /var/log/journal/
+
+# https://bugs.launchpad.net/ubuntu/+source/isc-dhcp/+bug/2011628
+echo ' /{,usr/}bin/true Uxr,' > /etc/apparmor.d/local/sbin.dhclient
+
 EOF
 
 echo "Installed the image to $PART."
