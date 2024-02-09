@@ -18,27 +18,25 @@ while ! sudo -u tc tce-load -wi curl; do
     sleep 5
 done
 
-
-authorized_keys=$(grep -o 'authorized_keys="[^"]*"' /proc/cmdline | cut -d= -f2- | tr -d '"' )
-if [ -n "$authorized_keys" ];  then
+authorized_keys=$(grep -o 'authorized_keys="[^"]*"' /proc/cmdline | cut -d= -f2- | tr -d '"')
+if [ -n "$authorized_keys" ]; then
     echo "Installing and starting ssh daemon"
     sudo -u tc tce-load -wi openssh
     cp /usr/local/etc/ssh/sshd_config.orig /usr/local/etc/ssh/sshd_config
-    /usr/local/etc/init.d/openssh start > /var/log/openssh-start.log 2>&1
+    /usr/local/etc/init.d/openssh start >/var/log/openssh-start.log 2>&1
     echo "Creating /root/.ssh/authorized_keys from kernel commandline"
     mkdir -p /root/.ssh/
 
     # Otherwise: bad ownership if sshd tries to read the authorized_keys file.
     chmod 644 /root
 
-    echo "$authorized_keys" > /root/.ssh/authorized_keys
+    echo "$authorized_keys" >/root/.ssh/authorized_keys
 else
     echo 'Not installing and starting ssh daemon, because no authorized_keys="..." kernel parameter was set'
 fi
 
 echo "interfaces:"
 ifconfig
-
 
 create_partition() {
 
@@ -49,13 +47,13 @@ create_partition() {
     # Create a new partition table and a single primary partition
     # Note: The following commands are piped into fdisk to perform non-interactive disk partitioning
     (
-    echo o      # Create a new empty DOS partition table
-    echo n      # Add a new partition
-    echo p      # Primary partition
-    echo 1      # Partition number 1
-    echo        # First sector (Accept default: 1)
-    echo        # Last sector (Accept default: end of the disk)
-    echo w      # Write changes
+        echo o # Create a new empty DOS partition table
+        echo n # Add a new partition
+        echo p # Primary partition
+        echo 1 # Partition number 1
+        echo   # First sector (Accept default: 1)
+        echo   # Last sector (Accept default: end of the disk)
+        echo w # Write changes
     ) | fdisk "$DEVICE"
 
     # Wait for the partition table to be re-read
@@ -92,7 +90,7 @@ create_public_interface() {
 }
 
 DEVICE=$(grep -o 'targetdrive=[^ ]*' /proc/cmdline | cut -d= -f2-)
-if [ -z "$DEVICE" ];  then
+if [ -z "$DEVICE" ]; then
     echo "Could not find targetdrive=... in /proc/cmdline."
     echo "Please specify the targetdrive while booting."
     echo "Example: kernel ... targetdrive=/dev/sda"
@@ -118,8 +116,8 @@ if [ -z "$metadata_url" ]; then
     exit 1
 fi
 
-
 sudo -u tc tce-load -wi jq
+sudo -u tc tce-load -wi libzstd
 
 if [ "${metadata_url#http}" = "$metadata_url" ]; then
     echo "Metadata URL does not start with http"
@@ -129,7 +127,7 @@ else
     echo
     echo "#############################################################################"
     echo "metadata_url: $metadata_url"
-    echo "$metadata_url" > /metadata.url
+    echo "$metadata_url" >/metadata.url
     curl -sSL --fail -o /metadata.json "$metadata_url"
     cat /metadata.json
     echo "#############################################################################"
@@ -146,7 +144,6 @@ fi
 create_partition
 
 mount -t ext4 "$PART" /mnt
-
 
 echo "#############################################################################"
 echo "#############################################################################"
@@ -191,7 +188,6 @@ fi
 # We hope to get out of the stuck endless reloading state like this.
 # This switches of iPXE for this device. The next boot should be from the disc.
 curl -XPOST -sSL --fail "$finish_url"
-
 
 echo "Looks good!"
 echo "Restarting"

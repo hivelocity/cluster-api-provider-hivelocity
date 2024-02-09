@@ -46,6 +46,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
+//go:embed tiny-core-linux.ipxe
+var tinyCoreLinuxIpxe string
+
 // Service defines struct with machine scope to reconcile Hivelocity devices.
 type Service struct {
 	scope *scope.MachineScope
@@ -550,17 +553,26 @@ func (s *Service) actionProvisionDevice(ctx context.Context) actionResult {
 		return actionContinue{delay: 10 * time.Second}
 	}
 
-	image, err := s.getDeviceImage(ctx)
-	if err != nil {
-		return actionError{err: fmt.Errorf("failed to get device image: %w", err)}
+	ipxe := true // TODOOOOOOOOOOOOOOO
+	ipxeScript := ""
+	image := ""
+	if ipxe {
+		image = "Custom iPXE"
+		ipxeScript = tinyCoreLinuxIpxe
+	} else {
+		image, err = s.getDeviceImage(ctx)
+		if err != nil {
+			return actionError{err: fmt.Errorf("failed to get device image: %w", err)}
+		}
 	}
 
 	opts := hv.BareMetalDeviceUpdate{
-		Hostname:    fmt.Sprintf("%s.example.com", s.scope.Name()), // TODO: HV API requires a FQDN.
-		Tags:        device.Tags,
-		Script:      "#cloud-config\n" + string(userData), // cloud-init script
-		OsName:      image,
-		ForceReload: true,
+		Hostname:                 fmt.Sprintf("%s.example.com", s.scope.Name()), // TODO: HV API requires a FQDN.
+		Tags:                     device.Tags,
+		CustomIPXEScriptContents: ipxeScript,
+		Script:                   "#cloud-config\n" + string(userData), // cloud-init script
+		OsName:                   image,
+		ForceReload:              true,
 	}
 
 	if s.scope.HivelocityCluster.Spec.SSHKey != nil {
