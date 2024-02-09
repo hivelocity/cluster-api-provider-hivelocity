@@ -172,6 +172,16 @@ mkdir -p /mnt/run/lock
 chroot /mnt /bin/bash <<EOF
 grub-install $DEVICE
 update-grub
+
+echo "######################################" >> /root/bootlocal.log
+echo "Output from bootlocal.sh" >> /root/bootlocal.log
+date >> /root/bootlocal.log
+echo >> /root/bootlocal.log
+ip a >> /root/bootlocal.log
+echo >> /root/bootlocal.log
+uname -a >> /root/bootlocal.log
+echo "######################################" >> /root/bootlocal.log
+rm -rf /var/log/journal/
 EOF
 
 echo "Installed the image to $PART."
