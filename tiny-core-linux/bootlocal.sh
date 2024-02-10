@@ -263,7 +263,7 @@ if [ -z "$OCI_REGISTRY_AUTH_TOKEN" ]; then
 else
     download_with_token
 fi
-'EOF_OCI_SCRIPT'
+EOF_OCI_SCRIPT
 
 set -x
 chmod 755 ./install-from-oci.sh
@@ -328,7 +328,6 @@ if [ -n "$authorized_keys" ]; then
     chmod 0700 /mnt/root/.ssh
     echo "$authorized_keys" >/mnt/root/.ssh/authorized_keys
 fi
-
 
 finish_url=$(jq -r '.finishHook.url' /metadata.json) || true
 if [ -z "$finish_url" ]; then
