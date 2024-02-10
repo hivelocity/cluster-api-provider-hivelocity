@@ -352,4 +352,4 @@ echo "Restarting"
 sleep 5
 
 # Leave Tinycore Linux, switch to downloaded machine image.
-reboot
+sudo reboot
