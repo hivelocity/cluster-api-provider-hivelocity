@@ -153,7 +153,132 @@ echo "Then you can scroll up with shift-PageUp"
 echo "Unfreeze the terminal with ctrl-q"
 echo
 
-curl -SL --fail --retry 20 -o- "$URL" | tar -C /mnt -xzf-
+#============================================================================
+# Script for downloading from oci registry
+echo "Creating bash script ./install-from-oci.sh"
+set +x
+cat <<'EOF_OCI_SCRIPT' >./install-from-oci.sh
+#!/bin/bash
+
+# Copyright 2023 The Kubernetes Authors.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# This scripts gets copied from the controller into the rescue system
+# of the bare-metal machine.
+
+set -euo pipefail
+
+image="${1:-}"
+image="${image#oci://}
+outdir="${2:-}"
+
+function usage {
+    echo "$0 image outdir."
+    echo "  Download a machine image in tgz format from a container registry"
+    echo "  and extract it into a directory."
+    echo "  image: for example oci://ghcr.io/foo/bar/my-machine-image:v9"
+    echo "  outdir: CreatTed file. Usually with file extensions '.tgz'"
+    echo "  If the oci registry needs a token, then the script uses OCI_REGISTRY_AUTH_TOKEN (if set)"
+    echo "  Example 1: of OCI_REGISTRY_AUTH_TOKEN: mygithubuser:mypassword"
+    echo "  Example 2: of OCI_REGISTRY_AUTH_TOKEN: ghp_SN51...."
+    echo
+}
+if [ -z "$outdir" ]; then
+    usage
+    exit 1
+fi
+OCI_REGISTRY_AUTH_TOKEN="${OCI_REGISTRY_AUTH_TOKEN:-}" # github:$GITHUB_TOKEN
+
+# Extract registry
+registry="${image%%/*}"
+
+# Extract scope and tag
+remainder="${image#*/}"
+scope="${remainder%:*}"
+tag="${remainder##*:}"
+
+if [[ -z "$registry" || -z "$scope" || -z "$tag" ]]; then
+    echo "failed to parse registry, scope and tag from image"
+    echo "image=$image"
+    echo "registry=$registry"
+    echo "scope=$scope"
+    echo "tag=$tag"
+    exit 1
+fi
+
+function download_with_token {
+    echo "download with token (OCI_REGISTRY_AUTH_TOKEN set)"
+    if [[ "$OCI_REGISTRY_AUTH_TOKEN" != *:* ]]; then
+        echo "Using OCI_REGISTRY_AUTH_TOKEN directly (no colon in token)"
+        token=$(echo "$OCI_REGISTRY_AUTH_TOKEN" | base64)
+    else
+        echo "OCI_REGISTRY_AUTH_TOKEN contains colon. Doing login first"
+        token=$(curl -fsSL -u "$OCI_REGISTRY_AUTH_TOKEN" "https://${registry}/token?scope=repository:$scope:pull" | jq -r '.token')
+        if [ -z "$token" ]; then
+            echo "Failed to get token for container registry"
+            exit 1
+        fi
+        echo "Login to $registry was successful"
+    fi
+    digest=$(curl -sSL -H "Authorization: Bearer $token" -H "Accept: application/vnd.oci.image.manifest.v1+json" \
+    "https://${registry}/v2/${scope}/manifests/${tag}" | jq -r '.layers[0].digest')
+
+    if [ -z "$digest" ]; then
+        echo "Failed to get digest from container registry"
+        exit 1
+    fi
+
+    echo "Start download of $image"
+    curl -fsSL -o- -H "Authorization: Bearer $token" \
+        "https://${registry}/v2/${scope}/blobs/$digest" | tar -C "$outdir" -xzf-"
+}
+
+function download_without_token {
+    echo "download without token (OCI_REGISTRY_AUTH_TOKEN empty)"
+    digest=$(curl -sSL -H "Accept: application/vnd.oci.image.manifest.v1+json" \
+        "https://${registry}/v2/${scope}/manifests/${tag}" | jq -r '.layers[0].digest')
+
+    if [ -z "$digest" ]; then
+        echo "Failed to get digest from container registry"
+        exit 1
+    fi
+
+    echo "Start download of $image"
+    curl -fsSL -o- "https://${registry}/v2/${scope}/blobs/$digest" | tar -C "$outdir" -xzf-
+}
+
+if [ -z "$OCI_REGISTRY_AUTH_TOKEN" ]; then
+    download_without_token
+else
+    download_with_token
+fi
+'EOF_OCI_SCRIPT'
+
+set -x
+chmod 755 ./install-from-oci.sh
+#
+# ================================================================================
+
+if [ "${URL#oci}" != "$URL" ]; then
+    # OCI URL like oci://ghcr.io/foo/bar/node-images/prod/my-machine-image:v9
+    OCI_REGISTRY_AUTH_TOKEN="$(grep -o 'OCI_REGISTRY_AUTH_TOKEN=[^ ]*' /proc/cmdline | cut -d= -f2-)"
+    export OCI_REGISTRY_AUTH_TOKEN
+    sudo -u tc tce-load -wi bash
+    ./install-from-oci.sh "$URL" /mnt
+else
+    curl -SL --fail --retry 20 -o- "$URL" | tar -C /mnt -xzf-
+fi
 
 for i in dev proc sys dev/pts; do
     mkdir -p /mnt/$i
@@ -179,9 +304,13 @@ date >> /root/bootlocal.log
 echo >> /root/bootlocal.log
 ip a >> /root/bootlocal.log
 echo >> /root/bootlocal.log
+route -n >> /root/bootlocal.log
+echo >> /root/bootlocal.log
 uname -a >> /root/bootlocal.log
 echo "######################################" >> /root/bootlocal.log
 rm -rf /var/log/journal/
+
+sed -i '/\/boot\/efi/ s/^/#/' /etc/fstab
 
 # https://bugs.launchpad.net/ubuntu/+source/isc-dhcp/+bug/2011628
 echo ' /{,usr/}bin/true Uxr,' > /etc/apparmor.d/local/sbin.dhclient
@@ -189,6 +318,17 @@ echo ' /{,usr/}bin/true Uxr,' > /etc/apparmor.d/local/sbin.dhclient
 EOF
 
 echo "Installed the image to $PART."
+
+if [ -n "$authorized_keys" ]; then
+    echo "Installing authorized keys"
+    echo "Creating /root/.ssh/authorized_keys from kernel commandline"
+    mkdir -p /mnt/root/.ssh/
+    # Otherwise: bad ownership if sshd tries to read the authorized_keys file.
+    chmod 0700 /mnt/root
+    chmod 0700 /mnt/root/.ssh
+    echo "$authorized_keys" >/mnt/root/.ssh/authorized_keys
+fi
+
 
 finish_url=$(jq -r '.finishHook.url' /metadata.json) || true
 if [ -z "$finish_url" ]; then
