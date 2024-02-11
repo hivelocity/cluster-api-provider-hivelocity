@@ -179,8 +179,10 @@ cat <<'EOF_OCI_SCRIPT' >./install-from-oci.sh
 
 set -euo pipefail
 
+set -x
+
 image="${1:-}"
-image="${image#oci://}
+image="${image#oci://}"
 outdir="${2:-}"
 
 function usage {
@@ -352,4 +354,4 @@ echo "Restarting"
 sleep 5
 
 # Leave Tinycore Linux, switch to downloaded machine image.
-sudo reboot
+reboot
