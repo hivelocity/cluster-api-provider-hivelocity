@@ -118,6 +118,7 @@ fi
 
 sudo -u tc tce-load -wi jq
 sudo -u tc tce-load -wi libzstd
+sudo -u tc tce-load -wi coreutils
 
 if [ "${metadata_url#http}" = "$metadata_url" ]; then
     echo "Metadata URL does not start with http"
@@ -128,7 +129,9 @@ else
     echo "#############################################################################"
     echo "metadata_url: $metadata_url"
     echo "$metadata_url" >/metadata.url
-    curl -sSL --fail -o /metadata.json "$metadata_url"
+    if [ ! -e "/metadata.json" ]; then
+        curl -sSL --fail -o /metadata.json "$metadata_url"
+    fi
     cat /metadata.json
     echo "#############################################################################"
     echo
@@ -243,7 +246,7 @@ function download_with_token {
 
     echo "Start download of $image"
     curl -fsSL -o- -H "Authorization: Bearer $token" \
-        "https://${registry}/v2/${scope}/blobs/$digest" | tar -C "$outdir" -xzf-"
+        "https://${registry}/v2/${scope}/blobs/$digest" | tar -C "$outdir" -xzf-
 }
 
 function download_without_token {
