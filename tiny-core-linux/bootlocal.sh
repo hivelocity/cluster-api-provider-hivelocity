@@ -321,6 +321,7 @@ uname -a >> /root/bootlocal.log
 echo "######################################" >> /root/bootlocal.log
 rm -rf /var/log/journal/
 
+# Uncomment /boot/efi, since we don't have this partition.
 sed -i '/\/boot\/efi/ s/^/#/' /etc/fstab
 
 # https://bugs.launchpad.net/ubuntu/+source/isc-dhcp/+bug/2011628
@@ -351,6 +352,35 @@ if [ -n "$rootpwd" ]; then
     echo "root:$rootpwd" | chpasswd
 EOF
 fi
+
+# set up network config
+# The netcfg.yaml was taken from a machine provisioned
+# with an ubuntu image from Hivelocity.
+cat >/mnt/etc/netplan/01-netcfg.yaml <<EOF
+network:
+  version: 2
+  renderer: networkd
+  ethernets:
+    eno1:
+      dhcp4: no
+      dhcp6: no
+    eno2:
+      dhcp4: no
+      dhcp6: no
+
+  bonds:
+    bond0:
+      interfaces: [eno1, eno2]
+      addresses: [$(jq -r .interfaces.public.full /metadata.json)]
+      nameservers:
+        addresses: [66.96.80.43, 66.96.80.194]
+      gateway4: $(jq -r .interfaces.public.gateway /metadata.json)
+      parameters:
+        mode: 802.3ad
+        lacp-rate: fast
+        mii-monitor-interval: 100
+        transmit-hash-policy: layer3+4
+EOF
 
 echo "Installed the image to $PART."
 
