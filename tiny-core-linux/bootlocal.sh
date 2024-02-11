@@ -275,14 +275,20 @@ chmod 755 ./install-from-oci.sh
 #
 # ================================================================================
 
+mkdir -p /mnt/root
+chmod 0700 /mnt/root
+date >>/mnt/root/image.txt
+
 if [ "${URL#oci}" != "$URL" ]; then
     # OCI URL like oci://ghcr.io/foo/bar/node-images/prod/my-machine-image:v9
     OCI_REGISTRY_AUTH_TOKEN="$(grep -o 'OCI_REGISTRY_AUTH_TOKEN=[^ ]*' /proc/cmdline | cut -d= -f2-)"
     export OCI_REGISTRY_AUTH_TOKEN
     sudo -u tc tce-load -wi bash
     ./install-from-oci.sh "$URL" /mnt
+    echo "installed from OCI: $URL" >>/mnt/root/image.txt
 else
     curl -SL --fail --retry 20 -o- "$URL" | tar -C /mnt -xzf-
+    echo "installed from http: $URL" >>/mnt/root/image.txt
 fi
 
 for i in dev proc sys dev/pts; do
@@ -319,10 +325,15 @@ sed -i '/\/boot\/efi/ s/^/#/' /etc/fstab
 
 # https://bugs.launchpad.net/ubuntu/+source/isc-dhcp/+bug/2011628
 echo ' /{,usr/}bin/true Uxr,' > /etc/apparmor.d/local/sbin.dhclient
-
 EOF
 
-echo "Installed the image to $PART."
+# Ensure ssh is running
+chroot /mnt /bin/bash <<EOF
+export DEBIAN_FRONTEND=noninteractive
+apt update
+apt install -y openssh-server
+systemctl enable ssh.service
+EOF
 
 if [ -n "$authorized_keys" ]; then
     echo "Installing authorized keys"
@@ -333,6 +344,15 @@ if [ -n "$authorized_keys" ]; then
     chmod 0700 /mnt/root/.ssh
     echo "$authorized_keys" >/mnt/root/.ssh/authorized_keys
 fi
+
+rootpwd=$(grep -o 'rootpwd=[^ ]*' /proc/cmdline | cut -d= -f2-)
+if [ -n "$rootpwd" ]; then
+    chroot /mnt /bin/bash <<EOF
+    echo "root:$rootpwd" | chpasswd
+EOF
+fi
+
+echo "Installed the image to $PART."
 
 finish_url=$(jq -r '.finishHook.url' /metadata.json) || true
 if [ -z "$finish_url" ]; then
