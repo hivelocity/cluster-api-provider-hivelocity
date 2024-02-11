@@ -382,6 +382,14 @@ network:
         transmit-hash-policy: layer3+4
 EOF
 
+# make systemd more verbose. Useful for debugging start-up
+# via IPMI console UI.
+mkdir -p /mnt/etc/systemd/system/systemd-journald.service.d
+cat >/mnt/etc/systemd/system/systemd-journald.service.d/override.conf <<EOF
+[Service]
+Environment=SYSTEMD_LOG_LEVEL=debug
+EOF
+
 echo "Installed the image to $PART."
 
 finish_url=$(jq -r '.finishHook.url' /metadata.json) || true
