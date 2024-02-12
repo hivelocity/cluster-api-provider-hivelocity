@@ -1,0 +1,18 @@
+#!ipxe
+# customIPXEScriptURL https://raw.githubusercontent.com/hivelocity/cluster-api-provider-hivelocity/BRANCH/tiny-core-linux/tiny-core-linux.ipxe
+
+# You can test this localy via:
+
+# qemu-img create -f qcow2 mydisk.qcow2 6G
+# qemu-system-x86_64 -serial stdio -boot n -m 2000 -hda mydisk.qcow2 -device virtio-net,netdev=n1 -netdev user,id=n1,tftp=$(pwd),bootfile=/tiny-core-linux.ipxe,hostfwd=tcp::2222-:22
+# You can ssh into the VM via port 2222.
+
+kernel http://tinycorelinux.net/14.x/x86_64/release/distribution_files/vmlinuz64 rootdelay=3 panic=30 text syslog targetdrive=/dev/sda sourceurl={{ .ImageUrl }} metadata_url={metadata_url} cloud_init_url={cloud_init_url} OCI_REGISTRY_AUTH_TOKEN={{ .OciToken }} rootpwd={{ .RootPwd }} authorized_keys="{{ .SshAuthorizedKeys }}"
+
+initrd http://tinycorelinux.net/14.x/x86_64/release/distribution_files/corepure64.gz
+
+# TODO, TODO, TODO: Switch the path of this URL from the branch to main or a fixed version.
+# Hint: https does not work.
+initrd http://raw.githubusercontent.com/hivelocity/cluster-api-provider-hivelocity/tg/custom-images/tiny-core-linux/bootlocal.sh /opt/bootlocal.sh mode=0755
+
+boot

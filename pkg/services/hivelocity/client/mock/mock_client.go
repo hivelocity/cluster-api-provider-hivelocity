@@ -93,15 +93,15 @@ const NoTagsDeviceID = 3
 
 // NoTagsDevice is a device which has no tags.
 var NoTagsDevice = hv.BareMetalDevice{
-	Hostname:    "host3-unused",
+	Hostname:    "NoTagsDevice",
 	Tags:        []string{},
 	DeviceId:    NoTagsDeviceID,
 	PowerStatus: "ON",
 	OsName:      defaultImage,
 }
 
-// CaphNotAllowDevice is a device which is has no "caphv-use=allow" tag.
-var CaphNotAllowDevice = hv.BareMetalDevice{
+// CaphvNotAllowDevice is a device which is has no "caphv-use=allow" tag.
+var CaphvNotAllowDevice = hv.BareMetalDevice{
 	Hostname:    "host-FreeDevice",
 	Tags:        []string{"caphvlabel:deviceType=hvCustom"},
 	DeviceId:    FreeDeviceID,
@@ -111,7 +111,7 @@ var CaphNotAllowDevice = hv.BareMetalDevice{
 
 // MultiLabelsDevice is a device which has multiple tags.
 var MultiLabelsDevice = hv.BareMetalDevice{
-	Hostname: "host3-unused",
+	Hostname: "MultiLabelsDevice",
 	Tags: []string{
 		"caphvlabel:foo1=bar1",
 		"caphvlabel:foo2=bar2",

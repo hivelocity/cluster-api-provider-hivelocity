@@ -14,8 +14,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-#!/usr/bin/env python3
-
 import re
 import sys
 import json
@@ -39,12 +37,15 @@ rows_to_skip = [
     '"validate update" v1alpha1/hivelocitymachine_webhook',
     '"validate update" v1alpha1/hivelocitycluster_webhook',
     'spec.status was updated',
+    'DEBUG "ReconcileState" ',
+    #'hv-guettli-control-plane-5qkn4',
 ]
 
 rows_to_skip_regex = [
     r'''DEBUG "Started function" device/device.go:\d+ {'HivelocityMachine': {'name': '\S+', 'namespace': '\S+'}, 'function': 'actionDeviceProvisioned'}''',
     r'''DEBUG "wrote response" admission.*''',
     r'''DEBUG "received request" admission.*''',
+    r'''DEBUG.*hivelocity API called.*GET.*''',
 ]
 
 def printHivelocityMachine(value):

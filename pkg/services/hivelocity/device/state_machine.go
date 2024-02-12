@@ -152,6 +152,12 @@ func (sm *stateMachine) handleDeleteDeviceDeProvision(ctx context.Context) actio
 		sm.nextState = infrav1.StateDeleteDeviceDissociate
 	}
 
+	// check whether we need to associate the machine to another device
+	actionGoBack, ok := actResult.(actionGoBack)
+	if ok {
+		sm.nextState = actionGoBack.nextState
+	}
+
 	return actResult
 }
 

@@ -1,0 +1,5 @@
+*.iso
+core.gz
+iso/
+*.qcow2
+vmlinuz

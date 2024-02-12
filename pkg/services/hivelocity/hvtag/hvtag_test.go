@@ -106,7 +106,7 @@ var _ = Describe("TestDeviceTagFromList", func() {
 			deviceTag, err := DeviceTagFromList(tc.key, tc.tagList)
 			if tc.expectError != nil {
 				Expect(err).ToNot(BeNil())
-				Expect(err).Should(Equal(tc.expectError))
+				Expect(err).Should(MatchError(tc.expectError))
 			}
 			Expect(deviceTag).Should(Equal(tc.expectDeviceTag))
 		},
@@ -183,7 +183,7 @@ var _ = Describe("deviceTagFromString", func() {
 			deviceTag, err := deviceTagFromString(tc.tagString)
 			if tc.expectError != nil {
 				Expect(err).ToNot(BeNil())
-				Expect(err).Should(Equal(tc.expectError))
+				Expect(err).Should(MatchError(tc.expectError))
 			}
 			Expect(deviceTag).Should(Equal(tc.expectDeviceTag))
 		},
@@ -344,7 +344,8 @@ var _ = Describe("RemoveEphemeralTags", func() {
 		Expect(newTags).To(Equal([]string{
 			"caphv-permanent-error=my-permantent-error",
 			"caphv-use=allow",
-			"some-other-tag"}))
+			"some-other-tag",
+		}))
 	})
 })
 

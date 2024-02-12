@@ -18,12 +18,15 @@ limitations under the License.
 package device
 
 import (
+	"bytes"
 	"context"
 	_ "embed"
 	"errors"
 	"fmt"
+	"os"
 	"sort"
 	"strings"
+	"text/template"
 	"time"
 
 	infrav1 "github.com/hivelocity/cluster-api-provider-hivelocity/api/v1alpha1"
@@ -33,6 +36,8 @@ import (
 	"github.com/hivelocity/cluster-api-provider-hivelocity/pkg/services/hivelocity/hvtag"
 	"github.com/hivelocity/cluster-api-provider-hivelocity/pkg/utils"
 	hv "github.com/hivelocity/hivelocity-client-go/client"
+	"golang.org/x/exp/maps"
+	"golang.org/x/exp/slices"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
@@ -43,6 +48,9 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
+
+//go:embed tiny-core-linux.ipxe
+var tinyCoreLinuxIpxe string
 
 // Service defines struct with machine scope to reconcile Hivelocity devices.
 type Service struct {
@@ -98,7 +106,7 @@ func (s *Service) Reconcile(ctx context.Context) (_ ctrl.Result, err error) {
 	actResult := hostStateMachine.ReconcileState(ctx)
 	result, err := actResult.Result()
 	if err != nil {
-		return ctrl.Result{Requeue: true}, fmt.Errorf("action %q failed: %w", initialState, err)
+		return reconcile.Result{}, fmt.Errorf("action %q failed: %w", initialState, err)
 	}
 
 	// TODO: Verify that patching the object is fine. Alternative would be to update it if that is better since we update the Spec as well
@@ -110,21 +118,22 @@ func (s *Service) actionAssociateDevice(ctx context.Context) actionResult {
 	log := s.scope.Logger.WithValues("function", "actionAssociateDevice")
 	log.V(1).Info("Started function")
 
-	device, err := GetFirstFreeDevice(ctx, s.scope.HVClient, s.scope.HivelocityMachine.Spec, s.scope.HivelocityCluster)
+	device, reason, err := GetFirstFreeDevice(ctx, s.scope.HVClient, s.scope.HivelocityMachine.Spec, s.scope.HivelocityCluster)
 	if err != nil {
 		s.handleRateLimitExceeded(err, "ListDevices")
-		return actionError{err: fmt.Errorf("failed to find available device: %w", err)}
+		return actionError{err: fmt.Errorf("failed to find available device: %w (%s)", err, reason)}
 	}
 
 	if device == nil {
+		msg := fmt.Sprintf("no available device found (selector: %+v) (%s)", s.scope.HivelocityMachine.Spec.DeviceSelector, reason)
 		conditions.MarkFalse(
 			s.scope.HivelocityMachine,
 			infrav1.DeviceAssociateSucceededCondition,
 			infrav1.NoAvailableDeviceReason,
 			clusterv1.ConditionSeverityWarning,
-			"no available device found",
+			msg,
 		)
-		record.Warnf(s.scope.HivelocityMachine, "NoFreeDeviceFound", "Failed to find free device")
+		record.Warn(s.scope.HivelocityMachine, "NoFreeDeviceFound", msg)
 		return actionContinue{delay: 30 * time.Second}
 	}
 	conditions.Delete(s.scope.HivelocityMachine, infrav1.DeviceAssociateSucceededCondition)
@@ -149,12 +158,12 @@ func (s *Service) actionAssociateDevice(ctx context.Context) actionResult {
 	return actionComplete{}
 }
 
-// GetFirstFreeDevice finds the first free matching device. The parameter machineName is optional.
-func GetFirstFreeDevice(ctx context.Context, hvclient hvclient.Client, hvMachineSpec infrav1.HivelocityMachineSpec, hvCluster *infrav1.HivelocityCluster) (*hv.BareMetalDevice, error) {
+// GetFirstFreeDevice finds the first free matching device. It returns nil if no device is found.
+func GetFirstFreeDevice(ctx context.Context, hvclient hvclient.Client, hvMachineSpec infrav1.HivelocityMachineSpec, hvCluster *infrav1.HivelocityCluster) (*hv.BareMetalDevice, string, error) {
 	// list all devices
 	devices, err := hvclient.ListDevices(ctx)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 
 	// Since we don't have a LoadBalancer we use the IP of the first ControlPlane
@@ -167,34 +176,40 @@ func GetFirstFreeDevice(ctx context.Context, hvclient hvclient.Client, hvMachine
 		return devices[i].DeviceId < devices[j].DeviceId
 	})
 
-	device := findAvailableDeviceFromList(devices, hvMachineSpec.DeviceSelector, hvCluster.Name)
-
-	return device, nil
+	device, reason, err := findAvailableDeviceFromList(devices, hvMachineSpec.DeviceSelector, hvCluster.Name)
+	if err != nil {
+		return nil, "", err
+	}
+	log := ctrl.LoggerFrom(ctx)
+	if device != nil {
+		log.Info(fmt.Sprintf("GetFirstFreeDevice hvMachineSpec.DeviceSelector %+v device.Tags: %+v",
+			hvMachineSpec.DeviceSelector,
+			device.Tags))
+	}
+	return device, reason, nil
 }
 
-func findAvailableDeviceFromList(devices []hv.BareMetalDevice, deviceSelector infrav1.DeviceSelector, clusterName string) *hv.BareMetalDevice {
-	labelSelector := getLabelSelector(deviceSelector)
+func findAvailableDeviceFromList(devices []hv.BareMetalDevice, deviceSelector infrav1.DeviceSelector, clusterName string) (
+	*hv.BareMetalDevice, string, error,
+) {
+	labelSelector, err := getLabelSelector(deviceSelector)
+	if err != nil {
+		return nil, "", fmt.Errorf("getLabelSelector failed: %w", err)
+	}
+	mapOfSkipReasons := make(map[string]int)
 
 	for _, device := range devices {
 		// Skip if caphv-permanent-error exists
 		_, err := hvtag.PermanentErrorTagFromList(device.Tags)
 		if err == nil {
 			// The tag exists. Skip this Device
+			mapOfSkipReasons["permanent-error"]++
 			continue
 		}
 
-		// Ignore if associated already
-		machineTag, err := hvtag.MachineTagFromList(device.Tags)
-		if err != nil && !errors.Is(err, hvtag.ErrDeviceTagNotFound) {
-			// unexpected error - continue
-			continue
-		}
-		if machineTag.Value != "" {
-			// associated to other machine - continue
-			continue
-		}
-
-		if !labelSelector.Matches(hvlabels.Tags(device.Tags)) {
+		if !hvtag.DeviceUsableByCAPI(device.Tags) {
+			// not allowed to use the device
+			mapOfSkipReasons["caphv-use-allow-is-missing"]++
 			continue
 		}
 
@@ -202,42 +217,69 @@ func findAvailableDeviceFromList(devices []hv.BareMetalDevice, deviceSelector in
 		clusterTag, err := hvtag.ClusterTagFromList(device.Tags)
 		if err != nil && !errors.Is(err, hvtag.ErrDeviceTagNotFound) {
 			// unexpected error - continue
+			mapOfSkipReasons["unexpected-error-while-get-cluster-tag"]++
 			continue
 		}
 		if clusterTag.Value != "" && clusterTag.Value != clusterName {
 			// associated to another cluster - continue
+			mapOfSkipReasons["associated-to-other-cluster"]++
 			continue
 		}
 
-		if !hvtag.DeviceUsableByCAPI(device.Tags) {
-			// not allowed to use the device
+		// Ignore if associated already
+		machineTag, err := hvtag.MachineTagFromList(device.Tags)
+		if err != nil && !errors.Is(err, hvtag.ErrDeviceTagNotFound) {
+			// unexpected error - continue
+			mapOfSkipReasons["unexpected-error-while-get-machine-tag"]++
+			continue
+		}
+		if machineTag.Value != "" {
+			// associated to other machine - continue
+			mapOfSkipReasons["machine-already-associated"]++
 			continue
 		}
 
-		return &device
+		if !labelSelector.Matches(hvlabels.Tags(device.Tags)) {
+			mapOfSkipReasons["label-selector-does-not-match"]++
+			continue
+		}
+
+		return &device, "", nil
 	}
-	return nil
+	reasons := make([]string, 0, len(mapOfSkipReasons))
+	keys := maps.Keys(mapOfSkipReasons)
+	slices.Sort(keys)
+	for _, key := range keys {
+		value := mapOfSkipReasons[key]
+		if value == 0 {
+			continue
+		}
+		reasons = append(reasons, fmt.Sprintf("%s: %d", key, value))
+	}
+	return nil, strings.Join(reasons, ", "), nil
 }
 
-func getLabelSelector(deviceSelector infrav1.DeviceSelector) labels.Selector {
+func getLabelSelector(deviceSelector infrav1.DeviceSelector) (labels.Selector, error) {
 	labelSelector := labels.NewSelector()
 	var reqs labels.Requirements
 
 	for labelKey, labelVal := range deviceSelector.MatchLabels {
 		r, err := labels.NewRequirement(labelKey, selection.Equals, []string{labelVal})
-		if err == nil { // ignore invalid host selector
-			reqs = append(reqs, *r)
+		if err != nil {
+			return labelSelector, err
 		}
+		reqs = append(reqs, *r)
 	}
 	for _, req := range deviceSelector.MatchExpressions {
 		lowercaseOperator := selection.Operator(strings.ToLower(string(req.Operator)))
 		r, err := labels.NewRequirement(req.Key, lowercaseOperator, req.Values)
-		if err == nil { // ignore invalid host selector
-			reqs = append(reqs, *r)
+		if err != nil {
+			return labelSelector, err
 		}
+		reqs = append(reqs, *r)
 	}
 
-	return labelSelector.Add(reqs...)
+	return labelSelector.Add(reqs...), nil
 }
 
 // actionVerifyAssociate verifies that the HV device has actually been associated to this machine and only this.
@@ -311,7 +353,6 @@ func hasTimedOut(lastUpdated *metav1.Time, timeout time.Duration) bool {
 
 // actionVerifyShutdown makes sure that the device is shut down.
 func (s *Service) actionVerifyShutdown(ctx context.Context) actionResult {
-
 	deviceID, err := s.scope.HivelocityMachine.DeviceIDFromProviderID()
 	if err != nil {
 		return actionError{err: fmt.Errorf("[actionVerifyShutdown] ProviderIDToDeviceID failed: %w", err)}
@@ -450,7 +491,8 @@ func (s *Service) setReloadingTooLongTag(ctx context.Context, deviceID int32, la
 }
 
 func (s *Service) getPowerAndReloadingState(ctx context.Context, deviceID int32) (
-	isReloading bool, isPoweredOn bool, err error) {
+	isReloading bool, isPoweredOn bool, err error,
+) {
 	dump, err := s.scope.HVClient.GetDeviceDump(ctx, deviceID)
 	if err != nil {
 		return false, false, fmt.Errorf("[getPowerAndReloadingState] GetDeviceDump failed: %d %w", deviceID, err)
@@ -494,7 +536,7 @@ func (s *Service) actionProvisionDevice(ctx context.Context) actionResult {
 
 	isReloading, isPoweredOn, err := s.getPowerAndReloadingState(ctx, deviceID)
 	if err != nil {
-		return actionError{err: fmt.Errorf("[actionProvisionDevice] getPowerAndReloadingState failed: %s", err)}
+		return actionError{err: fmt.Errorf("[actionProvisionDevice] getPowerAndReloadingState failed: %w", err)}
 	}
 	if isReloading {
 		msg := fmt.Sprintf("unexpected: device %d is reloading.", deviceID)
@@ -502,28 +544,41 @@ func (s *Service) actionProvisionDevice(ctx context.Context) actionResult {
 		return actionError{err: errors.New(msg)}
 	}
 	if isPoweredOn {
-		msg := fmt.Sprintf("unexpected: device %d has power on.", deviceID)
-		record.Warnf(s.scope.HivelocityMachine, "ProvisionDeviceIsPoweredOn", msg)
-		return actionError{err: errors.New(msg)}
+		msg := fmt.Sprintf("device %d has power on. Waiting until it is shut-down.", deviceID) // xbug: here every 5 min.
+		record.Eventf(s.scope.HivelocityMachine, "ProvisionDeviceIsPoweredOn", msg)
+		return actionContinue{delay: 4 * time.Second}
 	}
 
 	userData, err := s.scope.GetRawBootstrapData(ctx)
 	if err != nil {
-		record.Warnf(s.scope.HivelocityMachine, "FailedGetBootstrapData", err.Error())
-		return actionError{err: fmt.Errorf("failed to get raw bootstrap data: %s", err)}
+		// This is common while starting a new cluster.
+		record.Eventf(s.scope.HivelocityMachine, "FailedGetBootstrapData", "device %d: %s", deviceID, err.Error())
+		return actionContinue{delay: 10 * time.Second}
 	}
 
-	image, err := s.getDeviceImage(ctx)
-	if err != nil {
-		return actionError{err: fmt.Errorf("failed to get device image: %w", err)}
+	ipxe := true // TODOOOOOOOOOOOOOOO
+	ipxeScript := ""
+	image := ""
+	if ipxe {
+		image = "Custom iPXE"
+		ipxeScript, err = templateTinyCoreLinuxIpxe()
+		if err != nil {
+			return actionError{err: fmt.Errorf("failed to create ipxe script: %w", err)}
+		}
+	} else {
+		image, err = s.getDeviceImage(ctx)
+		if err != nil {
+			return actionError{err: fmt.Errorf("failed to get device image: %w", err)}
+		}
 	}
 
 	opts := hv.BareMetalDeviceUpdate{
-		Hostname:    fmt.Sprintf("%s.example.com", s.scope.Name()), // TODO: HV API requires a FQDN.
-		Tags:        device.Tags,
-		Script:      "#cloud-config\n" + string(userData), // cloud-init script
-		OsName:      image,
-		ForceReload: true,
+		Hostname:                 fmt.Sprintf("%s.example.com", s.scope.Name()), // TODO: HV API requires a FQDN.
+		Tags:                     device.Tags,
+		CustomIPXEScriptContents: ipxeScript,
+		Script:                   "#cloud-config\n" + string(userData), // cloud-init script
+		OsName:                   image,
+		ForceReload:              true,
 	}
 
 	if s.scope.HivelocityCluster.Spec.SSHKey != nil {
@@ -566,6 +621,29 @@ func (s *Service) actionProvisionDevice(ctx context.Context) actionResult {
 
 	log.V(1).Info("Completed function")
 	return actionComplete{}
+}
+
+func templateTinyCoreLinuxIpxe() (string, error) {
+	tmpl, err := template.New("ipxe").Parse(tinyCoreLinuxIpxe)
+	if err != nil {
+		return "", err
+	}
+	data := struct {
+		ImageUrl          string
+		OciToken          string
+		SshAuthorizedKeys string
+		RootPwd           string
+	}{
+		ImageUrl:          "oci://ghcr.io/syself/autopilot/node-images/prod/hetzner-apalla-1-27-workeramd64baremetal:v9", //  TODO TODO TODO TODO TODO
+		OciToken:          os.Getenv("OCI_REGISTRY_AUTH_TOKEN"),
+		SshAuthorizedKeys: "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQDCwScaVlrjtMClZNR4DhJTVkxNAIgK78B9fZtwLcUFOCZRvbVTtVJgjUABZGO/oxxt0IHGvjSoJNnjq1EbQ+w9EtJRZAI9cVIy+S5TJJ3+IMtAs55v0cUe+QlYIQoh7lh8hE749rmouf7SJxGu402jGxp5rkfjpJf4YgMi5dU4J0jeGQZqxguTHTvDWTr8dIe9Quebqia+JLdp3YrzHwvjqMqn3Ik3BkR8/fZwi4SYeL/28qzODvCKMPOP79zFBMfFY8RZiq/+dyaiF3PculP1h76IVH0oZONyWJ+amrYrnSsDe+cCmB/WBE+gDhczYCjcyO2AH9QLKYl2H4qJfvm4xmsLLxDkqmProzXBi+znFJVv9Nj1fHD5wxdOosOMG9qzuyCGwFJZ1WybrqQNxezN3VH0J1+WS6BuUb00Z7XVl8nQjaxO/hXjhU+ZQuhlLAwWWCymflzF/CKRat9WiSjUDtfvtqhCsSY7JFOeSt0e6pj1j8Xhz1284xnaS5l7ld0= guettli@yoga15",
+		RootPwd:           os.Getenv("ROOT_PWD"),
+	}
+	var result bytes.Buffer
+	if err := tmpl.Execute(&result, data); err != nil {
+		return "", err
+	}
+	return result.String(), nil
 }
 
 func findSSHKey(sshKeysInAPI []hv.SshKeyResponse, sshKeyName string) (int32, error) {
@@ -657,12 +735,11 @@ func (s *Service) actionDeviceProvisioned(ctx context.Context) actionResult {
 	conditions.MarkTrue(s.scope.HivelocityMachine, infrav1.HivelocityMachineReadyCondition)
 	s.scope.HivelocityMachine.Status.Ready = true
 
-	log.V(1).Info("Completed function",
+	log.V(1).Info("Completed function. This is the final state. The machine is provisioned.",
 		"DeviceId", device.DeviceId,
 		"PowerStatus", device.PowerStatus,
 		"script", utils.FirstN(device.Script, 50))
 
-	// This is the final state, if the machine is provisioned and everything is fine.
 	return actionComplete{}
 }
 
@@ -709,14 +786,16 @@ func (s *Service) actionDeleteDeviceDeProvision(ctx context.Context) (ar actionR
 
 	isReloading, isPoweredOn, err := s.getPowerAndReloadingState(ctx, deviceID)
 	if err != nil {
-		return actionError{err: fmt.Errorf("actionDeleteDeviceDeProvision] getPowerAndReloadingState failed: %w", err)}
+		return actionError{err: fmt.Errorf("[actionDeleteDeviceDeProvision] getPowerAndReloadingState failed: %w", err)}
 	}
+	log.V(1).Info("actionDeleteDeviceDeProvision", "isReloading", isReloading, "isPoweredOn", isPoweredOn)
 
 	if !isReloading && !isPoweredOn {
 		return s.actionDeleteDeviceDeProvisionPowerIsOff(ctx, device)
 	}
 
 	deprovisionCondition := conditions.Get(s.scope.HivelocityMachine, infrav1.DeviceDeProvisioningSucceededCondition)
+	log.V(1).Info("actionDeleteDeviceDeProvision", "deprovisionCondition", deprovisionCondition)
 
 	// handle reloading state
 	if isReloading {
@@ -822,7 +901,25 @@ func (s *Service) actionDeleteDeviceDissociate(ctx context.Context) actionResult
 		return actionError{err: fmt.Errorf("failed to get device: %w", err)}
 	}
 
-	if device.PowerStatus != hvclient.PowerStatusOff {
+	isReloading, isPoweredOn, err := s.getPowerAndReloadingState(ctx, deviceID)
+	if err != nil {
+		return actionError{err: fmt.Errorf("[actionDeleteDeviceDissociate] getPowerAndReloadingState failed: %w", err)}
+	}
+
+	doShutdown := isPoweredOn
+
+	// handle reloading state
+	if isReloading {
+		_, err := hvtag.PermanentErrorTagFromList(device.Tags)
+		if err == nil {
+			// PermanentErrorTag is set. Skip shutdown
+			record.Warn(s.scope.HivelocityMachine, "SkippingShutdown",
+				"Machine has a permanent error and is reloading. Skipping shutdown")
+			doShutdown = false
+		}
+	}
+
+	if doShutdown {
 		err = s.scope.HVClient.ShutdownDevice(ctx, deviceID)
 		if err != nil {
 			s.handleRateLimitExceeded(err, "ShutdownDevice")
@@ -852,6 +949,9 @@ func (s *Service) actionDeleteDeviceDissociate(ctx context.Context) actionResult
 			return actionError{err: fmt.Errorf("failed to set tags: %w", err)}
 		}
 	}
+
+	// For example: remove DeviceReloadingTooLongReason
+	conditions.MarkTrue(s.scope.HivelocityMachine, infrav1.DeviceReadyCondition)
 
 	log.V(1).Info("Completed function")
 	return actionComplete{}
