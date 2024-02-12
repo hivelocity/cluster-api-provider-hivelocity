@@ -18,12 +18,15 @@ limitations under the License.
 package device
 
 import (
+	"bytes"
 	"context"
 	_ "embed"
 	"errors"
 	"fmt"
+	"os"
 	"sort"
 	"strings"
+	"text/template"
 	"time"
 
 	infrav1 "github.com/hivelocity/cluster-api-provider-hivelocity/api/v1alpha1"
@@ -533,7 +536,7 @@ func (s *Service) actionProvisionDevice(ctx context.Context) actionResult {
 
 	isReloading, isPoweredOn, err := s.getPowerAndReloadingState(ctx, deviceID)
 	if err != nil {
-		return actionError{err: fmt.Errorf("[actionProvisionDevice] getPowerAndReloadingState failed: %s", err)}
+		return actionError{err: fmt.Errorf("[actionProvisionDevice] getPowerAndReloadingState failed: %w", err)}
 	}
 	if isReloading {
 		msg := fmt.Sprintf("unexpected: device %d is reloading.", deviceID)
@@ -558,7 +561,10 @@ func (s *Service) actionProvisionDevice(ctx context.Context) actionResult {
 	image := ""
 	if ipxe {
 		image = "Custom iPXE"
-		ipxeScript = tinyCoreLinuxIpxe
+		ipxeScript, err = templateTinyCoreLinuxIpxe()
+		if err != nil {
+			return actionError{err: fmt.Errorf("failed to create ipxe script: %w", err)}
+		}
 	} else {
 		image, err = s.getDeviceImage(ctx)
 		if err != nil {
@@ -615,6 +621,29 @@ func (s *Service) actionProvisionDevice(ctx context.Context) actionResult {
 
 	log.V(1).Info("Completed function")
 	return actionComplete{}
+}
+
+func templateTinyCoreLinuxIpxe() (string, error) {
+	tmpl, err := template.New("ipxe").Parse(tinyCoreLinuxIpxe)
+	if err != nil {
+		return "", err
+	}
+	data := struct {
+		ImageUrl          string
+		OciToken          string
+		SshAuthorizedKeys string
+		RootPwd           string
+	}{
+		ImageUrl:          "oci://ghcr.io/syself/autopilot/node-images/prod/hetzner-apalla-1-27-workeramd64baremetal:v9", //  TODO TODO TODO TODO TODO
+		OciToken:          os.Getenv("OCI_REGISTRY_AUTH_TOKEN"),
+		SshAuthorizedKeys: "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQDCwScaVlrjtMClZNR4DhJTVkxNAIgK78B9fZtwLcUFOCZRvbVTtVJgjUABZGO/oxxt0IHGvjSoJNnjq1EbQ+w9EtJRZAI9cVIy+S5TJJ3+IMtAs55v0cUe+QlYIQoh7lh8hE749rmouf7SJxGu402jGxp5rkfjpJf4YgMi5dU4J0jeGQZqxguTHTvDWTr8dIe9Quebqia+JLdp3YrzHwvjqMqn3Ik3BkR8/fZwi4SYeL/28qzODvCKMPOP79zFBMfFY8RZiq/+dyaiF3PculP1h76IVH0oZONyWJ+amrYrnSsDe+cCmB/WBE+gDhczYCjcyO2AH9QLKYl2H4qJfvm4xmsLLxDkqmProzXBi+znFJVv9Nj1fHD5wxdOosOMG9qzuyCGwFJZ1WybrqQNxezN3VH0J1+WS6BuUb00Z7XVl8nQjaxO/hXjhU+ZQuhlLAwWWCymflzF/CKRat9WiSjUDtfvtqhCsSY7JFOeSt0e6pj1j8Xhz1284xnaS5l7ld0= guettli@yoga15",
+		RootPwd:           os.Getenv("ROOT_PWD"),
+	}
+	var result bytes.Buffer
+	if err := tmpl.Execute(&result, data); err != nil {
+		return "", err
+	}
+	return result.String(), nil
 }
 
 func findSSHKey(sshKeysInAPI []hv.SshKeyResponse, sshKeyName string) (int32, error) {
@@ -757,14 +786,16 @@ func (s *Service) actionDeleteDeviceDeProvision(ctx context.Context) (ar actionR
 
 	isReloading, isPoweredOn, err := s.getPowerAndReloadingState(ctx, deviceID)
 	if err != nil {
-		return actionError{err: fmt.Errorf("actionDeleteDeviceDeProvision] getPowerAndReloadingState failed: %w", err)}
+		return actionError{err: fmt.Errorf("[actionDeleteDeviceDeProvision] getPowerAndReloadingState failed: %w", err)}
 	}
+	log.V(1).Info("actionDeleteDeviceDeProvision", "isReloading", isReloading, "isPoweredOn", isPoweredOn)
 
 	if !isReloading && !isPoweredOn {
 		return s.actionDeleteDeviceDeProvisionPowerIsOff(ctx, device)
 	}
 
 	deprovisionCondition := conditions.Get(s.scope.HivelocityMachine, infrav1.DeviceDeProvisioningSucceededCondition)
+	log.V(1).Info("actionDeleteDeviceDeProvision", "deprovisionCondition", deprovisionCondition)
 
 	// handle reloading state
 	if isReloading {
@@ -870,7 +901,25 @@ func (s *Service) actionDeleteDeviceDissociate(ctx context.Context) actionResult
 		return actionError{err: fmt.Errorf("failed to get device: %w", err)}
 	}
 
-	if device.PowerStatus != hvclient.PowerStatusOff {
+	isReloading, isPoweredOn, err := s.getPowerAndReloadingState(ctx, deviceID)
+	if err != nil {
+		return actionError{err: fmt.Errorf("[actionDeleteDeviceDissociate] getPowerAndReloadingState failed: %w", err)}
+	}
+
+	doShutdown := isPoweredOn
+
+	// handle reloading state
+	if isReloading {
+		_, err := hvtag.PermanentErrorTagFromList(device.Tags)
+		if err == nil {
+			// PermanentErrorTag is set. Skip shutdown
+			record.Warn(s.scope.HivelocityMachine, "SkippingShutdown",
+				"Machine has a permanent error and is reloading. Skipping shutdown")
+			doShutdown = false
+		}
+	}
+
+	if doShutdown {
 		err = s.scope.HVClient.ShutdownDevice(ctx, deviceID)
 		if err != nil {
 			s.handleRateLimitExceeded(err, "ShutdownDevice")
@@ -900,6 +949,9 @@ func (s *Service) actionDeleteDeviceDissociate(ctx context.Context) actionResult
 			return actionError{err: fmt.Errorf("failed to set tags: %w", err)}
 		}
 	}
+
+	// For example: remove DeviceReloadingTooLongReason
+	conditions.MarkTrue(s.scope.HivelocityMachine, infrav1.DeviceReadyCondition)
 
 	log.V(1).Info("Completed function")
 	return actionComplete{}

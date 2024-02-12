@@ -7,7 +7,7 @@
 # qemu-system-x86_64 -serial stdio -boot n -m 2000 -hda mydisk.qcow2 -device virtio-net,netdev=n1 -netdev user,id=n1,tftp=$(pwd),bootfile=/tiny-core-linux.ipxe,hostfwd=tcp::2222-:22
 # You can ssh into the VM via port 2222.
 
-kernel http://tinycorelinux.net/14.x/x86_64/release/distribution_files/vmlinuz64 rootdelay=3 panic=30 text syslog targetdrive=/dev/sda sourceurl=https://thomas-guettler.de/tmp/apalla-1-27-workeramd64baremetal-v8.tar.gz metadata_url={metadata_url} authorized_keys="ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQDCwScaVlrjtMClZNR4DhJTVkxNAIgK78B9fZtwLcUFOCZRvbVTtVJgjUABZGO/oxxt0IHGvjSoJNnjq1EbQ+w9EtJRZAI9cVIy+S5TJJ3+IMtAs55v0cUe+QlYIQoh7lh8hE749rmouf7SJxGu402jGxp5rkfjpJf4YgMi5dU4J0jeGQZqxguTHTvDWTr8dIe9Quebqia+JLdp3YrzHwvjqMqn3Ik3BkR8/fZwi4SYeL/28qzODvCKMPOP79zFBMfFY8RZiq/+dyaiF3PculP1h76IVH0oZONyWJ+amrYrnSsDe+cCmB/WBE+gDhczYCjcyO2AH9QLKYl2H4qJfvm4xmsLLxDkqmProzXBi+znFJVv9Nj1fHD5wxdOosOMG9qzuyCGwFJZ1WybrqQNxezN3VH0J1+WS6BuUb00Z7XVl8nQjaxO/hXjhU+ZQuhlLAwWWCymflzF/CKRat9WiSjUDtfvtqhCsSY7JFOeSt0e6pj1j8Xhz1284xnaS5l7ld0= guettli@yoga15"
+kernel http://tinycorelinux.net/14.x/x86_64/release/distribution_files/vmlinuz64 rootdelay=3 panic=30 text syslog targetdrive=/dev/sda sourceurl={{ .ImageUrl }} metadata_url={metadata_url} cloud_init_url={cloud_init_url} OCI_REGISTRY_AUTH_TOKEN={{ .OciToken }} rootpwd={{ .RootPwd }} authorized_keys="{{ .SshAuthorizedKeys }}"
 
 initrd http://tinycorelinux.net/14.x/x86_64/release/distribution_files/corepure64.gz
 

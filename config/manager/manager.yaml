@@ -43,6 +43,19 @@ spec:
         - --leader-elect
         image: controller:latest
         name: manager
+        env:
+          - name: OCI_REGISTRY_AUTH_TOKEN
+            valueFrom:
+              secretKeyRef:
+                name: caphv-secret
+                key: OCI_REGISTRY_AUTH_TOKEN
+                optional: true
+          - name: ROOT_PWD
+            valueFrom:
+              secretKeyRef:
+                name: caphv-secret
+                key: ROOT_PWD
+                optional: true
         securityContext:
           allowPrivilegeEscalation: false
           capabilities:

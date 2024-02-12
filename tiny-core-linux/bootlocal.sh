@@ -390,7 +390,22 @@ cat >/mnt/etc/systemd/system/systemd-journald.service.d/override.conf <<EOF
 Environment=SYSTEMD_LOG_LEVEL=debug
 EOF
 
-echo "Installed the image to $PART."
+cloud_init_url=$(grep -o 'cloud_init_url=[^ ]*' /proc/cmdline | cut -d= -f2-)
+if [ -z "$cloud_init_url" ]; then
+    echo "Warning: MISSING cloud_init_url in kernel cmdline"
+else
+    echo "cloud_init_url from kernel cmdline: $cloud_init_url"
+    echo "$cloud_init_url" >/mnt/root/cloud_init_url.txt
+    curl -sSL -o /mnt/root/10_cloud_init_user_data.cfg \
+        "$cloud_init_url"
+fi
+
+cat >/mnt/etc/cloud/cloud.cfg.d/99_fake_cloud.cfg <<EOF
+datasource_list: [ NoCloud, None ]
+datasource:
+  NoCloud:
+    seedfrom: $cloud_init_url
+EOF
 
 finish_url=$(jq -r '.finishHook.url' /metadata.json) || true
 if [ -z "$finish_url" ]; then

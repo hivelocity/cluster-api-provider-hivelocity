@@ -179,6 +179,8 @@ func (r *HivelocityMachineReconciler) Reconcile(ctx context.Context, req ctrl.Re
 			return ctrl.Result{}, nil
 		case infrav1.StateDeleteDeviceDeProvision:
 			logger.Info(baseMsg + " waiting for deprovisioning to finish.")
+		// case infrav1.StateDeleteDeviceDissociate:
+		// 	...
 		default:
 			logger.Info(baseMsg + " do: nothing?")
 		}
