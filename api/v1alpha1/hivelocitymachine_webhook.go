@@ -52,7 +52,7 @@ var _ webhook.Validator = &HivelocityMachine{}
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type.
 func (r *HivelocityMachine) ValidateCreate() (admission.Warnings, error) {
 	hivelocitymachinelog.V(1).Info("validate create", "name", r.Name)
-	return nil, nil
+	return nil, r.Spec.DeviceSelector.Validate()
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type.

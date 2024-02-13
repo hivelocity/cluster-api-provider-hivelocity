@@ -36,8 +36,6 @@ import (
 	"golang.org/x/exp/maps"
 	"golang.org/x/exp/slices"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/selection"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	capierrors "sigs.k8s.io/cluster-api/errors"
 	"sigs.k8s.io/cluster-api/util/conditions"
@@ -182,7 +180,7 @@ func GetFirstFreeDevice(ctx context.Context, hvclient hvclient.Client, hvMachine
 func findAvailableDeviceFromList(ctx context.Context, devices []hv.BareMetalDevice, deviceSelector infrav1.DeviceSelector, clusterName string) (
 	device *hv.BareMetalDevice, reason string,
 ) {
-	labelSelector, err := getLabelSelector(deviceSelector)
+	labelSelector, err := deviceSelector.GetLabelSelector()
 	log := ctrl.LoggerFrom(ctx)
 	if err != nil {
 		log.Error(err, "getLabelSelector() failed. Internal error!", "deviceSelector", deviceSelector)
@@ -262,32 +260,6 @@ func findAvailableDeviceFromList(ctx context.Context, devices []hv.BareMetalDevi
 		reasons = append(reasons, fmt.Sprintf("%s: %d", key, value))
 	}
 	return nil, fmt.Sprintf("No usable device of %d found: %s", usableDevices, strings.Join(reasons, ", "))
-}
-
-func getLabelSelector(deviceSelector infrav1.DeviceSelector) (labels.Selector, error) {
-	labelSelector := labels.NewSelector()
-	var reqs labels.Requirements
-
-	var errs []error
-	for labelKey, labelVal := range deviceSelector.MatchLabels {
-		r, err := labels.NewRequirement(labelKey, selection.Equals, []string{labelVal})
-		if err != nil {
-			errs = append(errs, err)
-			continue
-		}
-		reqs = append(reqs, *r)
-	}
-	for _, req := range deviceSelector.MatchExpressions {
-		lowercaseOperator := selection.Operator(strings.ToLower(string(req.Operator)))
-		r, err := labels.NewRequirement(req.Key, lowercaseOperator, req.Values)
-		if err != nil {
-			errs = append(errs, err)
-			continue
-		}
-		reqs = append(reqs, *r)
-	}
-
-	return labelSelector.Add(reqs...), errors.Join(errs...)
 }
 
 // actionVerifyAssociate verifies that the HV device has actually been associated to this machine and only this.
