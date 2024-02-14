@@ -17,7 +17,8 @@
 cluster_name=$(kubectl get cluster -A -o jsonpath='{.items[].metadata.name}')
 namespace=$(kubectl get cluster -A -o jsonpath='{.items[].metadata.namespace}')
 kubeconfig=".workload-cluster-kubeconfig.yaml"
-kubectl get secrets -n "$namespace" "$cluster_name-kubeconfig" -ojsonpath='{.data.value}' | base64 -d > "$kubeconfig"
+kubectl get secrets -n "$namespace" "$cluster_name-kubeconfig" -ojsonpath='{.data.value}' | base64 -d >"$kubeconfig.tmp"
+mv "$kubeconfig.tmp" "$kubeconfig"
 
 if [ ! -s "$kubeconfig" ]; then
     echo "failed to get kubeconfig of workload cluster"

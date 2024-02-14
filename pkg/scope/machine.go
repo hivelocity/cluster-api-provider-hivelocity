@@ -170,7 +170,6 @@ func (m *MachineScope) GetRawBootstrapData(ctx context.Context) ([]byte, error) 
 	}
 
 	key := types.NamespacedName{Namespace: m.Namespace(), Name: *m.Machine.Spec.Bootstrap.DataSecretName}
-	// Look for secret in the filtered cache
 	var secret corev1.Secret
 	if err := m.Client.Get(ctx, key, &secret); err != nil {
 		return nil, fmt.Errorf("failed to find bootstrap secret %+v: %w", key, err)

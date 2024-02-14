@@ -7,5 +7,5 @@ spec:
     spec:
       deviceSelector:
         matchLabels:
-          deviceType: ${HIVELOCITY_WORKER_MACHINE_TYPE}
+          deviceType: ${HIVELOCITY_WORKER_DEVICE_TYPE}
       imageName: "ubuntu-22.04"
