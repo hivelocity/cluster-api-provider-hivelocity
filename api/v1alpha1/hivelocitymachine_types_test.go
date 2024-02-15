@@ -23,6 +23,8 @@ import (
 	hv "github.com/hivelocity/hivelocity-client-go/client"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	"github.com/stretchr/testify/require"
+	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/utils/ptr"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	capierrors "sigs.k8s.io/cluster-api/errors"
@@ -243,3 +245,49 @@ var _ = Describe("Test SetProviderID", func() {
 		}),
 	)
 })
+
+func TestDeviceSelector_Validate_invalid(t *testing.T) {
+	for _, ds := range []DeviceSelector{
+		{
+			MatchLabels:      map[string]string{"key:invalid": "value"},
+			MatchExpressions: []DeviceSelectorRequirement{},
+		},
+		{
+			MatchLabels:      map[string]string{"key": "value:invalid"},
+			MatchExpressions: []DeviceSelectorRequirement{},
+		},
+		{
+			MatchLabels: map[string]string{"key": "value"},
+			MatchExpressions: []DeviceSelectorRequirement{
+				{
+					Key:      "foo",
+					Operator: selection.In,
+					Values:   []string{"one:invalid", "two"},
+				},
+			},
+		},
+	} {
+		err := ds.Validate()
+		require.NotNil(t, err)
+
+	}
+}
+
+func TestDeviceSelector_Validate_valid(t *testing.T) {
+	for _, ds := range []DeviceSelector{
+		{},
+		{
+			MatchLabels: map[string]string{"key": "value"},
+			MatchExpressions: []DeviceSelectorRequirement{
+				{
+					Key:      "foo",
+					Operator: selection.In,
+					Values:   []string{"one", "two"},
+				},
+			},
+		},
+	} {
+		err := ds.Validate()
+		require.Nil(t, err)
+	}
+}

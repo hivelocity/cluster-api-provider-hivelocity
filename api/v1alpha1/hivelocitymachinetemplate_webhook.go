@@ -58,13 +58,13 @@ var _ webhook.CustomValidator = &HivelocityMachineTemplateWebhook{}
 
 // ValidateCreate implements webhook.CustomValidator so a webhook will be registered for the type.
 func (r *HivelocityMachineTemplateWebhook) ValidateCreate(_ context.Context, obj runtime.Object) (admission.Warnings, error) {
-	newHivelocityMachine, ok := obj.(*HivelocityMachineTemplate)
+	newHivelocityMachineTemplate, ok := obj.(*HivelocityMachineTemplate)
 	if !ok {
 		return nil, apierrors.NewBadRequest(fmt.Sprintf("expected a HivelocityMachineTemplate but got a %T", obj))
 	}
+	hivelocitymachinetemplatelog.V(1).Info("validate create", "name", newHivelocityMachineTemplate)
 
-	hivelocitymachinetemplatelog.V(1).Info("validate create", "name", newHivelocityMachine)
-	return nil, nil
+	return nil, newHivelocityMachineTemplate.Spec.Template.Spec.DeviceSelector.Validate()
 }
 
 // ValidateUpdate implements webhook.CustomValidator so a webhook will be registered for the type.

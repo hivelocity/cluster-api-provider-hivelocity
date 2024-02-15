@@ -17,6 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -24,6 +25,7 @@ import (
 	"github.com/hivelocity/cluster-api-provider-hivelocity/pkg/services/hivelocity/hvtag"
 	hv "github.com/hivelocity/hivelocity-client-go/client"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
 	clusterv1 "sigs.k8s.io/cluster-api/api/v1beta1"
 	capierrors "sigs.k8s.io/cluster-api/errors"
@@ -115,6 +117,39 @@ type DeviceSelector struct {
 	// MatchExpressions match expressions that must be true on a chosen Device
 	// +optional
 	MatchExpressions []DeviceSelectorRequirement `json:"matchExpressions,omitempty"`
+}
+
+// Validate validates the deviceSelector.
+func (deviceSelector *DeviceSelector) Validate() error {
+	_, err := deviceSelector.GetLabelSelector()
+	return err
+}
+
+// GetLabelSelector returns the labels.Selector for the deviceSelector.
+func (deviceSelector *DeviceSelector) GetLabelSelector() (labels.Selector, error) {
+	labelSelector := labels.NewSelector()
+	var reqs labels.Requirements
+
+	var errs []error
+	for labelKey, labelVal := range deviceSelector.MatchLabels {
+		r, err := labels.NewRequirement(labelKey, selection.Equals, []string{labelVal})
+		if err != nil {
+			errs = append(errs, err)
+			continue
+		}
+		reqs = append(reqs, *r)
+	}
+	for _, req := range deviceSelector.MatchExpressions {
+		lowercaseOperator := selection.Operator(strings.ToLower(string(req.Operator)))
+		r, err := labels.NewRequirement(req.Key, lowercaseOperator, req.Values)
+		if err != nil {
+			errs = append(errs, err)
+			continue
+		}
+		reqs = append(reqs, *r)
+	}
+
+	return labelSelector.Add(reqs...), errors.Join(errs...)
 }
 
 // DeviceSelectorRequirement defines a requirement used for MatchExpressions to select device.
